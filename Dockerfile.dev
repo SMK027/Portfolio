@@ -6,13 +6,14 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
+    libicu-dev \
     zip \
     unzip \
     git \
     curl \
     cron \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql zip bcmath pcntl exif \
+    && docker-php-ext-install gd pdo pdo_mysql zip bcmath pcntl exif intl \
     && a2enmod rewrite remoteip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 

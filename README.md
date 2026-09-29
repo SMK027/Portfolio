@@ -1,58 +1,94 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Portfolio
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), avec un back-office complet.
 
-## About Laravel
+## Fonctionnalités
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Site public** (responsive mobile / PC)
+- **Accueil** : présentation (photo, accroche, texte « À propos », liens, CV), aperçus des compétences, projets et articles
+- **Formations**, **Diplômes**, **Certifications**, **Compétences**
+- **Projets** classés par thèmes (cartes avec image de fond). Chaque projet a un titre, une date, une description, des liens et dépôts GitHub, des fichiers (images en carrousel, PDF, Word, Excel, PowerPoint, LibreOffice), une miniature, des compétences et des thèmes
+- **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
+- **Contact** : nom, prénom, e-mail, objet, message et consentement obligatoire. Le formulaire est protégé par Google reCAPTCHA v3, un champ piège et une limite de débit. Chaque message est enregistré en base et notifié par e-mail
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**Visibilité des pages** : chaque page peut être rendue privée depuis *Administration → Pages & visibilité*. Une page privée :
+- disparaît du menu et renvoie une erreur 404 aux visiteurs ;
+- reste visible, avec un cadenas, pour les administrateurs connectés.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Les fichiers de projets sont servis par l'application et suivent la visibilité de la page « Projets ». Vous pouvez aussi renommer les pages, les réordonner et modifier leur introduction.
 
-## Learning Laravel
+**Rôles**
+| Rôle | Droits |
+|---|---|
+| Super-administrateur | Tout, y compris la gestion des comptes |
+| Administrateur | Gestion du contenu, accès aux pages privées |
+| Contributeur | Peut être auteur ou co-auteur d'un article, sans accès à l'administration |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+L'inscription publique est désactivée : les comptes se créent depuis l'administration.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Démarrage (Docker, développement)
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+| Service | URL |
+|---|---|
+| Site | http://localhost:8120 |
+| Administration | http://localhost:8120/admin |
+| phpMyAdmin | http://localhost:8121 |
+| Mailpit (e-mails reçus) | http://localhost:8032 |
+| MariaDB (depuis l'hôte) | `localhost:3322` |
 
-## Contributing
+Les ports se modifient via `APP_PORT`, `PMA_PORT`, `DB_FORWARD_PORT`, `MAILPIT_UI_PORT` et `MAILPIT_SMTP_PORT` dans `.env`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Au démarrage, le conteneur :
+- génère la clé de l'application si besoin ;
+- applique les migrations ;
+- crée le premier compte **`admin@app.local` / `password`** s'il n'existe encore aucun administrateur. **Changez ce mot de passe dès la première connexion** (*Mon compte*).
 
-## Code of Conduct
+Le conteneur `portfolio_node` recompile les assets à chaque modification (`vite build --watch`).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**Données de démonstration** (facultatif) :
+```bash
+docker exec -u www-data portfolio_web php artisan db:seed --class=DemoSeeder
+```
 
-## Security Vulnerabilities
+## Configuration
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Variable | Rôle |
+|---|---|
+| `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Clés reCAPTCHA **v3** ([console Google](https://www.google.com/recaptcha/admin)) |
+| `RECAPTCHA_MIN_SCORE` | Score minimal accepté (0.5 par défaut) |
+| `CONTACT_RECIPIENT` | Destinataire des messages. Par défaut : l'e-mail de la présentation, sinon `MAIL_FROM_ADDRESS` |
 
-## License
+Sans clés reCAPTCHA, la vérification est **ignorée en local et en test** (avec un avertissement dans les logs) et **les envois sont refusés en production**.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Pour changer la couleur principale du site, modifiez `primary` / `accent` dans `tailwind.config.js`.
+
+## Tests
+
+```bash
+docker exec -u www-data -e HOME=/tmp portfolio_web php artisan test
+```
+
+Lancez les tests dans le conteneur : au démarrage, celui-ci attribue `storage/` à `www-data`, que l'utilisateur de l'hôte ne peut plus écrire. Les tests utilisent toujours une base SQLite en mémoire (`force="true"` dans `phpunit.xml`), jamais la base de développement.
+
+Les tests couvrent notamment la visibilité des pages, les accès à l'administration, le formulaire de contact et reCAPTCHA, les projets et leurs fichiers, les articles et le rendu sécurisé d'Editor.js.
+
+## Architecture
+
+| Élément | Emplacement |
+|---|---|
+| Visibilité des pages | `app/Http/Middleware/EnsurePageIsAccessible.php` (`->middleware('page:projets')`), table `pages` |
+| Accès administration | `app/Http/Middleware/EnsureUserIsAdmin.php` |
+| Rendu Editor.js → HTML | `app/Services/EditorJsRenderer.php`, directive Blade `@editorjs(...)`. Chaque bloc est rendu explicitement et le texte enrichi passe par HTMLPurifier |
+| Vérification reCAPTCHA | `app/Services/Recaptcha.php` |
+| Éditeur (JS) | `resources/js/editor.js`, chargé uniquement sur les pages qui en contiennent un |
+| Carrousel, formulaire de contact | `resources/js/components/` |
+| Vues publiques / admin | `resources/views/public/`, `resources/views/admin/` |
+
+Stockage des fichiers :
+- **disque `public`** : photo, CV, badges, fonds de thèmes, miniatures et illustrations d'articles ;
+- **disque `local`** (privé) : fichiers des projets, servis par `ProjectFileController`.

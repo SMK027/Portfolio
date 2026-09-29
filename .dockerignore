@@ -9,3 +9,7 @@ storage/logs/*.log
 storage/framework/sessions/*
 storage/framework/views/*
 storage/framework/cache/data/*
+storage/app/private/*
+storage/app/public/*
+!storage/app/private/.gitignore
+!storage/app/public/.gitignore
