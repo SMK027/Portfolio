@@ -1,0 +1,36 @@
+<x-app-layout>
+    <x-slot name="title">Comptes</x-slot>
+    <x-slot name="header">Comptes</x-slot>
+    @can('manage-users')
+        <x-slot name="actions"><a href="{{ route('admin.utilisateurs.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Nouveau compte</a></x-slot>
+    @endcan
+
+    <p class="text-sm text-slate-500">
+        Les <strong>administrateurs</strong> gèrent le contenu et voient les pages privées. Les <strong>contributeurs</strong> peuvent être désignés
+        auteurs ou co-auteurs d'articles, sans accès à l'administration. Seuls les super-administrateurs gèrent les comptes.
+    </p>
+
+    <div class="card overflow-x-auto">
+        <table class="admin-table">
+            <thead><tr><th>Nom</th><th class="hidden md:table-cell">E-mail</th><th>Rôle</th><th class="hidden sm:table-cell">Articles</th><th class="w-24"></th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach ($users as $user)
+                    <tr>
+                        <td><p class="font-medium text-slate-900">{{ $user->name }}</p><p class="text-xs text-slate-500">{{ '@'.$user->username }}</p></td>
+                        <td class="hidden md:table-cell">{{ $user->email }}</td>
+                        <td><span @class(['badge-primary' => $user->isAdmin(), 'badge-slate' => ! $user->isAdmin()])>{{ \Illuminate\Support\Str::before($user->roleLabel(), ' (') }}</span></td>
+                        <td class="hidden sm:table-cell">{{ $user->articles_count }}</td>
+                        <td class="whitespace-nowrap text-right">
+                            @can('manage-users')
+                                <x-admin.edit-link :href="route('admin.utilisateurs.edit', $user)" />
+                                @unless ($user->is(auth()->user()))
+                                    <x-admin.delete-button :action="route('admin.utilisateurs.destroy', $user)" confirm="Supprimer ce compte ?" />
+                                @endunless
+                            @endcan
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</x-app-layout>

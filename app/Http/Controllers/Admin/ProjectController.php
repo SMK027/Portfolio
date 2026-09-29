@@ -8,6 +8,7 @@ use App\Models\ProjectFile;
 use App\Models\Skill;
 use App\Models\Theme;
 use Closure;
+use finfo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -143,7 +144,7 @@ class ProjectController extends Controller
 
     protected function storeFile(Project $project, UploadedFile $upload, int $position): ProjectFile
     {
-        $mime = (string) $upload->getMimeType();
+        $mime = $this->detectMime($upload);
         $isImage = in_array(strtolower($upload->getClientOriginalExtension()), ProjectFile::IMAGE_EXTENSIONS, true);
 
         return $project->files()->create([
@@ -173,6 +174,12 @@ class ProjectController extends Controller
         return $file?->is_image ? $file->id : null;
     }
 
+    /** Type MIME déterminé à partir du contenu réel du fichier. */
+    protected function detectMime(UploadedFile $file): string
+    {
+        return (string) ((new finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) ?: 'application/octet-stream');
+    }
+
     /**
      * Un fichier portant une extension d'image doit réellement être une image
      * (le contenu est vérifié, pas seulement l'extension).
@@ -186,7 +193,7 @@ class ProjectController extends Controller
 
             $isImageExtension = in_array(strtolower($value->getClientOriginalExtension()), ProjectFile::IMAGE_EXTENSIONS, true);
 
-            if ($isImageExtension && ! in_array($value->getMimeType(), self::IMAGE_MIMES, true)) {
+            if ($isImageExtension && ! in_array($this->detectMime($value), self::IMAGE_MIMES, true)) {
                 $fail('Le fichier « '.$value->getClientOriginalName().' » n\'est pas une image valide.');
             }
         };

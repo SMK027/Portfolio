@@ -304,6 +304,13 @@ class EditorJsRenderer
         $config->set('HTML.TargetNoreferrer', true);
         $config->set('AutoFormat.RemoveEmpty', false);
 
+        // <mark> (HTML5, outil "Marker") n'est pas connu nativement de HTMLPurifier.
+        $config->set('HTML.DefinitionID', 'portfolio-editorjs');
+        $config->set('HTML.DefinitionRev', 1);
+        if ($definition = $config->maybeGetRawHTMLDefinition()) {
+            $definition->addElement('mark', 'Inline', 'Inline', 'Common');
+        }
+
         return $this->purifier = new HTMLPurifier($config);
     }
 }

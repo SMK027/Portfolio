@@ -43,9 +43,6 @@
 
     /* ---------- Contenu Editor.js rendu ---------- */
     .editor-content { @apply prose prose-slate max-w-none prose-headings:font-display prose-a:text-primary-600 prose-img:rounded-xl; }
-    .editor-content .text-center { text-align: center; }
-    .editor-content .text-right { text-align: right; }
-    .editor-content .text-justify { text-align: justify; }
     .editor-content mark,
     .editor-content .cdx-marker { @apply rounded px-0.5; }
     .editor-content mark:not([style]) { @apply bg-yellow-200; }
@@ -57,9 +54,9 @@
     .editor-content .editor-image.with-background { @apply rounded-xl bg-slate-100 p-6; }
     .editor-content .editor-image.with-background img { @apply max-w-[60%]; }
     .editor-content .editor-image.is-stretched img { @apply w-full; }
-    .editor-content figcaption { @apply mt-2 text-center text-sm text-slate-500; }
+    .editor-content figcaption { @apply mt-2 text-sm text-slate-500; text-align: center; }
     .editor-content .editor-quote blockquote { @apply border-l-4 border-primary-400; }
-    .editor-content .editor-quote.text-center blockquote { @apply border-l-0; }
+    .editor-content .editor-quote.text-center blockquote { border-left-width: 0; }
     .editor-content .editor-delimiter { @apply mx-auto my-10 w-24 border-t-2 border-slate-200; }
     .editor-content .editor-table { @apply overflow-x-auto; }
     .editor-content .editor-warning { @apply my-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900; }

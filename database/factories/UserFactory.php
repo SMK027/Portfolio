@@ -35,6 +35,18 @@ class UserFactory extends Factory
         ];
     }
 
+    /** Compte administrateur. */
+    public function admin(): static
+    {
+        return $this->state(fn () => ['global_role' => 'admin']);
+    }
+
+    /** Compte super-administrateur. */
+    public function superAdmin(): static
+    {
+        return $this->state(fn () => ['global_role' => 'superadmin']);
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */
