@@ -9,6 +9,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFileController;
+use App\Http\Controllers\RobotsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Route;
 | Chaque page est protégée par le middleware "page:{clé}" : si la page est
 | privée, seuls les administrateurs connectés peuvent y accéder.
 */
+
+Route::get('/robots.txt', RobotsController::class)->name('robots');
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 
@@ -80,6 +83,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/presentation', [Admin\ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/referencement', [Admin\SeoController::class, 'edit'])->name('seo.edit');
+    Route::put('/referencement', [Admin\SeoController::class, 'update'])->name('seo.update');
 
     Route::get('/pages', [Admin\PageController::class, 'index'])->name('pages.index');
     Route::put('/pages', [Admin\PageController::class, 'update'])->name('pages.update');

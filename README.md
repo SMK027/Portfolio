@@ -23,6 +23,8 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 
 Les fichiers de projets sont servis par l'application et suivent la visibilité de la page « Projets ». Vous pouvez aussi renommer les pages, les réordonner et modifier leur introduction.
 
+**Référencement** : *Administration → Référencement* permet de désindexer tout le site. Les pages reçoivent alors une balise `noindex` et toutes les réponses l'en-tête `X-Robots-Tag: noindex, nofollow`. Le `robots.txt`, généré dynamiquement, bloque les images publiques (`/storage/`) mais laisse les pages explorables, pour que les moteurs lisent la consigne et retirent les pages déjà indexées. L'administration et la connexion ne sont jamais indexées.
+
 **Rôles**
 | Rôle | Droits |
 |---|---|

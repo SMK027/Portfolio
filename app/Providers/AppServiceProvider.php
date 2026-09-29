@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Announcement;
 use App\Models\Page;
 use App\Models\Profile;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\EditorJsRenderer;
 use App\Services\Recaptcha;
@@ -44,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
                 'siteProfile'   => Profile::current(),
                 'isAdmin'       => (bool) $user?->isAdmin(),
                 'announcements' => Announcement::visible()->ordered()->get(),
+                'indexable'     => Setting::siteIsIndexable(),
             ]);
         });
 

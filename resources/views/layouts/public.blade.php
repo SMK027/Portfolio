@@ -16,7 +16,7 @@
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:type" content="website">
     @if ($image)<meta property="og:image" content="{{ url($image) }}">@endif
-    @if ($page && ! $page->is_public)<meta name="robots" content="noindex, nofollow">@endif
+    @if (! $indexable || ($page && ! $page->is_public))<meta name="robots" content="noindex, nofollow">@endif
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|space-grotesk:500,600,700&display=swap" rel="stylesheet" />
@@ -31,7 +31,12 @@
         {{-- Barre d'administration : visible uniquement par les administrateurs connectés --}}
         <div class="bg-slate-900 text-xs text-slate-300">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    @unless ($indexable)
+                        <a href="{{ route('admin.seo.edit') }}" class="inline-flex items-center gap-1 rounded-full bg-red-400/15 px-2 py-0.5 font-medium text-red-300 hover:bg-red-400/25">
+                            <x-icon name="eye" class="h-3.5 w-3.5" /> Site non indexé
+                        </a>
+                    @endunless
                     @if ($page && ! $page->is_public)
                         <span class="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 font-medium text-amber-300">
                             <x-icon name="lock" class="h-3.5 w-3.5" /> Page privée — visible uniquement par les administrateurs

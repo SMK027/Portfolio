@@ -15,5 +15,6 @@ abstract class TestCase extends BaseTestCase
 
         // Le cache des pages est statique (durée d'une requête) : on le vide entre les tests.
         \App\Models\Page::flushCache();
+        \App\Models\Setting::flushCache();
     }
 }

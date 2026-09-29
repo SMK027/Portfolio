@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'page'  => \App\Http\Middleware\EnsurePageIsAccessible::class,
         ]);
 
+        // Global (et non "web") pour couvrir aussi les erreurs 404 hors route.
+        $middleware->append(\App\Http\Middleware\AddRobotsHeader::class);
+
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

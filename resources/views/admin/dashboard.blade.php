@@ -6,6 +6,14 @@
         <a href="{{ route('admin.articles.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Article</a>
     </x-slot>
 
+    @unless (\App\Models\Setting::siteIsIndexable())
+        <a href="{{ route('admin.seo.edit') }}" class="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 hover:bg-red-100">
+            <x-icon name="globe" class="h-5 w-5 flex-none" />
+            <span><strong>Le site est désindexé</strong> : les moteurs de recherche ne le référencent pas. Modifier ce réglage</span>
+            <x-icon name="arrow-right" class="ml-auto h-4 w-4 flex-none" />
+        </a>
+    @endunless
+
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         @foreach ($stats as $stat)
             <a href="{{ route($stat['route']) }}" class="card p-5 transition hover:border-primary-200 hover:shadow-md">
