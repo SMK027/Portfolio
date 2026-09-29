@@ -25,6 +25,8 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Référencement** : *Administration → Référencement* permet de désindexer tout le site. Les pages reçoivent alors une balise `noindex` et toutes les réponses l'en-tête `X-Robots-Tag: noindex, nofollow`. Le `robots.txt`, généré dynamiquement, bloque les images publiques (`/storage/`) mais laisse les pages explorables, pour que les moteurs lisent la consigne et retirent les pages déjà indexées. L'administration et la connexion ne sont jamais indexées.
 
+**Maintenance** : *Administration → Maintenance* met le site en maintenance, avec une date de désactivation automatique et un motif, tous deux facultatifs. Les visiteurs voient alors une page de maintenance (motif, date de retour, compte à rebours) à la place des pages et des fichiers. Elle est renvoyée avec un **statut HTTP 200** pour ne pas fausser la surveillance de disponibilité. Les administrateurs connectés continuent de naviguer et de modifier le site, et la page de connexion reste accessible.
+
 **Rôles**
 | Rôle | Droits |
 |---|---|
@@ -69,6 +71,7 @@ docker exec -u www-data portfolio_web php artisan db:seed --class=DemoSeeder
 |---|---|
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Clés reCAPTCHA **v3** ([console Google](https://www.google.com/recaptcha/admin)) |
 | `RECAPTCHA_MIN_SCORE` | Score minimal accepté (0.5 par défaut) |
+| `APP_TIMEZONE` | Fuseau horaire des dates saisies et affichées (`Europe/Paris` par défaut) |
 | `CONTACT_RECIPIENT` | Destinataire des messages. Par défaut : l'e-mail de la présentation, sinon `MAIL_FROM_ADDRESS` |
 
 Sans clés reCAPTCHA, la vérification est **ignorée en local et en test** (avec un avertissement dans les logs) et **les envois sont refusés en production**.

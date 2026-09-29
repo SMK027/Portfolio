@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global (et non "web") pour couvrir aussi les erreurs 404 hors route.
         $middleware->append(\App\Http\Middleware\AddRobotsHeader::class);
 
+        // Après la session et l'authentification, pour laisser passer les administrateurs.
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleMaintenanceMode::class,
+        ]);
+
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

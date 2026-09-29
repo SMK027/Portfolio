@@ -32,6 +32,11 @@
         <div class="bg-slate-900 text-xs text-slate-300">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
                 <div class="flex flex-wrap items-center gap-2">
+                    @if ($maintenance)
+                        <a href="{{ route('admin.maintenance.edit') }}" class="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 font-medium text-amber-300 hover:bg-amber-400/25">
+                            <x-icon name="wrench" class="h-3.5 w-3.5" /> Maintenance active — les visiteurs voient la page de maintenance
+                        </a>
+                    @endif
                     @unless ($indexable)
                         <a href="{{ route('admin.seo.edit') }}" class="inline-flex items-center gap-1 rounded-full bg-red-400/15 px-2 py-0.5 font-medium text-red-300 hover:bg-red-400/25">
                             <x-icon name="eye" class="h-3.5 w-3.5" /> Site non indexé

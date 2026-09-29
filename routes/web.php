@@ -84,6 +84,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/presentation', [Admin\ProfileController::class, 'update'])->name('profile.update');
 
+    Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->name('maintenance.edit');
+    Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->name('maintenance.update');
+
     Route::get('/referencement', [Admin\SeoController::class, 'edit'])->name('seo.edit');
     Route::put('/referencement', [Admin\SeoController::class, 'update'])->name('seo.update');
 

@@ -1,6 +1,7 @@
 @php
     $user = auth()->user();
     $unread = $user->isAdmin() ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
+    $maintenanceActive = $user->isAdmin() && app(\App\Services\Maintenance::class)->isActive();
 
     $sections = $user->isAdmin() ? [
         '' => [
@@ -21,6 +22,7 @@
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'],
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*'],
+            ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'],
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],
         ],
     ] : [];
@@ -50,6 +52,9 @@
                         ])>
                             <x-icon :name="$icon" class="h-5 w-5 flex-none {{ $active ? 'text-primary-300' : 'text-slate-500' }}" />
                             <span class="flex-1">{{ $label }}</span>
+                            @if ($route === 'admin.maintenance.edit' && $maintenanceActive)
+                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">Active</span>
+                            @endif
                             @if ($route === 'admin.messages.index' && $unread)
                                 <span class="rounded-full bg-primary-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unread }}</span>
                             @endif

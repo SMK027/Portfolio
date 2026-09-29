@@ -6,6 +6,19 @@
         <a href="{{ route('admin.articles.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Article</a>
     </x-slot>
 
+    @if (app(\App\Services\Maintenance::class)->isActive())
+        <a href="{{ route('admin.maintenance.edit') }}" class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 hover:bg-amber-100">
+            <x-icon name="wrench" class="h-5 w-5 flex-none" />
+            <span>
+                <strong>Maintenance active</strong> : les visiteurs voient la page de maintenance.
+                @if ($end = app(\App\Services\Maintenance::class)->endsAt())
+                    Fin automatique le {{ $end->translatedFormat('j F Y à H:i') }}.
+                @endif
+            </span>
+            <x-icon name="arrow-right" class="ml-auto h-4 w-4 flex-none" />
+        </a>
+    @endif
+
     @unless (\App\Models\Setting::siteIsIndexable())
         <a href="{{ route('admin.seo.edit') }}" class="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 hover:bg-red-100">
             <x-icon name="globe" class="h-5 w-5 flex-none" />

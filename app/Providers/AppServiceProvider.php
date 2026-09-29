@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(Recaptcha::class);
         $this->app->singleton(EditorJsRenderer::class);
+        $this->app->singleton(\App\Services\Maintenance::class);
     }
 
     /**
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
                 'isAdmin'       => (bool) $user?->isAdmin(),
                 'announcements' => Announcement::visible()->ordered()->get(),
                 'indexable'     => Setting::siteIsIndexable(),
+                'maintenance'   => app(\App\Services\Maintenance::class)->isActive(),
             ]);
         });
 
