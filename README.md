@@ -11,6 +11,12 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
 - **Contact** : nom, prénom, e-mail, objet, message et consentement obligatoire. Le formulaire est protégé par Google reCAPTCHA v3, un champ piège et une limite de débit. Chaque message est enregistré en base et notifié par e-mail
 
+**Annonces** : des bandeaux s'affichent sous le menu, sur toutes les pages publiques (recherche de stage ou d'alternance, disponibilité, actualité…). Depuis *Administration → Annonces*, chaque annonce se règle ainsi :
+- titre, message et style (mise en avant, recherche / disponibilité, information, important) ;
+- lien facultatif avec un bouton ;
+- période de diffusion (début et fin programmables) et ordre d'affichage ;
+- masquage possible par le visiteur. Une annonce masquée réapparaît si vous la modifiez.
+
 **Visibilité des pages** : chaque page peut être rendue privée depuis *Administration → Pages & visibilité*. Une page privée :
 - disparaît du menu et renvoie une erreur 404 aux visiteurs ;
 - reste visible, avec un cadenas, pour les administrateurs connectés.

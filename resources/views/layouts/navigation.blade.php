@@ -17,6 +17,7 @@
             ['admin.articles.index', 'Veille', 'newspaper', 'admin.articles.*'],
         ],
         'Site' => [
+            ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*'],
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'],
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*'],
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],

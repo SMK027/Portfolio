@@ -101,6 +101,8 @@
         </div>
     </header>
 
+    <x-announcements :announcements="$announcements" />
+
     <main id="contenu" class="flex-1">
         {{ $slot }}
     </main>

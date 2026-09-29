@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Announcement;
 use App\Models\Page;
 use App\Models\Profile;
 use App\Models\User;
@@ -38,10 +39,11 @@ class AppServiceProvider extends ServiceProvider
             $user = auth()->user();
 
             $view->with([
-                'navPages'    => Page::visibleTo($user)->where('key', '!=', 'home'),
-                'homePage'    => Page::findByKey('home'),
-                'siteProfile' => Profile::current(),
-                'isAdmin'     => (bool) $user?->isAdmin(),
+                'navPages'      => Page::visibleTo($user)->where('key', '!=', 'home'),
+                'homePage'      => Page::findByKey('home'),
+                'siteProfile'   => Profile::current(),
+                'isAdmin'       => (bool) $user?->isAdmin(),
+                'announcements' => Announcement::visible()->ordered()->get(),
             ]);
         });
 

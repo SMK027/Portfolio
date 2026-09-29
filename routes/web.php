@@ -95,6 +95,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('projets.files.destroy');
     Route::resource('articles', Admin\ArticleController::class)->except('show');
 
+    Route::resource('annonces', Admin\AnnouncementController::class)
+        ->except('show')->parameters(['annonces' => 'announcement']);
+
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
