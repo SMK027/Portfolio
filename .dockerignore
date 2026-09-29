@@ -13,3 +13,4 @@ storage/app/private/*
 storage/app/public/*
 !storage/app/private/.gitignore
 !storage/app/public/.gitignore
+storage/framework/testing

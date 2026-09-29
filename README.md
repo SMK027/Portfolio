@@ -27,6 +27,12 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Maintenance** : *Administration → Maintenance* met le site en maintenance, avec une date de désactivation automatique et un motif, tous deux facultatifs. Les visiteurs voient alors une page de maintenance (motif, date de retour, compte à rebours) à la place des pages et des fichiers. Elle est renvoyée avec un **statut HTTP 200** pour ne pas fausser la surveillance de disponibilité. Les administrateurs connectés continuent de naviguer et de modifier le site, et la page de connexion reste accessible.
 
+**E-mails tolérants aux pannes** : une panne SMTP, une configuration `MAIL_*` invalide ou un compte de messagerie désactivé ne bloquent jamais le site. Dans ce cas :
+- les messages de contact restent enregistrés et consultables dans l'admin, avec la mention « E-mail non envoyé » ;
+- la réinitialisation de mot de passe affiche un message au lieu d'une erreur ;
+- un délai SMTP court (`MAIL_TIMEOUT`) évite les pages bloquées ;
+- le tableau de bord signale la dernière erreur d'envoi, et un bouton « Tester l'envoi d'e-mails » (page Messages) permet de vérifier la configuration.
+
 **Rôles**
 | Rôle | Droits |
 |---|---|
@@ -51,6 +57,8 @@ docker compose -f docker-compose.dev.yml up -d --build
 | Mailpit (e-mails reçus) | http://localhost:8032 |
 | MariaDB (depuis l'hôte) | `localhost:3322` |
 
+Les conteneurs, le réseau et les routeurs Traefik (production) sont nommés d'après le **dossier d'installation** (nom de projet Compose), par exemple `portfoliov2-app-1` pour le dossier `Portfolio v2`. Plusieurs copies du projet peuvent donc tourner côte à côte ; pensez seulement à leur attribuer des ports différents. Pour imposer un nom, définissez `COMPOSE_PROJECT_NAME` dans `.env`.
+
 Les ports se modifient via `APP_PORT`, `PMA_PORT`, `DB_FORWARD_PORT`, `MAILPIT_UI_PORT` et `MAILPIT_SMTP_PORT` dans `.env`.
 
 Au démarrage, le conteneur :
@@ -58,11 +66,11 @@ Au démarrage, le conteneur :
 - applique les migrations ;
 - crée le premier compte **`admin@app.local` / `password`** s'il n'existe encore aucun administrateur. **Changez ce mot de passe dès la première connexion** (*Mon compte*).
 
-Le conteneur `portfolio_node` recompile les assets à chaque modification (`vite build --watch`).
+Le service `node` recompile les assets à chaque modification (`vite build --watch`).
 
 **Données de démonstration** (facultatif) :
 ```bash
-docker exec -u www-data portfolio_web php artisan db:seed --class=DemoSeeder
+docker compose -f docker-compose.dev.yml exec -u www-data app php artisan db:seed --class=DemoSeeder
 ```
 
 ## Configuration
@@ -72,6 +80,7 @@ docker exec -u www-data portfolio_web php artisan db:seed --class=DemoSeeder
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Clés reCAPTCHA **v3** ([console Google](https://www.google.com/recaptcha/admin)) |
 | `RECAPTCHA_MIN_SCORE` | Score minimal accepté (0.5 par défaut) |
 | `APP_TIMEZONE` | Fuseau horaire des dates saisies et affichées (`Europe/Paris` par défaut) |
+| `MAIL_TIMEOUT` | Délai maximal de connexion SMTP en secondes (5 par défaut) |
 | `CONTACT_RECIPIENT` | Destinataire des messages. Par défaut : l'e-mail de la présentation, sinon `MAIL_FROM_ADDRESS` |
 
 Sans clés reCAPTCHA, la vérification est **ignorée en local et en test** (avec un avertissement dans les logs) et **les envois sont refusés en production**.
@@ -81,7 +90,7 @@ Pour changer la couleur principale du site, modifiez `primary` / `accent` dans `
 ## Tests
 
 ```bash
-docker exec -u www-data -e HOME=/tmp portfolio_web php artisan test
+docker compose -f docker-compose.dev.yml exec -u www-data -e HOME=/tmp app php artisan test
 ```
 
 Lancez les tests dans le conteneur : au démarrage, celui-ci attribue `storage/` à `www-data`, que l'utilisateur de l'hôte ne peut plus écrire. Les tests utilisent toujours une base SQLite en mémoire (`force="true"` dans `phpunit.xml`), jamais la base de développement.

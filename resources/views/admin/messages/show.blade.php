@@ -13,6 +13,15 @@
                 <div class="flex gap-2"><dt class="text-slate-500">E-mail :</dt><dd><a href="mailto:{{ $message->email }}" class="font-medium text-primary-600">{{ $message->email }}</a></dd></div>
                 <div class="flex gap-2"><dt class="text-slate-500">Reçu le :</dt><dd>{{ $message->created_at->translatedFormat('j F Y à H:i') }}</dd></div>
                 <div class="flex gap-2"><dt class="text-slate-500">Consentement :</dt><dd class="text-emerald-700">Oui, le {{ $message->consented_at->format('d/m/Y H:i') }}</dd></div>
+                <div class="flex gap-2"><dt class="text-slate-500">Notification :</dt>
+                    <dd>
+                        @if ($message->notified_at)
+                            <span class="text-emerald-700">envoyée par e-mail</span>
+                        @else
+                            <span class="text-amber-700">non envoyée (problème d'envoi d'e-mails)</span>
+                        @endif
+                    </dd>
+                </div>
                 @if ($message->recaptcha_score !== null)
                     <div class="flex gap-2"><dt class="text-slate-500">Score reCAPTCHA :</dt><dd>{{ number_format($message->recaptcha_score, 1) }}</dd></div>
                 @endif

@@ -7,13 +7,11 @@ use App\Mail\ContactMessageReceived;
 use App\Models\ContactMessage;
 use App\Models\Profile;
 use App\Services\Recaptcha;
+use App\Services\SafeMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Throwable;
 
 class ContactController extends Controller
 {
@@ -26,7 +24,7 @@ class ContactController extends Controller
         ]);
     }
 
-    public function store(ContactRequest $request, Recaptcha $recaptcha): RedirectResponse
+    public function store(ContactRequest $request, Recaptcha $recaptcha, SafeMailer $mailer): RedirectResponse
     {
         if (! $recaptcha->verify($request->input('recaptcha_token'), 'contact', $request->ip())) {
             throw ValidationException::withMessages([
@@ -45,11 +43,10 @@ class ContactController extends Controller
             ?: Profile::current()->email
             ?: config('mail.from.address');
 
-        // Le message est déjà enregistré : un échec d'envoi ne doit pas le perdre.
-        try {
-            Mail::to($recipient)->send(new ContactMessageReceived($message));
-        } catch (Throwable $e) {
-            Log::error('Envoi de la notification de contact impossible : '.$e->getMessage());
+        // Le message est déjà enregistré : un échec d'envoi (panne SMTP, configuration
+        // invalide…) ne doit ni le perdre ni gêner le visiteur. Il reste lisible dans l'admin.
+        if ($mailer->send($recipient, new ContactMessageReceived($message), 'notification de contact')) {
+            $message->update(['notified_at' => now()]);
         }
 
         return redirect()->route('contact.show')

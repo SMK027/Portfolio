@@ -1,9 +1,11 @@
+# Les conteneurs et les routeurs Traefik sont nommés d'après le dossier
+# d'installation (nom de projet Compose) pour éviter les collisions entre
+# plusieurs déploiements. Pour forcer un nom : COMPOSE_PROJECT_NAME dans .env
 version: '3.8'
 
 services:
   app:
     build: .
-    container_name: app_web
     ports:
       - "8089:80"
     volumes:
@@ -28,12 +30,13 @@ services:
       - MAIL_ENCRYPTION=${SMTP_ENCRYPTION}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_TIMEOUT=${MAIL_TIMEOUT:-5}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`app.example.com`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=le"
-      - "traefik.http.services.app.loadbalancer.server.port=80"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`app.example.com`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=le"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
     depends_on:
       db:
@@ -45,7 +48,6 @@ services:
 
   db:
     image: mariadb:10.11
-    container_name: app_db
     command: --default-time-zone='+02:00'
     environment:
       MYSQL_ROOT_PASSWORD: root_password

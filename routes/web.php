@@ -84,6 +84,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/presentation', [Admin\ProfileController::class, 'update'])->name('profile.update');
 
+    Route::post('/email-test', Admin\MailTestController::class)
+        ->middleware('throttle:5,1')
+        ->name('mail.test');
+
     Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->name('maintenance.edit');
     Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->name('maintenance.update');
 

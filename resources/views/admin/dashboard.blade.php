@@ -6,6 +6,23 @@
         <a href="{{ route('admin.articles.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Article</a>
     </x-slot>
 
+    @if ($mailError = app(\App\Services\SafeMailer::class)->lastError())
+        <div class="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center">
+            <x-icon name="mail" class="h-5 w-5 flex-none" />
+            <div class="min-w-0 flex-1">
+                <p><strong>Les e-mails ne sont pas envoyés.</strong> Le site continue de fonctionner et les messages de contact restent enregistrés ci-dessous.</p>
+                <p class="mt-1 break-words text-xs text-red-700">
+                    Dernière erreur @if ($mailError['at'])({{ \Illuminate\Support\Carbon::parse($mailError['at'])->translatedFormat('j F Y à H:i') }})@endif : {{ $mailError['message'] }}
+                </p>
+                <p class="mt-1 text-xs text-red-700">Vérifiez les paramètres <code>MAIL_*</code> du fichier <code>.env</code>, puis relancez un test.</p>
+            </div>
+            <form method="POST" action="{{ route('admin.mail.test') }}" class="flex-none">
+                @csrf
+                <button class="btn-secondary btn-sm">Envoyer un e-mail de test</button>
+            </form>
+        </div>
+    @endif
+
     @if (app(\App\Services\Maintenance::class)->isActive())
         <a href="{{ route('admin.maintenance.edit') }}" class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 hover:bg-amber-100">
             <x-icon name="wrench" class="h-5 w-5 flex-none" />

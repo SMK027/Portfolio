@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Contenu de démonstration pour visualiser le portfolio.
- * Usage : docker exec -u www-data portfolio_web php artisan db:seed --class=DemoSeeder
+ * Usage : docker compose -f docker-compose.dev.yml exec -u www-data app php artisan db:seed --class=DemoSeeder
  * (n'est jamais exécuté automatiquement)
  */
 class DemoSeeder extends Seeder

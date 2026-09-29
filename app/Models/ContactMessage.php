@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
     'first_name', 'last_name', 'email', 'subject', 'message',
-    'consented_at', 'ip_address', 'recaptcha_score', 'read_at',
+    'consented_at', 'ip_address', 'recaptcha_score', 'notified_at', 'read_at',
 ])]
 class ContactMessage extends Model
 {
@@ -16,6 +16,7 @@ class ContactMessage extends Model
         return [
             'consented_at'    => 'datetime',
             'read_at'         => 'datetime',
+            'notified_at'     => 'datetime',
             'recaptcha_score' => 'float',
         ];
     }

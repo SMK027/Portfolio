@@ -1,9 +1,12 @@
+# Les conteneurs, le réseau et les volumes sont nommés d'après le dossier
+# d'installation (nom de projet Compose), ex. « portfoliov2-app-1 » :
+# plusieurs copies du projet peuvent tourner côte à côte sans conflit.
+# Pour forcer un autre nom : COMPOSE_PROJECT_NAME=mon-projet dans .env
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: portfolio_web
     ports:
       - "${APP_PORT:-8120}:80"
     volumes:
@@ -25,11 +28,12 @@ services:
       - MAIL_MAILER=smtp
       - MAIL_HOST=${SMTP_HOST:-mailpit}
       - MAIL_PORT=${SMTP_PORT:-1025}
-      - MAIL_USERNAME=${SMTP_USER}
-      - MAIL_PASSWORD=${SMTP_PASS}
+      - MAIL_USERNAME=${SMTP_USER:-}
+      - MAIL_PASSWORD=${SMTP_PASS:-}
       - MAIL_ENCRYPTION=${SMTP_ENCRYPTION:-null}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-portfolio@example.com}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Portfolio}
+      - MAIL_TIMEOUT=${MAIL_TIMEOUT:-5}
       - CONTACT_RECIPIENT=${CONTACT_RECIPIENT:-}
       - RECAPTCHA_SITE_KEY=${RECAPTCHA_SITE_KEY:-}
       - RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY:-}
@@ -38,25 +42,23 @@ services:
       db:
         condition: service_healthy
     networks:
-      - portfolio_network
+      - app_network
     restart: unless-stopped
 
   # Compile les assets (Tailwind, Alpine, Editor.js) en continu dans public/build
   node:
     image: node:22-alpine
-    container_name: portfolio_node
     working_dir: /app
     command: sh -c "npm ci --no-audit --no-fund && npm run build -- --watch"
     volumes:
       - .:/app
       - /app/node_modules
     networks:
-      - portfolio_network
+      - app_network
     restart: unless-stopped
 
   db:
     image: mariadb:10.11
-    container_name: portfolio_db
     command: --default-time-zone='+01:00'
     environment:
       MYSQL_ROOT_PASSWORD: root_password
@@ -73,12 +75,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - portfolio_network
+      - app_network
     restart: unless-stopped
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: portfolio_phpmyadmin
     ports:
       - "${PMA_PORT:-8121}:80"
     environment:
@@ -88,19 +89,18 @@ services:
     depends_on:
       - db
     networks:
-      - portfolio_network
+      - app_network
     restart: unless-stopped
 
   mailpit:
     image: axllent/mailpit
-    container_name: portfolio_mailpit
     ports:
       - "${MAILPIT_UI_PORT:-8032}:8025"
       - "${MAILPIT_SMTP_PORT:-1032}:1025"
     networks:
-      - portfolio_network
+      - app_network
     restart: unless-stopped
 
 networks:
-  portfolio_network:
+  app_network:
     driver: bridge
