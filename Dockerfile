@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.3-apache AS app
 
 # Dépendances système
 RUN apt-get update && apt-get install -y \
@@ -61,3 +61,20 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 80
+
+# ---------------------------------------------------------------------------
+# Compilation des assets (Tailwind, Alpine, Editor.js) : public/build n'est pas
+# versionné, il doit donc être produit pendant la construction de l'image.
+# Le code complet (vendor compris) est nécessaire car Tailwind analyse aussi
+# les vues de pagination de Laravel.
+# ---------------------------------------------------------------------------
+FROM node:22-alpine AS assets
+WORKDIR /app
+COPY --from=app /var/www/html /app
+RUN npm ci --no-audit --no-fund && npm run build
+
+# ---------------------------------------------------------------------------
+# Image finale
+# ---------------------------------------------------------------------------
+FROM app
+COPY --from=assets --chown=www-data:www-data /app/public/build /var/www/html/public/build

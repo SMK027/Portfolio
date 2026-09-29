@@ -92,6 +92,26 @@ docker compose -f docker-compose.yml up -d --build
 
 En développement, `docker-compose.dev.yml` fournit toujours son propre MariaDB, avec phpMyAdmin et Mailpit.
 
+L'image de production compile elle-même les assets (étape Node du `Dockerfile`) : aucun `npm run build` n'est nécessaire sur le serveur. Laravel fait confiance aux en-têtes `X-Forwarded-*` de Traefik (réseaux Docker privés uniquement), ce qui lui permet de générer des URL en `https://`.
+
+### Dépannage : « Bad Gateway » (502)
+
+Traefik a trouvé le routeur (le certificat est émis), mais rien ne répond sur le port 80 du conteneur. Apache ne démarre qu'**après** l'attente de la base et les migrations : pendant cette phase, ou si le conteneur redémarre en boucle, Docker affiche « Up » alors que Traefik renvoie 502.
+
+```bash
+docker compose ps                        # « Restarting » ou « Up » depuis quelques secondes seulement ?
+docker compose logs app --tail 50        # messages [entrypoint] : base injoignable, APP_KEY vide, migration en erreur…
+curl -I http://127.0.0.1:${APP_PORT:-8089}    # l'application répond-elle en direct, sans Traefik ?
+docker network inspect proxy --format '{{range .Containers}}{{.Name}} {{end}}'        # Traefik ET l'app doivent y figurer
+docker network inspect db_internal --format '{{range .Containers}}{{.Name}} {{end}}'  # l'app ET le serveur de base
+```
+
+Causes fréquentes :
+- `DB_HOST` ne correspond pas au nom du conteneur de base sur `db_internal` ;
+- l'utilisateur MariaDB n'est pas autorisé depuis le réseau Docker (hôte `%`) ;
+- `APP_KEY` est vide ;
+- Traefik n'est pas relié au réseau `proxy`.
+
 
 Au démarrage, le conteneur :
 - génère la clé de l'application si besoin ;

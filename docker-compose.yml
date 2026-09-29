@@ -9,8 +9,10 @@
 services:
   app:
     build: .
+    # Accès direct réservé à la machine hôte (diagnostic : curl -I http://127.0.0.1:8089) ;
+    # le trafic public passe par Traefik via le réseau « proxy ».
     ports:
-      - "${APP_PORT:-8089}:80"
+      - "127.0.0.1:${APP_PORT:-8089}:80"
     volumes:
       - ./storage:/var/www/html/storage
     # L'image ne contient pas le fichier .env : toutes les variables utiles à

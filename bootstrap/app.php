@@ -24,6 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleMaintenanceMode::class,
         ]);
 
+        // Traefik (réseau Docker privé) termine le HTTPS : on fait confiance à ses
+        // en-têtes X-Forwarded-* pour générer des URL en https:// et connaître
+        // l'IP réelle des visiteurs. Seules les plages privées sont acceptées.
+        $middleware->trustProxies(at: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.1']);
+
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

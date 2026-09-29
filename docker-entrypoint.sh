@@ -5,8 +5,13 @@ set -e
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Générer APP_KEY si absente
+# APP_KEY : obligatoire en production (l'image n'embarque pas de fichier .env),
+# générée automatiquement en développement.
 if [ -z "$APP_KEY" ]; then
+    if [ "$APP_ENV" = "production" ]; then
+        echo "[entrypoint] ERREUR : APP_KEY est vide. Générez-la (php artisan key:generate --show) et ajoutez-la au .env du serveur."
+        exit 1
+    fi
     php artisan key:generate --force
     echo "[entrypoint] APP_KEY généré."
 fi
@@ -38,6 +43,8 @@ if [ "${DB_CONNECTION:-mysql}" = "mysql" ] || [ "${DB_CONNECTION}" = "mariadb" ]
 fi
 
 # Exécuter les migrations
+# (tant que cette étape n'est pas terminée, Apache n'écoute pas encore :
+#  Traefik répond « Bad Gateway » — consultez les logs du conteneur)
 echo "[entrypoint] Exécution des migrations..."
 php artisan migrate --force
 echo "[entrypoint] Migrations terminées."
