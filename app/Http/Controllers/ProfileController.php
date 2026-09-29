@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,20 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        if ($user->articles()->exists()) {
+            return Redirect::route('profile.edit')->withErrors(
+                ['password' => 'Vous êtes l\'auteur principal d\'articles : réattribuez-les avant de supprimer votre compte.'],
+                'userDeletion'
+            );
+        }
+
+        if ($user->isSuperAdmin() && User::where('global_role', 'superadmin')->count() === 1) {
+            return Redirect::route('profile.edit')->withErrors(
+                ['password' => 'Vous êtes le dernier super-administrateur : ce compte ne peut pas être supprimé.'],
+                'userDeletion'
+            );
+        }
 
         Auth::logout();
 
