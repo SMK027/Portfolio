@@ -14,6 +14,29 @@ fi
 # Lien symbolique storage → public/storage
 php artisan storage:link --no-interaction 2>/dev/null || true
 
+# Attendre que la base de données soit joignable (serveur local ou centralisé)
+if [ "${DB_CONNECTION:-mysql}" = "mysql" ] || [ "${DB_CONNECTION}" = "mariadb" ]; then
+    echo "[entrypoint] Attente de la base de données ${DB_HOST}:${DB_PORT:-3306}..."
+    timeout="${DB_WAIT_TIMEOUT:-60}"
+    elapsed=0
+    until php -r '
+        try {
+            new PDO(
+                sprintf("mysql:host=%s;port=%s;dbname=%s", getenv("DB_HOST"), getenv("DB_PORT") ?: 3306, getenv("DB_DATABASE")),
+                getenv("DB_USERNAME"), getenv("DB_PASSWORD"), [PDO::ATTR_TIMEOUT => 3]
+            );
+        } catch (Throwable $e) { fwrite(STDERR, $e->getMessage() . PHP_EOL); exit(1); }
+    ' 2>/tmp/db-wait.log; do
+        if [ "$elapsed" -ge "$timeout" ]; then
+            echo "[entrypoint] ERREUR : base injoignable après ${timeout}s : $(tail -1 /tmp/db-wait.log)"
+            exit 1
+        fi
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    echo "[entrypoint] Base de données joignable."
+fi
+
 # Exécuter les migrations
 echo "[entrypoint] Exécution des migrations..."
 php artisan migrate --force

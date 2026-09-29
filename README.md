@@ -61,10 +61,37 @@ Les conteneurs, le réseau et les routeurs Traefik (production) sont nommés d'a
 
 Les ports se modifient via `APP_PORT`, `PMA_PORT`, `DB_FORWARD_PORT`, `MAILPIT_UI_PORT` et `MAILPIT_SMTP_PORT` dans `.env`.
 
-Les fichiers `docker-compose*.yml` utilisent **les mêmes noms de variables que Laravel** (`DB_DATABASE`, `MAIL_HOST`, `MAIL_SCHEME`…). Le fichier `.env` est donc l'unique source de configuration, pour l'application comme pour Docker. En production, l'image n'embarque pas `.env` : toutes les variables utiles sont transmises par `docker-compose.yml`.
-- `DB_ROOT_PASSWORD` est obligatoire en production.
-- `APP_DOMAIN` définit le domaine routé par Traefik.
-- La base n'est exposée que sur `127.0.0.1`.
+Les fichiers `docker-compose*.yml` utilisent **les mêmes noms de variables que Laravel** (`DB_DATABASE`, `MAIL_HOST`, `MAIL_SCHEME`…). Le fichier `.env` est donc l'unique source de configuration, pour l'application comme pour Docker.
+
+## Production (`docker-compose.yml`)
+
+La production **n'embarque pas de base de données**. L'application utilise un serveur MariaDB/MySQL centralisé, joignable via le réseau Docker externe **`db_internal`**. Le conteneur rejoint aussi le réseau externe `proxy` de Traefik.
+
+Prérequis :
+- les réseaux externes `db_internal` et `proxy` existent ;
+- la base et l'utilisateur sont créés sur le serveur central.
+
+Variables obligatoires (le démarrage est refusé sans elles) :
+
+| Variable | Rôle |
+|---|---|
+| `DB_HOST` | Nom du conteneur (ou alias) du serveur central sur le réseau `db_internal` |
+| `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Base et identifiants sur le serveur central |
+
+Variables facultatives :
+- `DB_PORT` (3306 par défaut) ;
+- `DB_WAIT_TIMEOUT` : au démarrage, le conteneur attend jusqu'à ce délai (60 s par défaut) que la base réponde avant de lancer les migrations ;
+- `APP_DOMAIN` : domaine routé par Traefik ;
+- `APP_PORT` : port publié sur l'hôte.
+
+L'image n'embarque pas `.env` : toutes les variables utiles à Laravel sont transmises par `docker-compose.yml`.
+
+```bash
+docker compose -f docker-compose.yml up -d --build
+```
+
+En développement, `docker-compose.dev.yml` fournit toujours son propre MariaDB, avec phpMyAdmin et Mailpit.
+
 
 Au démarrage, le conteneur :
 - génère la clé de l'application si besoin ;

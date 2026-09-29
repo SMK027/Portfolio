@@ -1,6 +1,10 @@
 # Les conteneurs et les routeurs Traefik sont nommés d'après le dossier
 # d'installation (nom de projet Compose) pour éviter les collisions entre
 # plusieurs déploiements. Pour forcer un nom : COMPOSE_PROJECT_NAME dans .env
+#
+# Base de données : aucune base n'est embarquée. L'application utilise un
+# serveur MariaDB/MySQL centralisé, joignable via le réseau Docker externe
+# « db_internal » (DB_HOST = nom du conteneur ou alias sur ce réseau).
 
 services:
   app:
@@ -21,12 +25,13 @@ services:
       - APP_LOCALE=${APP_LOCALE:-fr}
       - APP_FALLBACK_LOCALE=${APP_FALLBACK_LOCALE:-fr}
       - LOG_LEVEL=${LOG_LEVEL:-warning}
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=${DB_DATABASE}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=${DB_HOST:?DB_HOST doit désigner le serveur de base centralisé (réseau db_internal)}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:?DB_DATABASE doit être défini}
+      - DB_USERNAME=${DB_USERNAME:?DB_USERNAME doit être défini}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD doit être défini}
+      - DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT:-60}
       - SESSION_DRIVER=${SESSION_DRIVER:-database}
       - SESSION_LIFETIME=${SESSION_LIFETIME:-120}
       - CACHE_STORE=${CACHE_STORE:-database}
@@ -51,38 +56,13 @@ services:
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=le"
       - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - proxy
-      - app_network
-    restart: unless-stopped
-
-  db:
-    image: mariadb:10.11
-    command: --default-time-zone='+02:00'
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD doit être défini en production}
-      MYSQL_DATABASE: ${DB_DATABASE:-portfolio_db}
-      MYSQL_USER: ${DB_USERNAME:-portfolio_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    ports:
-      # Accessible uniquement depuis la machine hôte (jamais depuis Internet)
-      - "127.0.0.1:${DB_FORWARD_PORT:-3307}:3306"
-    volumes:
-      - ./data/mysql:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app_network
+      - db_internal
     restart: unless-stopped
 
 networks:
   proxy:
     external: true
-  app_network:
-    driver: bridge
+  db_internal:
+    external: true
