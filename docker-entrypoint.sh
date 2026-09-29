@@ -19,11 +19,20 @@ echo "[entrypoint] Exécution des migrations..."
 php artisan migrate --force
 echo "[entrypoint] Migrations terminées."
 
-# Optimiser les caches (config, routes, vues)
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-echo "[entrypoint] Caches reconstruits."
+# Crée le premier administrateur si aucun n'existe
+php artisan db:seed --class=AdminSeeder --force
+
+# Optimiser les caches (config, routes, vues) uniquement en production :
+# en développement, le code est monté en volume et doit être relu à chaque requête.
+if [ "$APP_ENV" = "production" ]; then
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    echo "[entrypoint] Caches reconstruits."
+else
+    php artisan optimize:clear > /dev/null
+    echo "[entrypoint] Caches vidés (environnement $APP_ENV)."
+fi
 
 # Configurer le scheduler Laravel (cron)
 touch /var/log/laravel-scheduler.log

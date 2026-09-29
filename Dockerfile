@@ -36,7 +36,7 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 
 # Configuration PHP (production)
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-RUN printf "upload_max_filesize = 10M\npost_max_size = 12M\nmemory_limit = 256M\n" \
+RUN printf "upload_max_filesize = 20M\npost_max_size = 100M\nmax_file_uploads = 30\nmemory_limit = 256M\n" \
     > "$PHP_INI_DIR/conf.d/custom.ini"
 
 # Répertoire de travail
