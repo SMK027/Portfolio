@@ -108,9 +108,21 @@ docker network inspect db_internal --format '{{range .Containers}}{{.Name}} {{en
 
 Causes fréquentes :
 - `DB_HOST` ne correspond pas au nom du conteneur de base sur `db_internal` ;
-- l'utilisateur MariaDB n'est pas autorisé depuis le réseau Docker (hôte `%`) ;
+- l'utilisateur MariaDB n'est pas autorisé depuis le réseau Docker (hôte `%`) : l'erreur est `[1045] Access denied for user '…'@'172.x.x.x'` ;
+- le mot de passe contient `$` : dans `.env`, Docker Compose remplace `$…` par une variable. Entourez alors la valeur d'apostrophes simples (`DB_PASSWORD='mot$de$passe'`) ;
 - `APP_KEY` est vide ;
 - Traefik n'est pas relié au réseau `proxy`.
+
+L'entrypoint distingue les erreurs définitives (identifiants refusés, base inexistante, droits manquants), signalées immédiatement avec une piste de correction, d'un serveur pas encore prêt, attendu jusqu'à `DB_WAIT_TIMEOUT`.
+
+Création de l'utilisateur sur le serveur central :
+```sql
+CREATE DATABASE IF NOT EXISTS portfolio_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'portfolio'@'%' IDENTIFIED BY 'mot_de_passe';
+ALTER USER 'portfolio'@'%' IDENTIFIED BY 'mot_de_passe';   -- si l'utilisateur existait déjà
+GRANT ALL PRIVILEGES ON portfolio_db.* TO 'portfolio'@'%';
+FLUSH PRIVILEGES;
+```
 
 
 Au démarrage, le conteneur :

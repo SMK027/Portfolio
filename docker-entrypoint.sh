@@ -16,22 +16,49 @@ if [ -z "$APP_KEY" ]; then
     echo "[entrypoint] APP_KEY généré."
 fi
 
-# Lien symbolique storage → public/storage
-php artisan storage:link --no-interaction 2>/dev/null || true
+# Lien symbolique storage → public/storage (une seule fois)
+if [ ! -L public/storage ]; then
+    php artisan storage:link --no-interaction > /dev/null 2>&1 || true
+fi
 
-# Attendre que la base de données soit joignable (serveur local ou centralisé)
+# Attendre que la base de données soit joignable (serveur local ou centralisé).
+# Code de sortie du test : 0 = connecté, 1 = réessayer (serveur pas encore prêt),
+# 2 = erreur définitive (identifiants, base inexistante, droits) : inutile d'attendre.
 if [ "${DB_CONNECTION:-mysql}" = "mysql" ] || [ "${DB_CONNECTION}" = "mariadb" ]; then
     echo "[entrypoint] Attente de la base de données ${DB_HOST}:${DB_PORT:-3306}..."
     timeout="${DB_WAIT_TIMEOUT:-60}"
     elapsed=0
-    until php -r '
-        try {
-            new PDO(
-                sprintf("mysql:host=%s;port=%s;dbname=%s", getenv("DB_HOST"), getenv("DB_PORT") ?: 3306, getenv("DB_DATABASE")),
-                getenv("DB_USERNAME"), getenv("DB_PASSWORD"), [PDO::ATTR_TIMEOUT => 3]
-            );
-        } catch (Throwable $e) { fwrite(STDERR, $e->getMessage() . PHP_EOL); exit(1); }
-    ' 2>/tmp/db-wait.log; do
+    while true; do
+        status=0
+        php -r '
+            try {
+                new PDO(
+                    sprintf("mysql:host=%s;port=%s;dbname=%s", getenv("DB_HOST"), getenv("DB_PORT") ?: 3306, getenv("DB_DATABASE")),
+                    getenv("DB_USERNAME"), getenv("DB_PASSWORD"), [PDO::ATTR_TIMEOUT => 3]
+                );
+            } catch (PDOException $e) {
+                fwrite(STDERR, $e->getMessage() . PHP_EOL);
+                $code = (int) ($e->errorInfo[1] ?? 0);
+                if ($code === 0 && preg_match("/\[(\d{4})\]/", $e->getMessage(), $m)) { $code = (int) $m[1]; }
+                // 1044 : droits refusés sur la base, 1045 : identifiants refusés, 1049 : base inexistante
+                exit(in_array($code, [1044, 1045, 1049], true) ? 2 : 1);
+            }
+        ' 2>/tmp/db-wait.log || status=$?
+
+        [ "$status" -eq 0 ] && break
+
+        if [ "$status" -eq 2 ]; then
+            echo "[entrypoint] ERREUR : connexion refusée par ${DB_HOST} : $(tail -1 /tmp/db-wait.log)"
+            case "$(cat /tmp/db-wait.log)" in
+                *1045*) echo "[entrypoint] → Identifiants refusés. Vérifiez DB_USERNAME / DB_PASSWORD et que l'utilisateur '${DB_USERNAME}' existe pour l'hôte '%' (les conteneurs se connectent depuis une IP du réseau Docker, pas depuis localhost)." ;;
+                *1049*) echo "[entrypoint] → La base '${DB_DATABASE}' n'existe pas sur ${DB_HOST} : créez-la (CREATE DATABASE)." ;;
+                *1044*) echo "[entrypoint] → La base '${DB_DATABASE}' n'existe pas, ou l'utilisateur '${DB_USERNAME}' n'a pas de droits dessus : CREATE DATABASE puis GRANT ALL PRIVILEGES ON \`${DB_DATABASE}\`.* TO '${DB_USERNAME}'@'%';" ;;
+            esac
+            # Pause avant de quitter, pour ne pas saturer les logs lors des redémarrages automatiques.
+            sleep 10
+            exit 1
+        fi
+
         if [ "$elapsed" -ge "$timeout" ]; then
             echo "[entrypoint] ERREUR : base injoignable après ${timeout}s : $(tail -1 /tmp/db-wait.log)"
             exit 1
