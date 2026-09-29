@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticleFileController;
 use App\Http\Controllers\BackgroundController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
@@ -37,6 +38,9 @@ Route::middleware('page:projets')->prefix('projets')->name('projects.')->group(f
 Route::middleware('page:veille')->prefix('veille')->name('articles.')->group(function () {
     Route::get('/', [ArticleController::class, 'index'])->name('index');
     Route::get('/{article}', [ArticleController::class, 'show'])->name('show');
+    Route::get('/{article:id}/fichiers/{file}', [ArticleFileController::class, 'show'])
+        ->scopeBindings()
+        ->name('files.show');
 });
 
 Route::middleware('page:contact')->group(function () {

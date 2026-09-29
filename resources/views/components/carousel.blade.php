@@ -1,7 +1,7 @@
 {{-- Carrousel d'images avec miniatures et mode plein écran --}}
-@props(['images', 'title' => ''])
+@props(['images', 'title' => '', 'label' => 'Images du projet'])
 @php $count = $images->count(); @endphp
-<div x-data="carousel({ count: {{ $count }} })" @keydown.left="prev()" @keydown.right="next()" class="space-y-3" role="region" aria-roledescription="carrousel" aria-label="Images du projet">
+<div x-data="carousel({ count: {{ $count }} })" @keydown.left="prev()" @keydown.right="next()" class="space-y-3" role="region" aria-roledescription="carrousel" aria-label="{{ $label }}">
     <div class="relative overflow-hidden rounded-2xl bg-slate-900" tabindex="0" @touchstart.passive="onTouchStart($event)" @touchend="onTouchEnd($event)">
         <div class="flex transition-transform duration-500 ease-out" :style="`transform: translateX(-${index * 100}%)`">
             @foreach ($images as $i => $image)

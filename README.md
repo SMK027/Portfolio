@@ -8,7 +8,7 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Accueil** : présentation (photo, accroche, texte « À propos », liens, CV), aperçus des compétences, projets et articles
 - **Formations**, **Diplômes**, **Certifications**, **Compétences**
 - **Projets** classés par thèmes (cartes avec image de fond). Chaque projet a un titre, une date, une description, des liens et dépôts GitHub, des fichiers (images en carrousel, PDF, Word, Excel, PowerPoint, LibreOffice), une miniature, des compétences et des thèmes
-- **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
+- **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature, des pièces jointes (images en carrousel, documents à télécharger, comme pour les projets) et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
 - **Contact** : nom, prénom, e-mail, objet, message et consentement obligatoire. Le formulaire est protégé par Google reCAPTCHA v3, un champ piège et une limite de débit. Chaque message est enregistré en base et notifié par e-mail
 
 **Annonces** : des bandeaux s'affichent sous le menu, sur toutes les pages publiques (recherche de stage ou d'alternance, disponibilité, actualité…). Depuis *Administration → Annonces*, chaque annonce se règle ainsi :
@@ -97,4 +97,4 @@ Les tests couvrent notamment la visibilité des pages, les accès à l'administr
 
 Stockage des fichiers :
 - **disque `public`** : photo, CV, badges, fonds de thèmes, miniatures et illustrations d'articles ;
-- **disque `local`** (privé) : fichiers des projets, servis par `ProjectFileController`.
+- **disque `local`** (privé) : pièces jointes des projets et des articles, servies par `ProjectFileController` et `ArticleFileController`. Elles suivent la visibilité de la page parente et, pour les articles, leur statut (brouillon, programmé). Le code est partagé via `IsAttachment` (modèles), `StoresAttachments` (upload) et `ServesAttachments` (envoi).

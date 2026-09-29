@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Concerns\HandlesUploads;
+use App\Http\Controllers\Admin\Concerns\StoresAttachments;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Models\ArticleFile;
 use App\Models\Theme;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +18,7 @@ use Illuminate\View\View;
 
 class ArticleController extends Controller
 {
-    use HandlesUploads;
+    use HandlesUploads, StoresAttachments;
 
     public function index(Request $request): View
     {
@@ -46,7 +48,7 @@ class ArticleController extends Controller
 
     public function edit(Article $article): View
     {
-        $article->load('coauthors', 'themes');
+        $article->load('coauthors', 'themes', 'files');
 
         return view('admin.articles.form', $this->formData($article));
     }
@@ -91,6 +93,7 @@ class ArticleController extends Controller
             'status'       => ['required', Rule::in(['draft', 'published'])],
             'published_at' => ['nullable', 'date'],
             'thumbnail'    => $this->imageRules(),
+            ...$this->attachmentRules(ArticleFile::class),
         ], [
             'coauthors.*.not_in' => 'L\'auteur principal ne peut pas être aussi co-auteur.',
         ]);
@@ -115,6 +118,8 @@ class ArticleController extends Controller
 
         $article->coauthors()->sync($data['coauthors'] ?? []);
         $article->themes()->sync($data['themes'] ?? []);
+
+        $this->syncAttachments($request, $article->files(), ArticleFile::class, 'articles/'.$article->id);
 
         return $article;
     }

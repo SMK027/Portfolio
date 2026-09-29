@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['title', 'excerpt', 'content', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at'])]
@@ -23,6 +25,29 @@ class Article extends Model
             'is_pinned'    => 'boolean',
             'published_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Les pièces jointes physiques sont supprimées avec l'article.
+        static::deleting(fn (Article $article) => $article->files()->each(fn (ArticleFile $file) => $file->delete()));
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(ArticleFile::class)->orderBy('position')->orderBy('id');
+    }
+
+    /** @return Collection<int, ArticleFile> */
+    public function images(): Collection
+    {
+        return $this->files->where('is_image', true)->values();
+    }
+
+    /** @return Collection<int, ArticleFile> */
+    public function documents(): Collection
+    {
+        return $this->files->where('is_image', false)->values();
     }
 
     public function author(): BelongsTo

@@ -44,12 +44,23 @@
             </div>
         </header>
 
-        <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <div class="mx-auto max-w-3xl space-y-10 px-4 py-12 sm:px-6">
+            @if ($article->images()->isNotEmpty())
+                <x-carousel :images="$article->images()" :title="$article->title" label="Images de l'article" />
+            @endif
+
             <div class="editor-content prose-lg">@editorjs($article->content)</div>
+
+            @if ($article->documents()->isNotEmpty())
+                <section>
+                    <h2 class="mb-4 font-display text-xl font-semibold text-slate-900">Documents</h2>
+                    <x-file-list :documents="$article->documents()" />
+                </section>
+            @endif
 
             @auth
                 @if (auth()->user()->isAdmin())
-                    <div class="mt-10 border-t border-slate-200 pt-6">
+                    <div class="border-t border-slate-200 pt-6">
                         <a href="{{ route('admin.articles.edit', $article) }}" class="btn-secondary"><x-icon name="pencil" class="h-4 w-4" /> Modifier cet article</a>
                     </div>
                 @endif

@@ -2,24 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\StoresAttachments;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\Skill;
 use App\Models\Theme;
-use Closure;
-use finfo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
-    /** Types MIME réellement détectés acceptés pour une image. */
-    protected const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    use StoresAttachments;
 
     public function index(Request $request): View
     {
@@ -85,8 +81,6 @@ class ProjectController extends Controller
 
     protected function save(Request $request, Project $project): Project
     {
-        $extensions = implode(',', ProjectFile::allowedExtensions());
-
         $data = $request->validate([
             'title'         => ['required', 'string', 'max:255'],
             'published_on'  => ['required', 'date'],
@@ -98,11 +92,8 @@ class ProjectController extends Controller
             'skills.*'      => ['integer', 'exists:skills,id'],
             'themes'        => ['nullable', 'array'],
             'themes.*'      => ['integer', 'exists:themes,id'],
-            'files'         => ['nullable', 'array', 'max:30'],
-            'files.*'       => ['file', 'max:20480', 'extensions:'.$extensions, $this->imageContentRule()],
             'thumbnail'     => ['nullable', 'string', 'max:20'],
-            'delete_files'  => ['nullable', 'array'],
-            'delete_files.*' => ['integer'],
+            ...$this->attachmentRules(ProjectFile::class),
         ]);
 
         $project->fill([
@@ -125,36 +116,11 @@ class ProjectController extends Controller
                 'position' => $i,
             ]));
 
-        // Suppression des fichiers cochés
-        if (! empty($data['delete_files'])) {
-            $project->files()->whereIn('id', $data['delete_files'])->get()->each->delete();
-        }
-
-        // Nouveaux fichiers
-        $newFiles = [];
-        $position = (int) $project->files()->max('position');
-        foreach ($request->file('files', []) as $index => $upload) {
-            $newFiles[$index] = $this->storeFile($project, $upload, ++$position);
-        }
+        $newFiles = $this->syncAttachments($request, $project->files(), ProjectFile::class, 'projects/'.$project->id);
 
         $project->forceFill(['thumbnail_file_id' => $this->resolveThumbnail($project, $data['thumbnail'] ?? null, $newFiles)])->save();
 
         return $project;
-    }
-
-    protected function storeFile(Project $project, UploadedFile $upload, int $position): ProjectFile
-    {
-        $mime = $this->detectMime($upload);
-        $isImage = in_array(strtolower($upload->getClientOriginalExtension()), ProjectFile::IMAGE_EXTENSIONS, true);
-
-        return $project->files()->create([
-            'path'          => $upload->store('projects/'.$project->id, ProjectFile::DISK),
-            'original_name' => mb_substr(basename($upload->getClientOriginalName()), 0, 255),
-            'mime_type'     => $isImage ? $mime : ($mime ?: 'application/octet-stream'),
-            'size'          => $upload->getSize(),
-            'is_image'      => $isImage,
-            'position'      => $position,
-        ]);
     }
 
     /**
@@ -172,30 +138,5 @@ class ProjectController extends Controller
         };
 
         return $file?->is_image ? $file->id : null;
-    }
-
-    /** Type MIME déterminé à partir du contenu réel du fichier. */
-    protected function detectMime(UploadedFile $file): string
-    {
-        return (string) ((new finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) ?: 'application/octet-stream');
-    }
-
-    /**
-     * Un fichier portant une extension d'image doit réellement être une image
-     * (le contenu est vérifié, pas seulement l'extension).
-     */
-    protected function imageContentRule(): Closure
-    {
-        return function (string $attribute, mixed $value, Closure $fail) {
-            if (! $value instanceof UploadedFile) {
-                return;
-            }
-
-            $isImageExtension = in_array(strtolower($value->getClientOriginalExtension()), ProjectFile::IMAGE_EXTENSIONS, true);
-
-            if ($isImageExtension && ! in_array($this->detectMime($value), self::IMAGE_MIMES, true)) {
-                $fail('Le fichier « '.$value->getClientOriginalName().' » n\'est pas une image valide.');
-            }
-        };
     }
 }

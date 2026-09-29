@@ -34,7 +34,7 @@ class ArticleController extends Controller
         // Brouillons et articles programmés : aperçu réservé aux administrateurs.
         abort_unless($article->isPublished() || $request->user()?->isAdmin(), 404);
 
-        $article->load('author', 'coauthors', 'themes');
+        $article->load('author', 'coauthors', 'themes', 'files');
 
         return view('public.articles.show', [
             'page'    => $request->attributes->get('page'),

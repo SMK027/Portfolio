@@ -6,22 +6,22 @@ use App\Models\Concerns\IsAttachment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProjectFile extends Model
+class ArticleFile extends Model
 {
     use IsAttachment;
 
-    public function project(): BelongsTo
+    public function article(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Article::class);
     }
 
     public function url(): string
     {
-        return route('projects.files.show', [$this->project_id, $this]);
+        return route('articles.files.show', [$this->article_id, $this]);
     }
 
     public function downloadUrl(): string
     {
-        return route('projects.files.show', [$this->project_id, $this, 'download' => 1]);
+        return route('articles.files.show', [$this->article_id, $this, 'download' => 1]);
     }
 }
