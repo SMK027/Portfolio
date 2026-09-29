@@ -13,24 +13,27 @@ services:
       - .:/var/www/html
       - /var/www/html/vendor
       - /var/www/html/node_modules
+    # Mêmes noms de variables que le fichier .env (lus par Laravel) : une seule
+    # source de vérité. Seuls DB_HOST / DB_PORT sont propres au réseau Docker.
     environment:
       - APP_NAME=${APP_NAME:-Portfolio}
       - APP_ENV=local
       - APP_KEY=${APP_KEY}
       - APP_DEBUG=true
       - APP_URL=${APP_URL:-http://localhost:8120}
+      - APP_TIMEZONE=${APP_TIMEZONE:-Europe/Paris}
       - DB_CONNECTION=mysql
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_DATABASE=${DB_NAME:-portfolio_db}
-      - DB_USERNAME=${DB_USER:-portfolio_user}
-      - DB_PASSWORD=${DB_PASS:-portfolio_password}
-      - MAIL_MAILER=smtp
-      - MAIL_HOST=${SMTP_HOST:-mailpit}
-      - MAIL_PORT=${SMTP_PORT:-1025}
-      - MAIL_USERNAME=${SMTP_USER:-}
-      - MAIL_PASSWORD=${SMTP_PASS:-}
-      - MAIL_ENCRYPTION=${SMTP_ENCRYPTION:-null}
+      - DB_DATABASE=${DB_DATABASE:-portfolio_db}
+      - DB_USERNAME=${DB_USERNAME:-portfolio_user}
+      - DB_PASSWORD=${DB_PASSWORD:-portfolio_password}
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_SCHEME=${MAIL_SCHEME:-null}
+      - MAIL_HOST=${MAIL_HOST:-mailpit}
+      - MAIL_PORT=${MAIL_PORT:-1025}
+      - MAIL_USERNAME=${MAIL_USERNAME:-null}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-null}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-portfolio@example.com}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Portfolio}
       - MAIL_TIMEOUT=${MAIL_TIMEOUT:-5}
@@ -61,10 +64,10 @@ services:
     image: mariadb:10.11
     command: --default-time-zone='+01:00'
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: ${DB_NAME:-portfolio_db}
-      MYSQL_USER: ${DB_USER:-portfolio_user}
-      MYSQL_PASSWORD: ${DB_PASS:-portfolio_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-portfolio_db}
+      MYSQL_USER: ${DB_USERNAME:-portfolio_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-portfolio_password}
     ports:
       - "${DB_FORWARD_PORT:-3322}:3306"
     volumes:
@@ -84,8 +87,8 @@ services:
       - "${PMA_PORT:-8121}:80"
     environment:
       PMA_HOST: db
-      PMA_USER: ${DB_USER:-portfolio_user}
-      PMA_PASSWORD: ${DB_PASS:-portfolio_password}
+      PMA_USER: ${DB_USERNAME:-portfolio_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-portfolio_password}
     depends_on:
       - db
     networks:

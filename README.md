@@ -61,6 +61,11 @@ Les conteneurs, le réseau et les routeurs Traefik (production) sont nommés d'a
 
 Les ports se modifient via `APP_PORT`, `PMA_PORT`, `DB_FORWARD_PORT`, `MAILPIT_UI_PORT` et `MAILPIT_SMTP_PORT` dans `.env`.
 
+Les fichiers `docker-compose*.yml` utilisent **les mêmes noms de variables que Laravel** (`DB_DATABASE`, `MAIL_HOST`, `MAIL_SCHEME`…). Le fichier `.env` est donc l'unique source de configuration, pour l'application comme pour Docker. En production, l'image n'embarque pas `.env` : toutes les variables utiles sont transmises par `docker-compose.yml`.
+- `DB_ROOT_PASSWORD` est obligatoire en production.
+- `APP_DOMAIN` définit le domaine routé par Traefik.
+- La base n'est exposée que sur `127.0.0.1`.
+
 Au démarrage, le conteneur :
 - génère la clé de l'application si besoin ;
 - applique les migrations ;

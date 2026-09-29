@@ -1,39 +1,52 @@
 # Les conteneurs et les routeurs Traefik sont nommés d'après le dossier
 # d'installation (nom de projet Compose) pour éviter les collisions entre
 # plusieurs déploiements. Pour forcer un nom : COMPOSE_PROJECT_NAME dans .env
-version: '3.8'
 
 services:
   app:
     build: .
     ports:
-      - "8089:80"
+      - "${APP_PORT:-8089}:80"
     volumes:
       - ./storage:/var/www/html/storage
+    # L'image ne contient pas le fichier .env : toutes les variables utiles à
+    # Laravel doivent être transmises ici (mêmes noms que dans .env).
     environment:
-      - APP_NAME=${APP_NAME:-ToolBox}
+      - APP_NAME=${APP_NAME:-Portfolio}
       - APP_ENV=production
       - APP_KEY=${APP_KEY}
       - APP_DEBUG=false
       - APP_URL=${APP_URL}
+      - APP_TIMEZONE=${APP_TIMEZONE:-Europe/Paris}
+      - APP_LOCALE=${APP_LOCALE:-fr}
+      - APP_FALLBACK_LOCALE=${APP_FALLBACK_LOCALE:-fr}
+      - LOG_LEVEL=${LOG_LEVEL:-warning}
       - DB_CONNECTION=mysql
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_DATABASE=${DB_NAME}
-      - DB_USERNAME=${DB_USER}
-      - DB_PASSWORD=${DB_PASS}
-      - MAIL_MAILER=smtp
-      - MAIL_HOST=${SMTP_HOST}
-      - MAIL_PORT=${SMTP_PORT}
-      - MAIL_USERNAME=${SMTP_USER}
-      - MAIL_PASSWORD=${SMTP_PASS}
-      - MAIL_ENCRYPTION=${SMTP_ENCRYPTION}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SESSION_DRIVER=${SESSION_DRIVER:-database}
+      - SESSION_LIFETIME=${SESSION_LIFETIME:-120}
+      - CACHE_STORE=${CACHE_STORE:-database}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_SCHEME=${MAIL_SCHEME:-null}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-null}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-null}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Portfolio}
       - MAIL_TIMEOUT=${MAIL_TIMEOUT:-5}
+      - CONTACT_RECIPIENT=${CONTACT_RECIPIENT:-}
+      - RECAPTCHA_SITE_KEY=${RECAPTCHA_SITE_KEY:-}
+      - RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY:-}
+      - RECAPTCHA_MIN_SCORE=${RECAPTCHA_MIN_SCORE:-0.5}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`app.example.com`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${APP_DOMAIN:-app.example.com}`)"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=le"
       - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
@@ -50,12 +63,13 @@ services:
     image: mariadb:10.11
     command: --default-time-zone='+02:00'
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: ${DB_NAME:-app_db}
-      MYSQL_USER: ${DB_USER:-app_user}
-      MYSQL_PASSWORD: ${DB_PASS:-app_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD doit être défini en production}
+      MYSQL_DATABASE: ${DB_DATABASE:-portfolio_db}
+      MYSQL_USER: ${DB_USERNAME:-portfolio_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3307:3306"
+      # Accessible uniquement depuis la machine hôte (jamais depuis Internet)
+      - "127.0.0.1:${DB_FORWARD_PORT:-3307}:3306"
     volumes:
       - ./data/mysql:/var/lib/mysql
     healthcheck:
