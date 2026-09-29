@@ -1,3 +1,79 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    [x-cloak] { display: none !important; }
+
+    html { scroll-behavior: smooth; }
+}
+
+@layer components {
+    /* ---------- Boutons ---------- */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+    }
+    .btn-primary { @apply btn bg-primary-600 text-white shadow-sm hover:bg-primary-700; }
+    .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50; }
+    .btn-danger { @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700; }
+    .btn-ghost { @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900; }
+    .btn-sm { @apply px-3 py-1.5 text-xs; }
+
+    /* ---------- Formulaires ---------- */
+    .form-label { @apply mb-1 block text-sm font-medium text-slate-700; }
+    .form-input {
+        @apply block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500;
+    }
+    .form-help { @apply mt-1 text-xs text-slate-500; }
+    .form-error { @apply mt-1 text-sm text-red-600; }
+
+    /* ---------- Cartes / badges ---------- */
+    .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+    .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+    .badge-primary { @apply badge bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200; }
+    .badge-slate { @apply badge bg-slate-100 text-slate-700; }
+    .badge-amber { @apply badge bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200; }
+    .badge-green { @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200; }
+
+    /* ---------- Tableaux d'administration ---------- */
+    .admin-table { @apply min-w-full divide-y divide-slate-200 text-sm; }
+    .admin-table th { @apply bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500; }
+    .admin-table td { @apply px-4 py-3 align-middle text-slate-700; }
+    .admin-table tbody tr { @apply hover:bg-slate-50; }
+
+    /* ---------- Contenu Editor.js rendu ---------- */
+    .editor-content { @apply prose prose-slate max-w-none prose-headings:font-display prose-a:text-primary-600 prose-img:rounded-xl; }
+    .editor-content .text-center { text-align: center; }
+    .editor-content .text-right { text-align: right; }
+    .editor-content .text-justify { text-align: justify; }
+    .editor-content mark,
+    .editor-content .cdx-marker { @apply rounded px-0.5; }
+    .editor-content mark:not([style]) { @apply bg-yellow-200; }
+    .editor-content .inline-code { @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.9em] text-pink-600; }
+    .editor-content .editor-code { @apply overflow-x-auto rounded-xl bg-slate-900 p-4 text-sm text-slate-100; }
+    .editor-content .editor-image { @apply my-6; }
+    .editor-content .editor-image img { @apply mx-auto my-0; }
+    .editor-content .editor-image.with-border img { @apply border border-slate-200; }
+    .editor-content .editor-image.with-background { @apply rounded-xl bg-slate-100 p-6; }
+    .editor-content .editor-image.with-background img { @apply max-w-[60%]; }
+    .editor-content .editor-image.is-stretched img { @apply w-full; }
+    .editor-content figcaption { @apply mt-2 text-center text-sm text-slate-500; }
+    .editor-content .editor-quote blockquote { @apply border-l-4 border-primary-400; }
+    .editor-content .editor-quote.text-center blockquote { @apply border-l-0; }
+    .editor-content .editor-delimiter { @apply mx-auto my-10 w-24 border-t-2 border-slate-200; }
+    .editor-content .editor-table { @apply overflow-x-auto; }
+    .editor-content .editor-warning { @apply my-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900; }
+    .editor-content .editor-warning p { @apply my-0; }
+    .editor-content .editor-warning-title { @apply font-semibold; }
+    .editor-content .editor-checklist { @apply list-none pl-0; }
+    .editor-content .editor-checklist li { @apply flex items-start gap-2 pl-0; }
+    .editor-content .editor-check { @apply mt-1.5 inline-block h-4 w-4 flex-none rounded border border-slate-400; }
+    .editor-content .editor-check.is-checked { @apply border-primary-600 bg-primary-600; background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e"); }
+    .editor-content .editor-embed-frame { @apply relative aspect-video overflow-hidden rounded-xl; }
+    .editor-content .editor-embed-frame iframe { @apply absolute inset-0 h-full w-full; }
+
+    /* ---------- Zone d'édition Editor.js (back-office) ---------- */
+    .editorjs-holder { @apply min-h-[300px] rounded-lg border border-slate-300 bg-white px-4 py-4 shadow-sm sm:px-14; }
+    .editorjs-holder .ce-block__content,
+    .editorjs-holder .ce-toolbar__content { max-width: none; }
+}
