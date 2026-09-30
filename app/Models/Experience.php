@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasDatePrecision;
+use App\Support\EditorContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['title', 'company', 'location', 'contract_type', 'start_date', 'end_date', 'description', 'position'])]
+#[Fillable(['title', 'company', 'location', 'contract_type', 'start_date', 'end_date', 'description', 'description_editor', 'description_markdown', 'position'])]
 class Experience extends Model
 {
     use HasDatePrecision;
@@ -20,6 +21,7 @@ class Experience extends Model
         return [
             'start_date' => 'date',
             'end_date'   => 'date',
+            'description' => 'array',
         ];
     }
 
@@ -27,6 +29,11 @@ class Experience extends Model
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderByDesc('start_date');
+    }
+
+    public function hasDescription(): bool
+    {
+        return ! EditorContent::isEmpty($this->description);
     }
 
     public function isOngoing(): bool

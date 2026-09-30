@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\HandlesRichText;
 use App\Http\Controllers\Admin\Concerns\ValidatesPreciseDates;
 use App\Http\Controllers\Controller;
 use App\Models\Experience;
@@ -11,7 +12,7 @@ use Illuminate\View\View;
 
 class ExperienceController extends Controller
 {
-    use ValidatesPreciseDates;
+    use HandlesRichText, ValidatesPreciseDates;
 
     public function index(): View
     {
@@ -57,7 +58,6 @@ class ExperienceController extends Controller
             'company'       => ['required', 'string', 'max:255'],
             'location'      => ['nullable', 'string', 'max:255'],
             'contract_type' => ['nullable', 'string', 'max:50'],
-            'description'   => ['nullable', 'string', 'max:10000'],
             'position'      => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
 
@@ -70,6 +70,7 @@ class ExperienceController extends Controller
             $dates['end_date'] = null;
         }
 
-        return ['position' => (int) ($data['position'] ?? 0)] + $dates + $data;
+        return ['position' => (int) ($data['position'] ?? 0)] + $dates + $data
+            + $this->richText($request, 'description', false, 'missions et réalisations');
     }
 }

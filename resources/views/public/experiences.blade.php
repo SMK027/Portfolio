@@ -22,8 +22,8 @@
                             <p class="mt-1 text-slate-600">
                                 {{ $experience->company }}@if ($experience->location)<span class="text-slate-400"> · {{ $experience->location }}</span>@endif
                             </p>
-                            @if ($experience->description)
-                                <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-600">{{ $experience->description }}</p>
+                            @if ($experience->hasDescription())
+                                <div class="editor-content prose-sm mt-3 text-slate-600">@editorjs($experience->description)</div>
                             @endif
                         </article>
                     </li>

@@ -140,6 +140,7 @@ class ContentTransfer
     {
         return Experience::ordered()->get()->map(fn (Experience $e) => [
             ...$e->only(['title', 'company', 'location', 'contract_type', 'description', 'position']),
+            ...($e->description_editor === 'markdown' ? ['description_markdown' => $e->description_markdown] : []),
             ...$this->exportDates($e, ['start_date', 'end_date']),
         ])->all();
     }
@@ -455,12 +456,21 @@ class ContentTransfer
             'company'       => ['required', 'string', 'max:255'],
             'location'      => ['nullable', 'string', 'max:255'],
             'contract_type' => ['nullable', 'string', 'max:50'],
-            'description'   => ['nullable', 'string', 'max:10000'],
+            'description'   => ['nullable'],
+            'description_markdown' => ['nullable', 'string'],
             'position'      => ['nullable', 'integer', 'min:0', 'max:999'],
         ], ['start_date' => true, 'end_date' => false]);
         if ($data === null) {
             return;
         }
+
+        // Missions : Markdown, contenu Editor.js, HTML ou texte brut.
+        $markdown = $data['description_markdown'] ?? null;
+        $data['description'] = filled($markdown)
+            ? $this->markdownConverter->convert($markdown)
+            : EditorContent::fromInput($data['description'] ?? null, $this->imageResolver());
+        $data['description_editor'] = filled($markdown) ? 'markdown' : 'blocks';
+        $data['description_markdown'] = filled($markdown) ? $markdown : null;
 
         $model = Experience::where('title', $data['title'])->where('company', $data['company'])
             ->whereDate('start_date', $data['start_date'])->first() ?? new Experience;

@@ -28,7 +28,7 @@
                     </label>
                 </div>
             </div>
-            <x-form.textarea name="description" label="Missions et réalisations" :value="$experience->description" rows="6" />
+            <x-form.editor name="description" label="Missions et réalisations" :value="$experience->description" :mode="$experience->description_editor" :markdown="$experience->description_markdown" with-markdown placeholder="Missions, projets menés, résultats…" />
             <x-form.input name="position" type="number" label="Ordre d'affichage" :value="$experience->position" min="0" max="999" class="sm:w-40" help="0 = automatique (du plus récent au plus ancien)." />
         </x-admin.section>
 
