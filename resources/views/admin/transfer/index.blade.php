@@ -2,7 +2,9 @@
     <x-slot name="title">Import / export</x-slot>
     <x-slot name="header">Import / export</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.transfer.example') }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Fichier modèle</a>
+        @can('panel', 'content.import')
+            <a href="{{ route('admin.transfer.example') }}" class="btn-secondary"><x-icon name="download" class="h-4 w-4" /> Fichier modèle</a>
+        @endcan
     </x-slot>
 
     {{-- Rapport de simulation ou d'import --}}
@@ -86,6 +88,7 @@
 
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- Export --}}
+        @can('panel', 'content.export')
         <form method="POST" action="{{ route('admin.transfer.export') }}" class="card flex flex-col p-4 sm:p-6">
             @csrf
             <h2 class="font-display text-base font-semibold text-slate-900">Exporter</h2>
@@ -97,7 +100,10 @@
             </div>
         </form>
 
+        @endcan
+
         {{-- Import --}}
+        @can('panel', 'content.import')
         <form method="POST" action="{{ route('admin.transfer.preview') }}" enctype="multipart/form-data" class="card flex flex-col p-4 sm:p-6">
             @csrf
             <h2 class="font-display text-base font-semibold text-slate-900">Importer</h2>
@@ -119,5 +125,6 @@
                 <button class="btn-primary"><x-icon name="eye" class="h-4 w-4" /> Simuler l'import</button>
             </div>
         </form>
+        @endcan
     </div>
 </x-app-layout>

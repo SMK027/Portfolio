@@ -70,10 +70,21 @@ Route::get('/dashboard', function () {
 
     return match (true) {
         $user->isAdmin()          => redirect()->route('admin.dashboard'),
+        $user->isBot()            => redirect(collect([
+            $user->canWriteArticles() ? route('admin.articles.index') : null,
+            $user->hasBotPermission('projects.read|projects.write') ? route('admin.projets.index') : null,
+            $user->hasBotPermission('announcements.read|announcements.write') ? route('admin.annonces.index') : null,
+            $user->hasBotPermission('messages.read') ? route('admin.messages.index') : null,
+            $user->hasBotPermission('content.export|content.import') ? route('admin.transfer.index') : null,
+            $user->hasBotPermission('maintenance.manage') ? route('admin.maintenance.edit') : null,
+        ])->filter()->first() ?? route('bot.idle')),
         $user->canWriteArticles() => redirect()->route('admin.articles.index'),
         default                   => redirect()->route('profile.edit'),
     };
 })->middleware('auth')->name('dashboard');
+
+// Bot sans aucune autorisation : page d'information
+Route::get('/admin/aucun-acces', fn () => view('admin.bot-idle'))->middleware('auth')->name('bot.idle');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -97,9 +108,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->middleware('throttle:5,1')
         ->name('mail.test');
 
-    Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->name('maintenance.edit');
-    Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->name('maintenance.update');
-
     Route::get('/referencement', [Admin\SeoController::class, 'edit'])->name('seo.edit');
     Route::put('/referencement', [Admin\SeoController::class, 'update'])->name('seo.update');
 
@@ -118,26 +126,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->except('show')->parameters(['competences' => 'skill']);
     Route::post('/themes/rapide', [Admin\ThemeController::class, 'quickStore'])->name('themes.quick');
     Route::resource('themes', Admin\ThemeController::class)->except('show');
-    Route::resource('projets', Admin\ProjectController::class)
-        ->except('show')->parameters(['projets' => 'project']);
-    Route::delete('/projets/{project}/fichiers/{file}', [Admin\ProjectController::class, 'destroyFile'])
-        ->scopeBindings()
-        ->name('projets.files.destroy');
 
-    Route::resource('annonces', Admin\AnnouncementController::class)
-        ->except('show')->parameters(['annonces' => 'announcement']);
-
-    Route::prefix('import-export')->name('transfer.')->controller(Admin\TransferController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::post('/export', 'export')->name('export');
-        Route::get('/modele', 'example')->name('example');
-        Route::post('/simulation', 'preview')->name('preview');
-        Route::post('/import', 'import')->name('import');
-        Route::delete('/import', 'cancel')->name('cancel');
-    });
-
-    Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->name('messages.index');
-    Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
 
     // Comptes de service et leurs autorisations : super-administrateurs uniquement
@@ -145,7 +134,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::resource('comptes-service', Admin\ServiceAccountController::class)
             ->parameters(['comptes-service' => 'serviceAccount'])->names('service-accounts');
         Route::post('/comptes-service/{serviceAccount}/codes', [Admin\ServiceAccountController::class, 'issueToken'])->name('service-accounts.tokens.store');
-        Route::delete('/comptes-service/{serviceAccount}/codes/{token}', [Admin\ServiceAccountController::class, 'revokeToken'])->name('service-accounts.tokens.revoke');
+        Route::patch('/comptes-service/{serviceAccount}/codes/{token}', [Admin\ServiceAccountController::class, 'toggleToken'])->name('service-accounts.tokens.toggle');
+        Route::delete('/comptes-service/{serviceAccount}/codes/{token}', [Admin\ServiceAccountController::class, 'destroyToken'])->name('service-accounts.tokens.destroy');
     });
 
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
@@ -154,6 +144,47 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('utilisateurs', Admin\UserController::class)
         ->except('show')->parameters(['utilisateurs' => 'user']);
 
+});
+
+/*
+|--------------------------------------------------------------------------
+| Sections accessibles aux bots selon leurs autorisations
+|--------------------------------------------------------------------------
+| « can:panel,<autorisation> » : administrateurs, ou bots disposant de
+| l'autorisation (plusieurs possibles, séparées par « | »).
+*/
+
+Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
+    // Guillemets : sans eux, le middleware « can » y verrait un nom de paramètre de route.
+    $panel = fn (string $permissions) => "can:panel,'{$permissions}'";
+
+    Route::resource('projets', Admin\ProjectController::class)
+        ->except('show')->parameters(['projets' => 'project'])
+        ->middlewareFor(['index', 'edit'], $panel('projects.read|projects.write'))
+        ->middlewareFor(['create', 'store', 'update'], $panel('projects.write'))
+        ->middlewareFor('destroy', $panel('projects.delete'));
+    Route::delete('/projets/{project}/fichiers/{file}', [Admin\ProjectController::class, 'destroyFile'])
+        ->scopeBindings()->middleware($panel('projects.write'))->name('projets.files.destroy');
+
+    Route::resource('annonces', Admin\AnnouncementController::class)
+        ->except('show')->parameters(['annonces' => 'announcement'])
+        ->middlewareFor(['index', 'edit'], $panel('announcements.read|announcements.write'))
+        ->middlewareFor(['create', 'store', 'update', 'destroy'], $panel('announcements.write'));
+
+    Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->middleware($panel('messages.read'))->name('messages.index');
+    Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
+
+    Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->middleware($panel('maintenance.manage'))->name('maintenance.edit');
+    Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->middleware($panel('maintenance.manage'))->name('maintenance.update');
+
+    Route::prefix('import-export')->name('transfer.')->controller(Admin\TransferController::class)->group(function () use ($panel) {
+        Route::get('/', 'index')->middleware($panel('content.export|content.import'))->name('index');
+        Route::post('/export', 'export')->middleware($panel('content.export'))->name('export');
+        Route::get('/modele', 'example')->middleware($panel('content.import'))->name('example');
+        Route::post('/simulation', 'preview')->middleware($panel('content.import'))->name('preview');
+        Route::post('/import', 'import')->middleware($panel('content.import'))->name('import');
+        Route::delete('/import', 'cancel')->middleware($panel('content.import'))->name('cancel');
+    });
 });
 
 /*
@@ -168,7 +199,9 @@ Route::middleware(['auth', 'can:write-articles'])->prefix('admin')->name('admin.
     Route::resource('articles', Admin\ArticleController::class);
     Route::post('/articles/{article}/valider', [Admin\ArticleController::class, 'approve'])->name('articles.approve');
     Route::post('/articles/{article}/renvoyer', [Admin\ArticleController::class, 'requestChanges'])->name('articles.request-changes');
+});
 
+Route::middleware(['auth', 'can:use-editor'])->prefix('admin')->name('admin.')->group(function () {
     // Outils de l'éditeur : illustrations et conversions visuel ⇄ Markdown
     Route::post('/uploads/image', Admin\EditorUploadController::class)
         ->middleware('throttle:60,1')

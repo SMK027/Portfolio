@@ -11,6 +11,7 @@ use App\Models\User;
  * - Contributeurs : consultent tous les articles, créent des brouillons,
  *   modifient ceux dont ils sont auteur ou co-auteur et les soumettent à
  *   validation. Ils ne publient, n'épinglent et ne suppriment rien.
+ * - Bots : selon leurs autorisations (articles.read / write / publish / delete).
  */
 class ArticlePolicy
 {
@@ -26,34 +27,37 @@ class ArticlePolicy
 
     public function create(User $user): bool
     {
-        return $user->canWriteArticles();
+        return $user->isAdmin() || $user->isContributor() || $user->hasBotPermission('articles.write');
     }
 
     public function update(User $user, Article $article): bool
     {
-        return $user->isAdmin() || ($user->isContributor() && $article->isAuthoredBy($user));
+        return $user->isAdmin()
+            || ($user->isContributor() && $article->isAuthoredBy($user))
+            || $user->hasBotPermission('articles.write');
     }
 
     /** Publier, programmer, épingler, changer l'auteur principal. */
     public function publish(User $user, ?Article $article = null): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->hasBotPermission('articles.publish');
     }
 
     /** Soumettre à validation (ou retirer la demande). */
     public function submit(User $user, Article $article): bool
     {
-        return $user->isContributor() && $article->published_at === null && $article->isAuthoredBy($user);
+        return $article->published_at === null
+            && (($user->isContributor() && $article->isAuthoredBy($user)) || $user->hasBotPermission('articles.write'));
     }
 
     /** Valider ou renvoyer en brouillon un article soumis. */
     public function review(User $user, Article $article): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->hasBotPermission('articles.publish');
     }
 
     public function delete(User $user, Article $article): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->hasBotPermission('articles.delete');
     }
 }

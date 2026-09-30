@@ -41,7 +41,7 @@
 
             <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="mx-auto max-w-6xl space-y-6">
-                    @if (auth()->user()->isContributor() && app(\App\Services\Maintenance::class)->isActive())
+                    @if ((auth()->user()->isContributor() || auth()->user()->isBot()) && app(\App\Services\Maintenance::class)->isActive())
                         <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                             <x-icon name="wrench" class="h-5 w-5 flex-none" />
                             <p>Le site est en maintenance : les pages publiques sont inaccessibles, mais vous pouvez continuer à rédiger vos articles.</p>

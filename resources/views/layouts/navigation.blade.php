@@ -11,6 +11,17 @@
         ],
     ] : [];
 
+    if ($user->isBot()) {
+        $sections = ['Sections autorisées' => array_values(array_filter([
+            $user->canWriteArticles() ? ['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*'] : null,
+            $user->hasBotPermission('projects.read|projects.write') ? ['admin.projets.index', 'Projets', 'folder', 'admin.projets.*'] : null,
+            $user->hasBotPermission('announcements.read|announcements.write') ? ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*'] : null,
+            $user->hasBotPermission('messages.read') ? ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'] : null,
+            $user->hasBotPermission('content.export|content.import') ? ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*'] : null,
+            $user->hasBotPermission('maintenance.manage') ? ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'] : null,
+        ]))];
+    }
+
     $sections = $user->isAdmin() ? [
         '' => [
             ['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard'],
@@ -41,7 +52,7 @@
     // Réservé aux super-administrateurs
     if ($user->isSuperAdmin()) {
         $sections['Sécurité'] = [
-            ['admin.service-accounts.index', 'Comptes de service', 'cog', 'admin.service-accounts.*'],
+            ['admin.service-accounts.index', 'Comptes de service et bots', 'cog', 'admin.service-accounts.*'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
         ];
     }
@@ -90,6 +101,7 @@
     <div>
         <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Compte</p>
         <ul class="space-y-0.5">
+            @unless ($user->isMachine())
             <li>
                 <a href="{{ route('profile.edit') }}" @class([
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
@@ -99,6 +111,7 @@
                     <x-icon name="cog" class="h-5 w-5 text-slate-500" /> Mon compte
                 </a>
             </li>
+            @endunless
             <li>
                 <a href="{{ url('/') }}" target="_blank" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-white/5 hover:text-white">
                     <x-icon name="external" class="h-5 w-5 text-slate-500" /> Voir le site

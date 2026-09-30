@@ -17,6 +17,8 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        abort_if($request->user()->isMachine(), 403, 'Les comptes techniques n\'ont pas de page « Mon compte ».');
+
         return view('profile.edit', [
             'user' => $request->user(),
         ]);
@@ -27,6 +29,8 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        abort_if($request->user()->isMachine(), 403, 'Les comptes techniques n\'ont pas de page « Mon compte ».');
+
         $request->user()->fill($request->validated());
 
         if ($request->user()->isDirty('email')) {
@@ -43,6 +47,8 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        abort_if($request->user()->isMachine(), 403, 'Les comptes techniques n\'ont pas de page « Mon compte ».');
+
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
         ]);

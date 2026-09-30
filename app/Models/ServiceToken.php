@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Code d'application d'un compte de service.
+ * Code d'application d'un compte technique (service : API ; bot : connexion au panel).
  * Seule l'empreinte SHA-256 est conservée : le code n'est affiché qu'à sa création.
  */
-#[Fillable(['user_id', 'name', 'token_hash', 'token_prefix', 'created_by', 'last_used_at', 'last_used_ip', 'revoked_at'])]
+#[Fillable(['user_id', 'name', 'token_hash', 'token_prefix', 'created_by', 'last_used_at', 'last_used_ip', 'disabled_at'])]
 #[Hidden(['token_hash'])]
 class ServiceToken extends Model
 {
@@ -26,7 +26,7 @@ class ServiceToken extends Model
     {
         return [
             'last_used_at' => 'datetime',
-            'revoked_at'   => 'datetime',
+            'disabled_at'  => 'datetime',
         ];
     }
 
@@ -62,7 +62,7 @@ class ServiceToken extends Model
 
     public function scopeActive(Builder $query): void
     {
-        $query->whereNull('revoked_at');
+        $query->whereNull('disabled_at');
     }
 
     public function user(): BelongsTo
@@ -75,9 +75,15 @@ class ServiceToken extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function isRevoked(): bool
+    public function isDisabled(): bool
     {
-        return $this->revoked_at !== null;
+        return $this->disabled_at !== null;
+    }
+
+    /** Code utilisable : actif et rattaché à un compte technique actif. */
+    public function isUsable(): bool
+    {
+        return ! $this->isDisabled() && $this->user?->isMachine() && $this->user->is_active;
     }
 
     public function auditLabel(): string

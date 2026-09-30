@@ -28,14 +28,14 @@ class AuthenticateServiceToken
             $this->audit->record('api.auth_failed', $account, meta: [
                 'raison' => match (true) {
                     $plain === ''          => 'code absent',
-                    ! $token               => 'code inconnu ou révoqué',
-                    default                => 'compte de service désactivé',
+                    ! $token               => 'code inconnu ou désactivé',
+                    default                => 'compte désactivé ou non autorisé à l\'API',
                 },
                 'préfixe' => $plain !== '' ? substr($plain, 0, 12) : null,
                 'route'   => $request->method().' '.$request->path(),
             ], force: true);
 
-            return response()->json(['message' => 'Code d\'application invalide, révoqué ou compte désactivé.'], 401);
+            return response()->json(['message' => 'Code d\'application invalide, désactivé ou compte désactivé.'], 401);
         }
 
         // Dernière utilisation (au plus une écriture par minute).

@@ -13,7 +13,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Comptes de service (API) : création, autorisations et codes d'application.
+ * Comptes de service (API) et bots (connexion au panel) : création,
+ * autorisations et codes d'application.
  * Réservé aux super-administrateurs.
  */
 class ServiceAccountController extends Controller
@@ -21,8 +22,8 @@ class ServiceAccountController extends Controller
     public function index(): View
     {
         return view('admin.service-accounts.index', [
-            'accounts' => User::where('global_role', 'service')
-                ->withCount(['serviceTokens as active_tokens_count' => fn ($q) => $q->whereNull('revoked_at')])
+            'accounts' => User::whereIn('global_role', ['service', 'bot'])
+                ->withCount(['serviceTokens as active_tokens_count' => fn ($q) => $q->whereNull('disabled_at')])
                 ->withMax('serviceTokens as last_used_at', 'last_used_at')
                 ->orderBy('name')->get(),
         ]);
@@ -30,13 +31,14 @@ class ServiceAccountController extends Controller
 
     public function create(): View
     {
-        return view('admin.service-accounts.form', ['account' => new User(['is_active' => true, 'permissions' => []])]);
+        return view('admin.service-accounts.form', ['account' => new User(['is_active' => true, 'permissions' => [], 'global_role' => 'service'])]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $base = 'svc-'.(Str::slug($data['name']) ?: 'compte');
+        $type = $request->validate(['type' => ['required', Rule::in(['service', 'bot'])]])['type'];
+        $base = ($type === 'bot' ? 'bot-' : 'svc-').(Str::slug($data['name']) ?: 'compte');
         $username = $base;
         for ($i = 2; User::where('username', $username)->exists(); $i++) {
             $username = $base.'-'.$i;
@@ -46,13 +48,13 @@ class ServiceAccountController extends Controller
             ...$data,
             'username'          => $username,
             'email'             => $username.'@service.invalid',
-            'password'          => Str::random(64), // jamais utilisé : connexion au panel impossible
-            'global_role'       => 'service',
+            'password'          => Str::random(64), // jamais utilisé : connexion par mot de passe refusée
+            'global_role'       => $type,
             'email_verified_at' => now(),
         ]);
 
         return redirect()->route('admin.service-accounts.show', $account)
-            ->with('success', 'Compte de service créé. Générez maintenant un code d\'application.');
+            ->with('success', ($type === 'bot' ? 'Bot' : 'Compte de service').' créé. Générez maintenant un code d\'application.');
     }
 
     public function show(User $serviceAccount): View
@@ -107,16 +109,26 @@ class ServiceAccountController extends Controller
             ->with('service_token', ['id' => $token->id, 'name' => $token->name, 'plain' => $plain]);
     }
 
-    public function revokeToken(User $serviceAccount, ServiceToken $token): RedirectResponse
+    /** Active ou désactive un code : effet immédiat (API et sessions de bot). */
+    public function toggleToken(User $serviceAccount, ServiceToken $token): RedirectResponse
     {
         $this->ensureService($serviceAccount);
         abort_unless($token->user_id === $serviceAccount->id, 404);
 
-        if (! $token->isRevoked()) {
-            $token->update(['revoked_at' => now()]);
-        }
+        $token->update(['disabled_at' => $token->isDisabled() ? null : now()]);
 
-        return back()->with('success', 'Code « '.$token->name.' » révoqué : il ne fonctionne plus.');
+        return back()->with('success', 'Code « '.$token->name.' » '.($token->isDisabled() ? 'désactivé : il ne fonctionne plus.' : 'réactivé.'));
+    }
+
+    /** Suppression définitive (code compromis). */
+    public function destroyToken(User $serviceAccount, ServiceToken $token): RedirectResponse
+    {
+        $this->ensureService($serviceAccount);
+        abort_unless($token->user_id === $serviceAccount->id, 404);
+
+        $token->delete();
+
+        return back()->with('success', 'Code « '.$token->name.' » supprimé définitivement.');
     }
 
     /** @return array<string, mixed> */
@@ -140,6 +152,6 @@ class ServiceAccountController extends Controller
 
     protected function ensureService(User $user): void
     {
-        abort_unless($user->isService(), 404);
+        abort_unless($user->isMachine(), 404);
     }
 }

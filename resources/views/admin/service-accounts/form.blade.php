@@ -1,16 +1,32 @@
 @php $editing = $account->exists; $granted = old('permissions', $account->permissions ?? []); @endphp
 <x-app-layout>
-    <x-slot name="title">{{ $editing ? 'Modifier le compte de service' : 'Nouveau compte de service' }}</x-slot>
-    <x-slot name="header">{{ $editing ? $account->name : 'Nouveau compte de service' }}</x-slot>
+    <x-slot name="title">{{ $editing ? 'Modifier le compte' : 'Nouveau compte de service ou bot' }}</x-slot>
+    <x-slot name="header">{{ $editing ? $account->name : 'Nouveau compte de service ou bot' }}</x-slot>
 
     <form method="POST" action="{{ $editing ? route('admin.service-accounts.update', $account) : route('admin.service-accounts.store') }}" class="space-y-6">
         @csrf
         @if ($editing) @method('PUT') @endif
 
         <x-admin.section>
+            @if ($editing)
+                <p class="text-sm text-slate-600">Type : <span class="badge-slate">{{ $account->isBot() ? 'Bot' : 'Compte de service' }}</span></p>
+            @else
+                <fieldset>
+                    <legend class="form-label">Type</legend>
+                    <div class="space-y-1.5">
+                        @foreach (['service' => ['Compte de service', 'Utilise l\'API avec ses codes d\'application.'], 'bot' => ['Bot', 'Se connecte au panel avec un code d\'application (page « Connexion bot ») et n\'accède qu\'aux sections autorisées.']] as $value => [$label, $help])
+                            <label class="flex items-start gap-2 text-sm text-slate-700">
+                                <input type="radio" name="type" value="{{ $value }}" @checked(old('type', 'service') === $value) class="mt-0.5 border-slate-300 text-primary-600 focus:ring-primary-500">
+                                <span><strong>{{ $label }}</strong> — {{ $help }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('type')<p class="form-error">{{ $message }}</p>@enderror
+                </fieldset>
+            @endif
             <x-form.input name="name" label="Nom" :value="$account->name" required maxlength="100" placeholder="Ex. : Import depuis l'ancien site" />
             <x-form.textarea name="description" label="Usage" :value="$account->description" rows="2" maxlength="500" help="À quoi sert ce compte ? Qui l'utilise ?" />
-            <x-form.checkbox name="is_active" label="Compte actif" :checked="$account->is_active" help="Un compte désactivé ne peut plus utiliser l'API, même avec des codes valides." />
+            <x-form.checkbox name="is_active" label="Compte actif" :checked="$account->is_active" help="Un compte désactivé ne peut plus utiliser l'API ni se connecter, même avec des codes valides." />
         </x-admin.section>
 
         <x-admin.section title="Autorisations" description="Accordez uniquement ce dont l'outil a besoin. Toute requête hors de ces autorisations est refusée.">
@@ -37,7 +53,7 @@
     </form>
 
     @if ($editing)
-        <form method="POST" action="{{ route('admin.service-accounts.destroy', $account) }}" onsubmit="return confirm('Supprimer ce compte de service et invalider tous ses codes ?')" class="text-right">
+        <form method="POST" action="{{ route('admin.service-accounts.destroy', $account) }}" onsubmit="return confirm('Supprimer ce compte et invalider tous ses codes ?')" class="text-right">
             @csrf @method('DELETE')
             <button class="btn-ghost text-red-600"><x-icon name="trash" class="h-4 w-4" /> Supprimer ce compte</button>
         </form>

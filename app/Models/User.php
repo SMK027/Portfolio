@@ -59,6 +59,9 @@ class User extends Authenticatable
         if ($this->isService()) {
             return 'Compte de service';
         }
+        if ($this->isBot()) {
+            return 'Bot';
+        }
 
         return self::ROLES[$this->global_role] ?? ucfirst((string) $this->global_role);
     }
@@ -80,10 +83,38 @@ class User extends Authenticatable
         return $this->global_role === 'service';
     }
 
+    /** Bot : connexion au panel par code d'application, avec des autorisations limitées. */
+    public function isBot(): bool
+    {
+        return $this->global_role === 'bot';
+    }
+
+    /** Compte technique (service ou bot) : jamais de mot de passe ni de page « Mon compte ». */
+    public function isMachine(): bool
+    {
+        return $this->isService() || $this->isBot();
+    }
+
     /** Autorisation API d'un compte de service actif. */
     public function hasServicePermission(string $permission): bool
     {
         return $this->isService() && $this->is_active && in_array($permission, $this->permissions ?? [], true);
+    }
+
+    /** Autorisation d'un bot actif (une ou plusieurs séparées par « | »). */
+    public function hasBotPermission(string $permissions): bool
+    {
+        if (! $this->isBot() || ! $this->is_active) {
+            return false;
+        }
+
+        return (bool) array_intersect(explode('|', $permissions), $this->permissions ?? []);
+    }
+
+    /** Accès à une section du panel : administrateurs, ou bots autorisés. */
+    public function canUsePanel(string $permissions): bool
+    {
+        return $this->isAdmin() || $this->hasBotPermission($permissions);
     }
 
     public function serviceTokens(): HasMany
@@ -94,13 +125,13 @@ class User extends Authenticatable
     /** Comptes humains (hors comptes de service). */
     public function scopeHumans(\Illuminate\Database\Eloquent\Builder $query): void
     {
-        $query->where('global_role', '!=', 'service');
+        $query->whereNotIn('global_role', ['service', 'bot']);
     }
 
     /** Accès à l'éditeur d'articles (administrateurs et contributeurs). */
     public function canWriteArticles(): bool
     {
-        return $this->isAdmin() || $this->isContributor();
+        return $this->isAdmin() || $this->isContributor() || $this->hasBotPermission('articles.read|articles.write');
     }
 
     public function isSuperAdmin(): bool

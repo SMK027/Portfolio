@@ -222,7 +222,7 @@ class ArticleController extends Controller
 
         // Un contributeur co-auteur reste co-auteur (il garde ainsi l'accès à l'article).
         $coauthors = collect($data['coauthors'] ?? [])->map(fn ($id) => (int) $id);
-        if (! $canPublish && $article->author_id !== $user->id) {
+        if (! $canPublish && $user->isContributor() && $article->author_id !== $user->id) {
             $coauthors->push($user->id);
         }
         $article->coauthors()->sync($coauthors->unique()->reject(fn ($id) => $id === $article->author_id)->values()->all());

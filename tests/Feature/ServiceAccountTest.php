@@ -23,7 +23,7 @@ class ServiceAccountTest extends TestCase
     protected function createAccount(array $permissions = ['articles.read']): User
     {
         $this->actingAs($this->super)->post(route('admin.service-accounts.store'), [
-            'name' => 'Import ancien site', 'description' => 'Migration', 'is_active' => '1', 'permissions' => $permissions,
+            'type' => 'service', 'name' => 'Import ancien site', 'description' => 'Migration', 'is_active' => '1', 'permissions' => $permissions,
         ])->assertSessionHasNoErrors();
 
         return User::where('global_role', 'service')->latest('id')->first();
@@ -90,18 +90,28 @@ class ServiceAccountTest extends TestCase
         $this->actingAs($this->super)->get(route('admin.articles.create'))->assertDontSee('Import ancien site');
     }
 
-    public function test_revoking_a_code(): void
+    public function test_disabling_reenabling_and_deleting_a_code(): void
     {
         $account = $this->createAccount();
         [$token, $plain] = ServiceToken::issue($account, 'Test');
+        $headers = ['Authorization' => 'Bearer '.$plain];
 
-        $this->getJson('/api/v1/me', ['Authorization' => 'Bearer '.$plain])->assertOk();
+        $this->getJson('/api/v1/me', $headers)->assertOk();
 
-        $this->actingAs($this->super)->delete(route('admin.service-accounts.tokens.revoke', [$account, $token]));
-        $this->assertTrue($token->fresh()->isRevoked());
+        $this->actingAs($this->super)->patch(route('admin.service-accounts.tokens.toggle', [$account, $token]));
+        $this->assertTrue($token->fresh()->isDisabled());
         $this->assertNotNull(AuditLog::where('action', 'service_token.updated')->first());
-
         auth()->logout();
-        $this->getJson('/api/v1/me', ['Authorization' => 'Bearer '.$plain])->assertUnauthorized();
+        $this->getJson('/api/v1/me', $headers)->assertUnauthorized();
+
+        $this->actingAs($this->super)->patch(route('admin.service-accounts.tokens.toggle', [$account, $token]));
+        $this->assertFalse($token->fresh()->isDisabled());
+        auth()->logout();
+        $this->getJson('/api/v1/me', $headers)->assertOk();
+
+        $this->actingAs($this->super)->delete(route('admin.service-accounts.tokens.destroy', [$account, $token]));
+        $this->assertNull($token->fresh());
+        auth()->logout();
+        $this->getJson('/api/v1/me', $headers)->assertUnauthorized();
     }
 }

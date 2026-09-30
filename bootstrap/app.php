@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Après la session et l'authentification, pour laisser passer les administrateurs.
         $middleware->web(append: [
+            \App\Http\Middleware\EnsureBotTokenIsValid::class,
             \App\Http\Middleware\HandleMaintenanceMode::class,
         ]);
 

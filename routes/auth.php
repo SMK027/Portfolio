@@ -14,6 +14,10 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
+    // Bots : connexion par code d'application
+    Route::get('login/bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'create'])->name('login.bot');
+    Route::post('login/bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'store']);
+
     // L'inscription publique est désactivée : les comptes sont créés depuis l'administration.
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 

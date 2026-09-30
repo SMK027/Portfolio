@@ -44,4 +44,8 @@
             </x-primary-button>
         </div>
     </form>
+
+    <p class="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
+        <a href="{{ route('login.bot') }}" class="hover:text-slate-600">Connexion d'un bot (code d'application)</a>
+    </p>
 </x-guest-layout>

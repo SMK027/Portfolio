@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Annonces</x-slot>
     <x-slot name="header">Annonces</x-slot>
+    @can('panel', 'announcements.write')
     <x-slot name="actions"><a href="{{ route('admin.annonces.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Nouvelle annonce</a></x-slot>
+    @endcan
 
     <p class="text-sm text-slate-500">
         Les annonces s'affichent en bandeau sous le menu, sur toutes les pages publiques : recherche de stage ou d'alternance,
@@ -33,7 +35,7 @@
                             </td>
                             <td class="whitespace-nowrap text-right">
                                 <x-admin.edit-link :href="route('admin.annonces.edit', $announcement)" />
-                                <x-admin.delete-button :action="route('admin.annonces.destroy', $announcement)" />
+                                @can('panel', 'announcements.write')<x-admin.delete-button :action="route('admin.annonces.destroy', $announcement)" />@endcan
                             </td>
                         </tr>
                     @endforeach

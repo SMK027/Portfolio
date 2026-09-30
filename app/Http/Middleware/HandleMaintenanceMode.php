@@ -16,7 +16,7 @@ class HandleMaintenanceMode
 {
     /** Toujours accessibles : connexion des administrateurs et fichiers techniques. */
     protected const ALLOWED_PATHS = [
-        'login', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
+        'login', 'login/bot', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
         'admin', 'admin/*', 'robots.txt',
     ];
 
@@ -40,7 +40,7 @@ class HandleMaintenanceMode
 
         if ($user?->isAdmin()
             || $request->is(...self::ALLOWED_PATHS)
-            || ($user?->canWriteArticles() && $request->is(...self::WRITER_PATHS))
+            || (($user?->canWriteArticles() || $user?->isBot()) && $request->is(...self::WRITER_PATHS))
             || ! $this->maintenance->isActive()) {
             return $next($request);
         }

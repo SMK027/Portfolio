@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Projets</x-slot>
     <x-slot name="header">Projets</x-slot>
+    @can('panel', 'projects.write')
     <x-slot name="actions"><a href="{{ route('admin.projets.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Nouveau projet</a></x-slot>
+    @endcan
 
     <form method="GET" class="flex gap-2">
         <input type="search" name="q" value="{{ request('q') }}" placeholder="Rechercher un projet…" class="form-input max-w-sm">
@@ -35,7 +37,7 @@
                             <td class="whitespace-nowrap text-right">
                                 <a href="{{ route('projects.show', $project) }}" target="_blank" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 inline-block" title="Voir" aria-label="Voir"><x-icon name="eye" class="h-4 w-4" /></a>
                                 <x-admin.edit-link :href="route('admin.projets.edit', $project)" />
-                                <x-admin.delete-button :action="route('admin.projets.destroy', $project)" confirm="Supprimer ce projet et tous ses fichiers ?" />
+                                @can('panel', 'projects.delete')<x-admin.delete-button :action="route('admin.projets.destroy', $project)" confirm="Supprimer ce projet et tous ses fichiers ?" />@endcan
                             </td>
                         </tr>
                     @endforeach

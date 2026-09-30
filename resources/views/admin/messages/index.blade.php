@@ -1,6 +1,7 @@
 <x-app-layout>
     <x-slot name="title">Messages</x-slot>
     <x-slot name="header">Messages reçus</x-slot>
+    @if (auth()->user()->isAdmin())
     <x-slot name="actions">
         <form method="POST" action="{{ route('admin.mail.test') }}">
             @csrf
@@ -9,6 +10,7 @@
             </button>
         </form>
     </x-slot>
+    @endif
 
     @if ($messages->isEmpty())
         <x-empty-state icon="inbox" message="Aucun message reçu pour le moment." />

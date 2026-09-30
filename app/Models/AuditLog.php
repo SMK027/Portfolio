@@ -52,6 +52,7 @@ class AuditLog extends Model
         'auth.failed'       => 'Échec de connexion',
         'auth.lockout'      => 'Connexions bloquées (trop de tentatives)',
         'auth.password_reset' => 'Mot de passe réinitialisé',
+        'auth.session_revoked' => 'Session coupée (code désactivé ou supprimé)',
         'api.auth_failed'   => 'Code d\'application refusé',
         'api.forbidden'     => 'Requête API refusée (autorisation manquante)',
         'api.messages_read' => 'Messages lus via l\'API',

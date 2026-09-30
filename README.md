@@ -61,9 +61,10 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 | Administrateur | Gestion du contenu, accès aux pages privées |
 | Contributeur | Accès à la rédaction d'articles uniquement : consulte tous les articles (brouillons compris), modifie ceux dont il est auteur ou co-auteur, crée des brouillons et les soumet à validation |
 
-**Comptes de service et API** (*Sécurité → Comptes de service*, super-administrateurs uniquement) :
+**Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;
-- chaque code a un intitulé et reste valide jusqu'à sa révocation. Il n'est affiché qu'une fois, et seule son empreinte SHA-256 est conservée ;
+- un **bot** se connecte au panel sur `/login/bot` avec un code d'application (jamais par mot de passe). Il ne voit que les sections couvertes par ses autorisations (menu « Sections autorisées »), n'a pas de page « Mon compte » et n'utilise pas l'API. Il garde l'accès au panel pendant une maintenance ;
+- chaque code a un intitulé ; il n'est affiché qu'une fois, et seule son empreinte SHA-256 est conservée. Un code peut être **désactivé / réactivé**, ou **supprimé définitivement** en cas de compromission. L'effet est immédiat : l'API le refuse et toute session de bot ouverte avec ce code est coupée dès la requête suivante (de même si le compte est désactivé) ;
 - chaque compte reçoit des autorisations précises : articles (lire, écrire, publier, supprimer), projets, annonces, messages, export, import, maintenance. Toute requête hors autorisation est refusée et journalisée ;
 - l'API est limitée à 120 requêtes par minute et par code. La documentation des routes se trouve dans la page des comptes de service.
 

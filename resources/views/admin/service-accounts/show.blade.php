@@ -20,7 +20,7 @@
     @endif
 
     <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <x-admin.section title="Codes d'application" description="Chaque code reste valide jusqu'à sa révocation. Utilisez un code par outil ou par machine pour pouvoir les révoquer séparément.">
+        <x-admin.section title="Codes d'application" description="Un code désactivé ou supprimé cesse immédiatement de fonctionner (y compris les sessions de bot ouvertes avec lui). Utilisez un code par outil ou par machine pour pouvoir les couper séparément.">
             @if ($tokens->isEmpty())
                 <p class="text-sm text-slate-500">Aucun code pour l'instant.</p>
             @else
@@ -28,20 +28,24 @@
                     @foreach ($tokens as $token)
                         <li class="flex flex-wrap items-center justify-between gap-3 py-3">
                             <div class="min-w-0">
-                                <p class="font-medium {{ $token->isRevoked() ? 'text-slate-400 line-through' : 'text-slate-900' }}">{{ $token->name }}</p>
+                                <p class="font-medium {{ $token->isDisabled() ? 'text-slate-400' : 'text-slate-900' }}">{{ $token->name }}
+                                    @if ($token->isDisabled())<span class="badge-slate ml-1">désactivé le {{ $token->disabled_at->format('d/m/Y') }}</span>@endif
+                                </p>
                                 <p class="text-xs text-slate-500">
                                     <code>{{ $token->token_prefix }}…</code> · créé {{ $token->created_at->translatedFormat('j F Y') }}@if ($token->creator) par {{ $token->creator->name }}@endif
                                     · {{ $token->last_used_at ? 'utilisé '.$token->last_used_at->diffForHumans().($token->last_used_ip ? ' ('.$token->last_used_ip.')' : '') : 'jamais utilisé' }}
                                 </p>
                             </div>
-                            @if ($token->isRevoked())
-                                <span class="badge-slate">révoqué le {{ $token->revoked_at->format('d/m/Y') }}</span>
-                            @else
-                                <form method="POST" action="{{ route('admin.service-accounts.tokens.revoke', [$account, $token]) }}" onsubmit="return confirm('Révoquer ce code ? Les outils qui l\'utilisent perdront l\'accès.')">
-                                    @csrf @method('DELETE')
-                                    <button class="btn-secondary btn-sm text-red-600">Révoquer</button>
+                            <div class="flex gap-2">
+                                <form method="POST" action="{{ route('admin.service-accounts.tokens.toggle', [$account, $token]) }}">
+                                    @csrf @method('PATCH')
+                                    <button class="btn-secondary btn-sm">{{ $token->isDisabled() ? 'Activer' : 'Désactiver' }}</button>
                                 </form>
-                            @endif
+                                <form method="POST" action="{{ route('admin.service-accounts.tokens.destroy', [$account, $token]) }}" onsubmit="return confirm('Supprimer définitivement ce code ? Les outils ou sessions qui l\'utilisent perdront immédiatement l\'accès.')">
+                                    @csrf @method('DELETE')
+                                    <button class="btn-secondary btn-sm text-red-600">Supprimer définitivement</button>
+                                </form>
+                            </div>
                         </li>
                     @endforeach
                 </ul>
@@ -56,6 +60,7 @@
 
         <x-admin.section title="Compte">
             <p class="text-sm">
+                <span class="badge-slate">{{ $account->isBot() ? 'Bot' : 'Compte de service' }}</span>
                 @if ($account->is_active)<span class="badge-green">Actif</span>@else<span class="badge bg-red-50 text-red-700">Désactivé</span>@endif
             </p>
             @if ($account->description)<p class="text-sm text-slate-600">{{ $account->description }}</p>@endif
@@ -71,5 +76,12 @@
         </x-admin.section>
     </div>
 
-    @include('admin.service-accounts.partials.api-docs')
+    @if ($account->isBot())
+        <x-admin.section title="Connexion du bot">
+            <p class="text-sm text-slate-600">Le bot se connecte sur <a href="{{ route('login.bot') }}" class="font-mono text-primary-600">{{ route('login.bot') }}</a> avec l'un de ses codes actifs.
+                La session est vérifiée à chaque requête : désactiver ou supprimer le code, ou désactiver le compte, la coupe immédiatement.</p>
+        </x-admin.section>
+    @else
+        @include('admin.service-accounts.partials.api-docs')
+    @endif
 </x-app-layout>
