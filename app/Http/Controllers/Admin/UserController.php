@@ -20,7 +20,7 @@ class UserController extends Controller
     public function index(): View
     {
         return view('admin.users.index', [
-            'users' => User::withCount('articles')->orderBy('name')->get(),
+            'users' => User::humans()->withCount('articles')->orderBy('name')->get(),
         ]);
     }
 
@@ -45,6 +45,7 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
+        abort_if($user->isService(), 404); // géré dans « Comptes de service »
         Gate::authorize('manage-users');
 
         return view('admin.users.form', ['user' => $user]);
@@ -52,6 +53,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        abort_if($user->isService(), 404); // géré dans « Comptes de service »
         Gate::authorize('manage-users');
 
         $data = $this->validated($request, $user);
@@ -71,6 +73,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        abort_if($user->isService(), 404); // géré dans « Comptes de service »
         Gate::authorize('manage-users');
 
         if ($user->is($request->user())) {

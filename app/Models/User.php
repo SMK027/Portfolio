@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'avatar', 'bio'])]
+#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'permissions', 'description', 'is_active', 'avatar', 'bio'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'permissions'       => 'array',
+            'is_active'         => 'boolean',
         ];
     }
 
@@ -54,6 +56,10 @@ class User extends Authenticatable
 
     public function roleLabel(): string
     {
+        if ($this->isService()) {
+            return 'Compte de service';
+        }
+
         return self::ROLES[$this->global_role] ?? ucfirst((string) $this->global_role);
     }
 
@@ -66,6 +72,29 @@ class User extends Authenticatable
     public function isContributor(): bool
     {
         return $this->global_role === 'user';
+    }
+
+    /** Compte de service : accès à l'API uniquement (codes d'application), jamais au panel. */
+    public function isService(): bool
+    {
+        return $this->global_role === 'service';
+    }
+
+    /** Autorisation API d'un compte de service actif. */
+    public function hasServicePermission(string $permission): bool
+    {
+        return $this->isService() && $this->is_active && in_array($permission, $this->permissions ?? [], true);
+    }
+
+    public function serviceTokens(): HasMany
+    {
+        return $this->hasMany(ServiceToken::class)->latest('id');
+    }
+
+    /** Comptes humains (hors comptes de service). */
+    public function scopeHumans(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('global_role', '!=', 'service');
     }
 
     /** Accès à l'éditeur d'articles (administrateurs et contributeurs). */

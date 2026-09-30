@@ -16,7 +16,10 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Carbon;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
@@ -64,6 +67,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-users', fn (User $user) => $user->isSuperAdmin());
         Gate::define('write-articles', fn (User $user) => $user->canWriteArticles());
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
+
+        // API : 120 requêtes par minute et par code d'application (ou par IP sans code).
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by(
+            $request->bearerToken() ? hash('sha256', $request->bearerToken()) : $request->ip()
+        ));
 
         $this->registerAuditListeners();
 

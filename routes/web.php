@@ -140,6 +140,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
 
+    // Comptes de service et leurs autorisations : super-administrateurs uniquement
+    Route::middleware('can:manage-service-accounts')->group(function () {
+        Route::resource('comptes-service', Admin\ServiceAccountController::class)
+            ->parameters(['comptes-service' => 'serviceAccount'])->names('service-accounts');
+        Route::post('/comptes-service/{serviceAccount}/codes', [Admin\ServiceAccountController::class, 'issueToken'])->name('service-accounts.tokens.store');
+        Route::delete('/comptes-service/{serviceAccount}/codes/{token}', [Admin\ServiceAccountController::class, 'revokeToken'])->name('service-accounts.tokens.revoke');
+    });
+
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 

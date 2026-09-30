@@ -42,7 +42,8 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Les comptes de service n'utilisent que l'API (codes d'application).
+        if (! Auth::attemptWhen($this->only('email', 'password'), fn ($user) => ! $user->isService(), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

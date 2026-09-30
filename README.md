@@ -61,6 +61,19 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 | Administrateur | Gestion du contenu, accès aux pages privées |
 | Contributeur | Accès à la rédaction d'articles uniquement : consulte tous les articles (brouillons compris), modifie ceux dont il est auteur ou co-auteur, crée des brouillons et les soumet à validation |
 
+**Comptes de service et API** (*Sécurité → Comptes de service*, super-administrateurs uniquement) :
+- un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;
+- chaque code a un intitulé et reste valide jusqu'à sa révocation. Il n'est affiché qu'une fois, et seule son empreinte SHA-256 est conservée ;
+- chaque compte reçoit des autorisations précises : articles (lire, écrire, publier, supprimer), projets, annonces, messages, export, import, maintenance. Toute requête hors autorisation est refusée et journalisée ;
+- l'API est limitée à 120 requêtes par minute et par code. La documentation des routes se trouve dans la page des comptes de service.
+
+**Journal d'activité** (*Sécurité → Journal d'activité*, super-administrateurs) : toutes les opérations d'administration faites depuis le panel, l'API ou la console sont enregistrées :
+- connexions, déconnexions, échecs et blocages ;
+- créations, modifications (avec les champs avant / après) et suppressions ;
+- validations d'articles, imports et exports, codes créés ou révoqués, refus d'accès à l'API, lectures de messages via l'API…
+
+Les secrets ne sont jamais enregistrés et les actions du site public sont ignorées. Le journal ne peut être ni modifié ni supprimé depuis l'application.
+
 **Validation des articles des contributeurs** :
 - les articles créés par un contributeur restent en brouillon ; il les **soumet pour validation** quand ils sont prêts ;
 - un administrateur les relit, puis les **publie** (immédiatement ou à une date programmée) ou les **renvoie en brouillon** avec un commentaire ;

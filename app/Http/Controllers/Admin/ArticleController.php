@@ -151,7 +151,7 @@ class ArticleController extends Controller
     {
         return [
             'article' => $article,
-            'users'   => User::orderBy('name')->get(),
+            'users'   => User::humans()->orderBy('name')->get(),
             'themes'  => Theme::ordered()->get(),
         ];
     }

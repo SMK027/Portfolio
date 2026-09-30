@@ -41,6 +41,7 @@
     // Réservé aux super-administrateurs
     if ($user->isSuperAdmin()) {
         $sections['Sécurité'] = [
+            ['admin.service-accounts.index', 'Comptes de service', 'cog', 'admin.service-accounts.*'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
         ];
     }
