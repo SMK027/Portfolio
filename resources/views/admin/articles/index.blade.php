@@ -55,7 +55,7 @@
                                 @if ($article->isPendingReview() && $article->submitted_at)<p class="mt-0.5 text-xs text-slate-400">soumis le {{ $article->submitted_at->format('d/m/Y') }}</p>@endif
                             </td>
                             <td class="whitespace-nowrap text-right">
-                                <a href="{{ route('admin.articles.show', $article) }}" class="inline-block rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Consulter" aria-label="Consulter"><x-icon name="eye" class="h-4 w-4" /></a>
+                                <a href="{{ route('admin.articles.show', $article) }}" class="inline-flex items-center justify-center align-middle rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Consulter" aria-label="Consulter"><x-icon name="eye" class="h-4 w-4" /></a>
                                 @can('update', $article)
                                     <x-admin.edit-link :href="route('admin.articles.edit', $article)" />
                                 @endcan

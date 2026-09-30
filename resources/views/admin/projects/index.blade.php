@@ -35,7 +35,7 @@
                             </td>
                             <td class="hidden lg:table-cell">{{ $project->files_count }}</td>
                             <td class="whitespace-nowrap text-right">
-                                <a href="{{ route('projects.show', $project) }}" target="_blank" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 inline-block" title="Voir" aria-label="Voir"><x-icon name="eye" class="h-4 w-4" /></a>
+                                <a href="{{ route('projects.show', $project) }}" target="_blank" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 inline-flex items-center justify-center align-middle" title="Voir" aria-label="Voir"><x-icon name="eye" class="h-4 w-4" /></a>
                                 <x-admin.edit-link can="projects.write" :href="route('admin.projets.edit', $project)" />
                                 <x-admin.delete-button can="projects.delete" :action="route('admin.projets.destroy', $project)" confirm="Supprimer ce projet et tous ses fichiers ?" />
                             </td>

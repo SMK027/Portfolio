@@ -29,7 +29,7 @@
                             <td class="text-sm">{{ $account->active_tokens_count }}</td>
                             <td class="hidden text-xs text-slate-500 lg:table-cell">{{ $account->last_used_at ? \Illuminate\Support\Carbon::parse($account->last_used_at)->diffForHumans() : 'jamais' }}</td>
                             <td class="whitespace-nowrap text-right">
-                                <a href="{{ route('admin.service-accounts.show', $account) }}" class="inline-block rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Codes et détails" aria-label="Codes et détails"><x-icon name="eye" class="h-4 w-4" /></a>
+                                <a href="{{ route('admin.service-accounts.show', $account) }}" class="inline-flex items-center justify-center align-middle rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Codes et détails" aria-label="Codes et détails"><x-icon name="eye" class="h-4 w-4" /></a>
                                 <x-admin.edit-link :href="route('admin.service-accounts.edit', $account)" />
                             </td>
                         </tr>
