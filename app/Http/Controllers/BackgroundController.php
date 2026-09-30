@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Certification;
 use App\Models\Diploma;
 use App\Models\Education;
+use App\Models\Experience;
+use App\Models\Hobby;
 use App\Models\Skill;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,6 +21,22 @@ class BackgroundController extends Controller
         return view('public.formations', [
             'page'       => $request->attributes->get('page'),
             'educations' => Education::ordered()->get(),
+        ]);
+    }
+
+    public function experiences(Request $request): View
+    {
+        return view('public.experiences', [
+            'page'        => $request->attributes->get('page'),
+            'experiences' => Experience::ordered()->get(),
+        ]);
+    }
+
+    public function hobbies(Request $request): View
+    {
+        return view('public.hobbies', [
+            'page'    => $request->attributes->get('page'),
+            'hobbies' => Hobby::ordered()->get(),
         ]);
     }
 

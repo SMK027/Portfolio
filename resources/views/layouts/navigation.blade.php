@@ -10,9 +10,11 @@
         'Contenu' => [
             ['admin.profile.edit', 'Présentation', 'user', 'admin.profile.*'],
             ['admin.formations.index', 'Formations', 'academic-cap', 'admin.formations.*'],
+            ['admin.experiences.index', 'Expériences', 'briefcase', 'admin.experiences.*'],
             ['admin.diplomes.index', 'Diplômes', 'diploma', 'admin.diplomes.*'],
             ['admin.certifications.index', 'Certifications', 'badge', 'admin.certifications.*'],
             ['admin.competences.index', 'Compétences', 'sparkles', 'admin.competences.*'],
+            ['admin.loisirs.index', 'Loisirs', 'heart', 'admin.loisirs.*'],
             ['admin.themes.index', 'Thèmes', 'tag', 'admin.themes.*'],
             ['admin.projets.index', 'Projets', 'folder', 'admin.projets.*'],
             ['admin.articles.index', 'Veille', 'newspaper', 'admin.articles.*'],

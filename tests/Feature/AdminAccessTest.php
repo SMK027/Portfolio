@@ -16,6 +16,8 @@ class AdminAccessTest extends TestCase
         return array_map(fn ($route) => [$route], [
             'admin.dashboard', 'admin.profile.edit', 'admin.pages.index',
             'admin.formations.index', 'admin.formations.create',
+            'admin.experiences.index', 'admin.experiences.create',
+            'admin.loisirs.index', 'admin.loisirs.create',
             'admin.diplomes.index', 'admin.diplomes.create',
             'admin.certifications.index', 'admin.certifications.create',
             'admin.competences.index', 'admin.competences.create',

@@ -17,6 +17,8 @@ class PageVisibilityTest extends TestCase
         return [
             'accueil'        => ['home', '/'],
             'formations'     => ['formations', '/formations'],
+            'experiences'    => ['experiences', '/experiences'],
+            'loisirs'        => ['loisirs', '/loisirs'],
             'diplomes'       => ['diplomes', '/diplomes'],
             'certifications' => ['certifications', '/certifications'],
             'competences'    => ['competences', '/competences'],
@@ -29,6 +31,7 @@ class PageVisibilityTest extends TestCase
     #[DataProvider('publicRoutes')]
     public function test_public_pages_are_accessible(string $key, string $url): void
     {
+        Page::where('key', $key)->update(['is_public' => true]);
         $this->get($url)->assertOk();
     }
 

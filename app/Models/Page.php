@@ -16,11 +16,13 @@ class Page extends Model
     public const ROUTES = [
         'home'           => 'home',
         'formations'     => 'formations',
+        'experiences'    => 'experiences',
         'diplomes'       => 'diplomes',
         'certifications' => 'certifications',
         'competences'    => 'competences',
         'projets'        => 'projects.index',
         'veille'         => 'articles.index',
+        'loisirs'        => 'loisirs',
         'contact'        => 'contact.show',
     ];
 

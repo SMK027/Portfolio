@@ -28,6 +28,8 @@ Route::get('/formations', [BackgroundController::class, 'formations'])->middlewa
 Route::get('/diplomes', [BackgroundController::class, 'diplomas'])->middleware('page:diplomes')->name('diplomes');
 Route::get('/certifications', [BackgroundController::class, 'certifications'])->middleware('page:certifications')->name('certifications');
 Route::get('/competences', [BackgroundController::class, 'skills'])->middleware('page:competences')->name('competences');
+Route::get('/experiences', [BackgroundController::class, 'experiences'])->middleware('page:experiences')->name('experiences');
+Route::get('/loisirs', [BackgroundController::class, 'hobbies'])->middleware('page:loisirs')->name('loisirs');
 
 Route::middleware('page:projets')->prefix('projets')->name('projects.')->group(function () {
     Route::get('/', [ProjectController::class, 'index'])->name('index');
@@ -99,6 +101,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::resource('formations', Admin\EducationController::class)
         ->except('show')->parameters(['formations' => 'education']);
+    Route::resource('experiences', Admin\ExperienceController::class)->except('show');
+    Route::resource('loisirs', Admin\HobbyController::class)
+        ->except('show')->parameters(['loisirs' => 'hobby']);
     Route::resource('diplomes', Admin\DiplomaController::class)
         ->except('show')->parameters(['diplomes' => 'diploma']);
     Route::resource('certifications', Admin\CertificationController::class)->except('show');

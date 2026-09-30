@@ -73,6 +73,7 @@
     @php
         $shortcuts = collect([
             ['formations', 'formations', 'academic-cap'],
+            ['experiences', 'experiences', 'briefcase'],
             ['diplomes', 'diplomes', 'diploma'],
             ['certifications', 'certifications', 'badge'],
             ['competences', 'competences', 'sparkles'],
@@ -80,7 +81,7 @@
     @endphp
     @if ($shortcuts->isNotEmpty())
         <section class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div @class(['grid grid-cols-2 gap-4', 'md:grid-cols-4' => $shortcuts->count() % 4 === 0, 'md:grid-cols-3' => $shortcuts->count() % 4 !== 0, 'lg:grid-cols-5' => $shortcuts->count() === 5])>
                 @foreach ($shortcuts as [$key, $route, $icon])
                     @php $p = \App\Models\Page::findByKey($key); @endphp
                     <a href="{{ route($route) }}" class="card group flex flex-col gap-3 p-5 transition hover:border-primary-200 hover:shadow-md">
