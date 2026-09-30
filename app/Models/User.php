@@ -36,7 +36,7 @@ class User extends Authenticatable
     public const ROLES = [
         'superadmin' => 'Super-administrateur',
         'admin'      => 'Administrateur',
-        'user'       => 'Contributeur (co-auteur sans accès admin)',
+        'user'       => 'Contributeur (rédige des articles soumis à validation)',
     ];
 
     public function articles(): HasMany
@@ -57,6 +57,18 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return in_array($this->global_role, ['admin', 'superadmin']);
+    }
+
+    /** Contributeur : accès à la rédaction d'articles uniquement (publication validée par un admin). */
+    public function isContributor(): bool
+    {
+        return $this->global_role === 'user';
+    }
+
+    /** Accès à l'éditeur d'articles (administrateurs et contributeurs). */
+    public function canWriteArticles(): bool
+    {
+        return $this->isAdmin() || $this->isContributor();
     }
 
     public function isSuperAdmin(): bool

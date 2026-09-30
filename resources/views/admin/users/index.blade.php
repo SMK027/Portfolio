@@ -6,8 +6,9 @@
     @endcan
 
     <p class="text-sm text-slate-500">
-        Les <strong>administrateurs</strong> gèrent le contenu et voient les pages privées. Les <strong>contributeurs</strong> peuvent être désignés
-        auteurs ou co-auteurs d'articles, sans accès à l'administration. Seuls les super-administrateurs gèrent les comptes.
+        Les <strong>administrateurs</strong> gèrent le contenu et voient les pages privées. Les <strong>contributeurs</strong> accèdent uniquement
+        à la rédaction d'articles : ils consultent tous les articles, modifient ceux dont ils sont auteurs ou co-auteurs, et leurs
+        nouveaux articles sont publiés après validation par un administrateur. Seuls les super-administrateurs gèrent les comptes.
     </p>
 
     <div class="card overflow-x-auto">

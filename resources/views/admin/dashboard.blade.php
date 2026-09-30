@@ -44,6 +44,20 @@
         </a>
     @endunless
 
+    @if ($pendingArticles->isNotEmpty())
+        <x-admin.section title="Articles à valider" description="Soumis par des contributeurs : relisez-les puis publiez-les ou renvoyez-les en brouillon.">
+            @foreach ($pendingArticles as $pending)
+                <a href="{{ route('admin.articles.show', $pending) }}" class="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
+                    <span class="min-w-0">
+                        <span class="block truncate text-sm font-medium text-slate-800">{{ $pending->title }}</span>
+                        <span class="block text-xs text-slate-500">{{ $pending->author?->name }} · soumis {{ $pending->submitted_at?->diffForHumans() }}</span>
+                    </span>
+                    <span class="btn-secondary btn-sm flex-none">Relire</span>
+                </a>
+            @endforeach
+        </x-admin.section>
+    @endif
+
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         @foreach ($stats as $stat)
             <a href="{{ route($stat['route']) }}" class="card p-5 transition hover:border-primary-200 hover:shadow-md">

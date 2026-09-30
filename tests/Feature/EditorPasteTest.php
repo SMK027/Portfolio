@@ -100,11 +100,9 @@ class EditorPasteTest extends TestCase
         $this->assertFalse($fetcher->isPublicIp('100.100.0.1'));
     }
 
-    public function test_only_admins_can_use_the_endpoint(): void
+    public function test_guests_cannot_use_the_endpoint(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->postJson(route('admin.uploads.image-url'), ['url' => $this->pngDataUri()])
-            ->assertForbidden();
+        $this->postJson(route('admin.uploads.image-url'), ['url' => $this->pngDataUri()])->assertUnauthorized();
     }
 
     public function test_article_gallery_offers_insertion_into_the_text(): void

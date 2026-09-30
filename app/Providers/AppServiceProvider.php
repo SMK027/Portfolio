@@ -35,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale(config('app.locale'));
 
         Gate::define('manage-users', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('write-articles', fn (User $user) => $user->canWriteArticles());
 
         // Menu et présentation partagés par toutes les pages publiques.
         View::composer('layouts.public', function ($view) {

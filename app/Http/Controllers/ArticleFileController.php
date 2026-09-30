@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ServesAttachments;
 use App\Models\Article;
 use App\Models\ArticleFile;
+use App\Models\Page;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -18,7 +19,15 @@ class ArticleFileController extends Controller
 
     public function show(Request $request, Article $article, ArticleFile $file): StreamedResponse
     {
-        abort_unless($article->isPublished() || $request->user()?->isAdmin(), 404);
+        $user = $request->user();
+
+        // Rédacteurs (admins, contributeurs) : tous les articles, brouillons compris.
+        // Public : article publié et page Veille accessible.
+        abort_unless(
+            $user?->canWriteArticles()
+                || ($article->isPublished() && Page::isKeyAccessibleBy('veille', $user)),
+            404
+        );
 
         return $this->attachmentResponse($request, $file);
     }

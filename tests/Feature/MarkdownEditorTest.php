@@ -106,7 +106,8 @@ class MarkdownEditorTest extends TestCase
             ->assertJsonPath('content.blocks.0.type', 'header')
             ->assertJsonPath('html', "<h2>Titre</h2>\n<p><b>Gras</b></p>");
 
-        $this->actingAs(User::factory()->create())->postJson(route('admin.editor.to-blocks'), ['markdown' => 'x'])->assertForbidden();
+        auth()->logout();
+        $this->postJson(route('admin.editor.to-blocks'), ['markdown' => 'x'])->assertUnauthorized();
     }
 
     public function test_markdown_toggle_only_on_articles_and_projects(): void

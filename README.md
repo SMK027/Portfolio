@@ -59,7 +59,13 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 |---|---|
 | Super-administrateur | Tout, y compris la gestion des comptes |
 | Administrateur | Gestion du contenu, accès aux pages privées |
-| Contributeur | Peut être auteur ou co-auteur d'un article, sans accès à l'administration |
+| Contributeur | Accès à la rédaction d'articles uniquement : consulte tous les articles (brouillons compris), modifie ceux dont il est auteur ou co-auteur, crée des brouillons et les soumet à validation |
+
+**Validation des articles des contributeurs** :
+- les articles créés par un contributeur restent en brouillon ; il les **soumet pour validation** quand ils sont prêts ;
+- un administrateur les relit, puis les **publie** (immédiatement ou à une date programmée) ou les **renvoie en brouillon** avec un commentaire ;
+- chaque étape déclenche un e-mail (soumission aux administrateurs, décision à l'auteur), et les articles à valider sont signalés dans le menu et sur le tableau de bord ;
+- un contributeur ne peut ni publier, ni programmer, ni épingler, ni changer l'auteur principal, ni supprimer un article, ni créer de thème. Il peut corriger un article déjà publié dont il est auteur ou co-auteur, qui reste alors publié.
 
 L'inscription publique est désactivée : les comptes se créent depuis l'administration.
 

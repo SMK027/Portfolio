@@ -13,7 +13,10 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'excerpt', 'content', 'content_editor', 'content_markdown', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at'])]
+#[Fillable([
+    'title', 'excerpt', 'content', 'content_editor', 'content_markdown', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at',
+    'review_status', 'submitted_at', 'review_note', 'reviewed_by', 'reviewed_at',
+])]
 class Article extends Model
 {
     use HasUniqueSlug;
@@ -24,6 +27,8 @@ class Article extends Model
             'content'      => 'array',
             'is_pinned'    => 'boolean',
             'published_at' => 'datetime',
+            'submitted_at' => 'datetime',
+            'reviewed_at'  => 'datetime',
         ];
     }
 
@@ -82,12 +87,46 @@ class Article extends Model
         return $this->published_at !== null && $this->published_at->lte(now());
     }
 
+    /** Soumis à validation par un contributeur. */
+    public const REVIEW_PENDING = 'pending';
+
+    /** Renvoyé en brouillon par un administrateur, avec un commentaire. */
+    public const REVIEW_CHANGES_REQUESTED = 'changes_requested';
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function scopePendingReview(Builder $query): void
+    {
+        $query->where('review_status', self::REVIEW_PENDING)->whereNull('published_at');
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->review_status === self::REVIEW_PENDING && $this->published_at === null;
+    }
+
+    /** L'utilisateur est-il l'auteur principal ou un co-auteur ? */
+    public function isAuthoredBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->author_id === $user->id
+            || ($this->exists && $this->coauthors()->whereKey($user->id)->exists());
+    }
+
     public function status(): string
     {
         return match (true) {
-            $this->published_at === null => 'Brouillon',
-            $this->isPublished()         => 'Publié',
-            default                      => 'Programmé',
+            $this->isPublished()                                        => 'Publié',
+            $this->published_at !== null                                => 'Programmé',
+            $this->review_status === self::REVIEW_PENDING               => 'En attente de validation',
+            $this->review_status === self::REVIEW_CHANGES_REQUESTED     => 'À retravailler',
+            default                                                     => 'Brouillon',
         };
     }
 

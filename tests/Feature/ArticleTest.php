@@ -105,8 +105,8 @@ class ArticleTest extends TestCase
             ->post(route('admin.uploads.image'), ['image' => UploadedFile::fake()->create('x.svg', 1, 'image/svg+xml')])
             ->assertStatus(422);
 
-        $this->actingAs(User::factory()->create())
-            ->post(route('admin.uploads.image'), ['image' => UploadedFile::fake()->image('illu.png')])
-            ->assertForbidden();
+        auth()->logout();
+        $this->post(route('admin.uploads.image'), ['image' => UploadedFile::fake()->image('illu.png')])
+            ->assertRedirect(route('login'));
     }
 }

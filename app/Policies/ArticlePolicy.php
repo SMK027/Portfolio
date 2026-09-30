@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Article;
+use App\Models\User;
+
+/**
+ * Droits sur les articles de veille.
+ * - Administrateurs : tout.
+ * - Contributeurs : consultent tous les articles, créent des brouillons,
+ *   modifient ceux dont ils sont auteur ou co-auteur et les soumettent à
+ *   validation. Ils ne publient, n'épinglent et ne suppriment rien.
+ */
+class ArticlePolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return $user->canWriteArticles();
+    }
+
+    public function view(User $user, Article $article): bool
+    {
+        return $user->canWriteArticles();
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->canWriteArticles();
+    }
+
+    public function update(User $user, Article $article): bool
+    {
+        return $user->isAdmin() || ($user->isContributor() && $article->isAuthoredBy($user));
+    }
+
+    /** Publier, programmer, épingler, changer l'auteur principal. */
+    public function publish(User $user, ?Article $article = null): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /** Soumettre à validation (ou retirer la demande). */
+    public function submit(User $user, Article $article): bool
+    {
+        return $user->isContributor() && $article->published_at === null && $article->isAuthoredBy($user);
+    }
+
+    /** Valider ou renvoyer en brouillon un article soumis. */
+    public function review(User $user, Article $article): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function delete(User $user, Article $article): bool
+    {
+        return $user->isAdmin();
+    }
+}

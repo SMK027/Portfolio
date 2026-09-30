@@ -43,10 +43,13 @@ Route::middleware('page:projets')->prefix('projets')->name('projects.')->group(f
 Route::middleware('page:veille')->prefix('veille')->name('articles.')->group(function () {
     Route::get('/', [ArticleController::class, 'index'])->name('index');
     Route::get('/{article}', [ArticleController::class, 'show'])->name('show');
-    Route::get('/{article:id}/fichiers/{file}', [ArticleFileController::class, 'show'])
-        ->scopeBindings()
-        ->name('files.show');
 });
+
+// Pièces jointes d'articles : accessibles au public selon la page Veille et la
+// publication, et aux rédacteurs (y compris brouillons) — voir ArticleFileController.
+Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class, 'show'])
+    ->scopeBindings()
+    ->name('articles.files.show');
 
 Route::middleware('page:contact')->group(function () {
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
@@ -63,9 +66,13 @@ Route::middleware('page:contact')->group(function () {
 
 // Point d'entrée après connexion : back-office pour les admins, compte sinon.
 Route::get('/dashboard', function () {
-    return auth()->user()->isAdmin()
-        ? redirect()->route('admin.dashboard')
-        : redirect()->route('profile.edit');
+    $user = auth()->user();
+
+    return match (true) {
+        $user->isAdmin()          => redirect()->route('admin.dashboard'),
+        $user->canWriteArticles() => redirect()->route('admin.articles.index'),
+        default                   => redirect()->route('profile.edit'),
+    };
 })->middleware('auth')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -116,7 +123,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/projets/{project}/fichiers/{file}', [Admin\ProjectController::class, 'destroyFile'])
         ->scopeBindings()
         ->name('projets.files.destroy');
-    Route::resource('articles', Admin\ArticleController::class)->except('show');
 
     Route::resource('annonces', Admin\AnnouncementController::class)
         ->except('show')->parameters(['annonces' => 'announcement']);
@@ -137,18 +143,32 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('utilisateurs', Admin\UserController::class)
         ->except('show')->parameters(['utilisateurs' => 'user']);
 
-    // Téléversement d'illustrations depuis Editor.js
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rédaction d'articles : administrateurs et contributeurs
+|--------------------------------------------------------------------------
+| Les droits fins (modifier, publier, valider, supprimer) sont vérifiés par
+| App\Policies\ArticlePolicy.
+*/
+
+Route::middleware(['auth', 'can:write-articles'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('articles', Admin\ArticleController::class);
+    Route::post('/articles/{article}/valider', [Admin\ArticleController::class, 'approve'])->name('articles.approve');
+    Route::post('/articles/{article}/renvoyer', [Admin\ArticleController::class, 'requestChanges'])->name('articles.request-changes');
+
+    // Outils de l'éditeur : illustrations et conversions visuel ⇄ Markdown
     Route::post('/uploads/image', Admin\EditorUploadController::class)
         ->middleware('throttle:60,1')
         ->name('uploads.image');
+    Route::post('/uploads/image-url', Admin\EditorImageUrlController::class)
+        ->middleware('throttle:120,1')
+        ->name('uploads.image-url');
     Route::post('/editeur/vers-markdown', [Admin\EditorConversionController::class, 'toMarkdown'])
         ->middleware('throttle:120,1')->name('editor.to-markdown');
     Route::post('/editeur/vers-blocs', [Admin\EditorConversionController::class, 'toBlocks'])
         ->middleware('throttle:240,1')->name('editor.to-blocks');
-
-    Route::post('/uploads/image-url', Admin\EditorImageUrlController::class)
-        ->middleware('throttle:120,1')
-        ->name('uploads.image-url');
 });
 
 require __DIR__.'/auth.php';

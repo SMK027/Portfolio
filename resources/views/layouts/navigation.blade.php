@@ -3,6 +3,14 @@
     $unread = $user->isAdmin() ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
     $maintenanceActive = $user->isAdmin() && app(\App\Services\Maintenance::class)->isActive();
 
+    $pendingArticles = $user->isAdmin() ? \App\Models\Article::pendingReview()->count() : 0;
+
+    $sections = $user->isContributor() ? [
+        'Rédaction' => [
+            ['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*'],
+        ],
+    ] : [];
+
     $sections = $user->isAdmin() ? [
         '' => [
             ['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard'],
@@ -28,7 +36,7 @@
             ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'],
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],
         ],
-    ] : [];
+    ] : $sections;
 @endphp
 
 <div class="flex h-16 flex-none items-center justify-between gap-2 border-b border-white/10 px-5">
@@ -55,6 +63,9 @@
                         ])>
                             <x-icon :name="$icon" class="h-5 w-5 flex-none {{ $active ? 'text-primary-300' : 'text-slate-500' }}" />
                             <span class="flex-1">{{ $label }}</span>
+                            @if ($route === 'admin.articles.index' && $pendingArticles)
+                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950" title="Articles à valider">{{ $pendingArticles }}</span>
+                            @endif
                             @if ($route === 'admin.maintenance.edit' && $maintenanceActive)
                                 <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">Active</span>
                             @endif

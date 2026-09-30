@@ -23,7 +23,6 @@ class AdminAccessTest extends TestCase
             'admin.competences.index', 'admin.competences.create',
             'admin.themes.index', 'admin.themes.create',
             'admin.projets.index', 'admin.projets.create',
-            'admin.articles.index', 'admin.articles.create',
             'admin.messages.index', 'admin.utilisateurs.index',
         ]);
     }
@@ -72,6 +71,7 @@ class AdminAccessTest extends TestCase
     public function test_dashboard_redirects_according_to_role(): void
     {
         $this->actingAs(User::factory()->admin()->create())->get('/dashboard')->assertRedirect(route('admin.dashboard'));
-        $this->actingAs(User::factory()->create())->get('/dashboard')->assertRedirect(route('profile.edit'));
+        // Contributeur : directement vers la rédaction d'articles.
+        $this->actingAs(User::factory()->create())->get('/dashboard')->assertRedirect(route('admin.articles.index'));
     }
 }
