@@ -43,7 +43,7 @@ class SocialLinksTest extends TestCase
 
     public function test_icon_detection(): void
     {
-        $this->assertSame('x', Profile::iconFor('https://twitter.com/smk_027'));
+        $this->assertSame('x-twitter', Profile::iconFor('https://twitter.com/smk_027'));
         $this->assertSame('linkedin', Profile::iconFor('https://www.linkedin.com/in/test'));
         $this->assertSame('youtube', Profile::iconFor('https://youtu.be/abc'));
         $this->assertSame('globe', Profile::iconFor('https://leofranz.fr'));

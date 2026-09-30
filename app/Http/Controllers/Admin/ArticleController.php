@@ -151,10 +151,20 @@ class ArticleController extends Controller
     {
         return [
             'article' => $article,
-            'users'   => User::humans()->orderBy('name')->get(),
-            'authors' => User::articleAuthors()->orderBy('name')->get()
-                ->mapWithKeys(fn (User $u) => [$u->id => $u->isMachine() ? $u->name.' ('.$u->roleLabel().')' : $u->name]),
+            // Auto-complétion : auteur principal (tout compte actif), co-auteurs (personnes)
+            'authors'   => User::articleAuthors()->orderBy('name')->get()->map($this->accountOption(...))->all(),
+            'coauthors' => User::humans()->orderBy('name')->get()->map($this->accountOption(...))->all(),
             'themes'  => Theme::ordered()->get(),
+        ];
+    }
+
+    /** @return array{id: int, label: string, hint: string} */
+    protected function accountOption(User $user): array
+    {
+        return [
+            'id'    => $user->id,
+            'label' => $user->name,
+            'hint'  => ($user->isMachine() ? $user->roleLabel().' · ' : '').'@'.$user->username.($user->isMachine() ? '' : ' · '.$user->email),
         ];
     }
 

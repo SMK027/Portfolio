@@ -45,7 +45,7 @@ class ArticleAuthorTest extends TestCase
         [$bot] = $this->machine('bot', []);
         $article = $this->article($this->admin);
 
-        $this->actingAs($this->admin)->get(route('admin.articles.edit', $article))->assertSee($bot->name.' (Bot)');
+        $this->actingAs($this->admin)->get(route('admin.articles.edit', $article))->assertSee($bot->username);
         $this->put(route('admin.articles.update', $article), $this->form(['author_id' => $bot->id]))->assertSessionHasNoErrors();
         $this->assertTrue($article->fresh()->author->is($bot));
 
@@ -68,32 +68,33 @@ class ArticleAuthorTest extends TestCase
         $this->assertTrue($article->fresh()->author->is($this->admin));
     }
 
-    public function test_bot_needs_articles_author_permission(): void
+    public function test_bot_with_articles_write_changes_author(): void
     {
         $other = User::factory()->create(['global_role' => 'user']);
         $article = $this->article($this->admin);
 
         [, $plain] = $this->machine('bot', ['articles.read', 'articles.write']);
         $this->post(route('login.bot'), ['code' => $plain]);
-        $this->put(route('admin.articles.update', $article), $this->form(['author_id' => $other->id]))->assertSessionHasNoErrors();
-        $this->assertTrue($article->fresh()->author->is($this->admin));
-        $this->post(route('logout'));
-
-        [, $plain] = $this->machine('bot', ['articles.read', 'articles.write', 'articles.author']);
-        $this->post(route('login.bot'), ['code' => $plain]);
+        $this->get(route('admin.articles.edit', $article))->assertOk()->assertSee('Nom, identifiant ou e-mail');
         $this->put(route('admin.articles.update', $article), $this->form(['author_id' => $other->id]))->assertSessionHasNoErrors();
         $this->assertTrue($article->fresh()->author->is($other));
     }
 
-    public function test_api_needs_articles_author_permission(): void
+    public function test_bot_with_read_only_cannot_edit(): void
+    {
+        $article = $this->article($this->admin);
+
+        [, $plain] = $this->machine('bot', ['articles.read']);
+        $this->post(route('login.bot'), ['code' => $plain]);
+        $this->put(route('admin.articles.update', $article), $this->form(['author_id' => $this->admin->id]))->assertForbidden();
+    }
+
+    public function test_api_changes_author_with_articles_write(): void
     {
         [$bot] = $this->machine('bot', []);
         $article = $this->article($this->admin);
 
-        [, $plain] = $this->machine('service', ['articles.write']);
-        $this->patchJson("/api/v1/articles/{$article->id}", ['author' => $bot->username], ['Authorization' => 'Bearer '.$plain])->assertForbidden();
-
-        [$service, $plain] = $this->machine('service', ['articles.write', 'articles.author']);
+        [$service, $plain] = $this->machine('service', ['articles.write']);
         $this->patchJson("/api/v1/articles/{$article->id}", ['author' => $bot->username], ['Authorization' => 'Bearer '.$plain])->assertOk();
         $this->assertTrue($article->fresh()->author->is($bot));
 

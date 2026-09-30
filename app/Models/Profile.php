@@ -54,7 +54,7 @@ class Profile extends Model
         $host = strtolower(preg_replace('/^www\./', '', (string) parse_url($url, PHP_URL_HOST)));
 
         return match (true) {
-            in_array($host, ['x.com', 'twitter.com'], true) => 'x',
+            in_array($host, ['x.com', 'twitter.com'], true) => 'x-twitter',
             str_ends_with($host, 'github.com')             => 'github',
             str_ends_with($host, 'linkedin.com')           => 'linkedin',
             str_ends_with($host, 'youtube.com'), $host === 'youtu.be' => 'youtube',

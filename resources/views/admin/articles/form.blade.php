@@ -76,16 +76,18 @@
 
                 <x-admin.section title="Auteurs">
                     @if ($canChangeAuthor)
-                        <x-form.select name="author_id" label="Auteur principal" :value="$article->author_id ?? auth()->id()" :options="$authors" required
-                                       help="{{ auth()->user()->isContributor() ? 'Si vous confiez l\'article à un autre auteur, vous restez co-auteur.' : 'Tout compte actif : personne, bot ou compte de service.' }}" />
+                        <x-form.autocomplete name="author_id" label="Auteur principal" :options="$authors" :selected="[$article->author_id ?? auth()->id()]"
+                                             channel="article-author" required placeholder="Nom, identifiant ou e-mail…"
+                                             :help="auth()->user()->isContributor() ? 'Si vous confiez l\'article à un autre auteur, vous restez co-auteur.' : 'Tout compte actif : personne, bot ou compte de service.'" />
                     @else
                         <div>
                             <span class="form-label">Auteur principal</span>
                             <p class="text-sm text-slate-800">{{ $article->author?->name ?? auth()->user()->name }}</p>
                         </div>
                     @endif
-                    <x-form.chips name="coauthors" label="Co-auteurs" :options="($canPublish ? $users : $users->reject(fn ($u) => $u->id === ($article->author_id ?? auth()->id())))->pluck('name', 'id')" :selected="$article->coauthors->pluck('id')"
-                                  help="Les co-auteurs peuvent modifier l'article. Un contributeur n'a accès qu'à la rédaction d'articles." />
+                    <x-form.autocomplete name="coauthors" label="Co-auteurs" multiple :options="collect($coauthors)->reject(fn ($o) => $o['id'] === ($article->author_id ?? auth()->id()))"
+                                         :selected="$article->coauthors->pluck('id')" listen="article-author" placeholder="Ajouter un co-auteur…"
+                                         help="Les co-auteurs peuvent modifier l'article. Un contributeur n'a accès qu'à la rédaction d'articles." />
                 </x-admin.section>
 
                 <x-admin.section title="Thèmes">

@@ -27,9 +27,8 @@ final class ServicePermissions
         ],
         'Articles de veille' => [
             'articles.read'    => 'Lire les articles (brouillons compris)',
-            'articles.write'   => 'Créer et modifier des articles (brouillons, soumission à validation)',
+            'articles.write'   => 'Créer et modifier des articles, y compris l\'auteur et les co-auteurs (brouillons, soumission à validation)',
             'articles.publish' => 'Publier, programmer, dépublier et épingler des articles',
-            'articles.author'  => 'Changer l\'auteur principal et les co-auteurs des articles',
             'articles.delete'  => 'Supprimer des articles',
         ],
         'Annonces' => [
@@ -78,7 +77,7 @@ final class ServicePermissions
 
     /** Autorisations utilisables via l'API ; les autres ne servent qu'aux bots (panel). */
     public const API = [
-        'articles.read', 'articles.write', 'articles.publish', 'articles.author', 'articles.delete',
+        'articles.read', 'articles.write', 'articles.publish', 'articles.delete',
         'projects.read', 'projects.write', 'projects.delete',
         'announcements.read', 'announcements.write', 'announcements.delete',
         'messages.read', 'content.export', 'content.import', 'maintenance.read', 'maintenance.manage',

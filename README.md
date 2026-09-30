@@ -64,7 +64,9 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 **Auteur des articles** : l'auteur principal peut être n'importe quel compte actif (personne, bot ou compte de service) ; les co-auteurs, qui obtiennent le droit de modifier l'article, sont toujours des personnes. Peuvent le changer :
 - les administrateurs ;
 - un contributeur, pour les articles dont il est l'auteur principal : il reste alors co-auteur ;
-- les bots et les clients API disposant de l'autorisation `articles.author` (champs `author` et `coauthors` de l'API ; `author` accepte l'e-mail ou l'identifiant du compte).
+- les bots et les clients API disposant de l'autorisation `articles.write` (champs `author` et `coauthors` de l'API ; `author` accepte l'e-mail ou l'identifiant du compte).
+
+Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-complétion (nom, identifiant ou e-mail).
 
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;

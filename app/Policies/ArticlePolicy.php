@@ -39,12 +39,12 @@ class ArticlePolicy
 
     /**
      * Changer l'auteur principal (et les co-auteurs) : administrateurs, bots
-     * autorisés (articles.author), contributeur auteur principal de l'article.
+     * pouvant écrire (articles.write), contributeur auteur principal de l'article.
      */
     public function changeAuthor(User $user, ?Article $article = null): bool
     {
         return $user->isAdmin()
-            || ($user->hasBotPermission('articles.author') && $user->hasBotPermission('articles.write'))
+            || $user->hasBotPermission('articles.write')
             || ($user->isContributor() && (! $article?->exists || $article->author_id === $user->id));
     }
 

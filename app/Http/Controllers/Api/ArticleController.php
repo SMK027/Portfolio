@@ -126,14 +126,6 @@ class ArticleController extends Controller
             abort(403, 'Autorisation manquante : articles.publish (publication, programmation, épinglage).');
         }
 
-        // Auteur principal et co-auteurs : autorisation dédiée.
-        if ($request->hasAny(['author', 'coauthors']) && ! $account->hasServicePermission('articles.author')) {
-            $this->audit->record('api.forbidden', $article->exists ? $article : null, meta: [
-                'autorisation' => 'articles.author', 'route' => $request->method().' '.$request->path(),
-            ], force: true);
-            abort(403, 'Autorisation manquante : articles.author (auteur principal et co-auteurs).');
-        }
-
         $before = $creating ? ['thèmes' => [], 'co-auteurs' => []] : [
             'thèmes' => $article->themes()->pluck('name')->all(), 'co-auteurs' => $article->coauthors()->pluck('name')->all(),
         ];
