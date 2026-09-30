@@ -21,7 +21,7 @@
                 <x-form.input name="title" label="Titre" :value="$project->title" required />
                 <x-form.input name="published_on" type="date" label="Date de création / publication" :value="$project->published_on?->toDateString()" required />
             </div>
-            <x-form.textarea name="description" label="Description" :value="$project->description" rows="10" required />
+            <x-form.editor name="description" label="Description *" :value="$project->description" placeholder="Présentez le projet : contexte, objectifs, réalisation, bilan…" />
         </x-admin.section>
 
         <x-admin.section title="Classement">
@@ -44,8 +44,8 @@
             </div>
         </x-admin.section>
 
-        <x-admin.section title="Fichiers" description="Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice et ZIP — 20 Mo max. par fichier. Les images forment le carrousel ; choisissez-en une comme miniature.">
-            <x-admin.attachments :files="$editing ? $project->files : collect()" :file-class="\App\Models\ProjectFile::class" with-thumbnail />
+        <x-admin.section title="Fichiers" description="Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice et ZIP — 20 Mo max. par fichier. Les images forment le carrousel ; choisissez-en une comme miniature, ou insérez-la dans la description.">
+            <x-admin.attachments :files="$editing ? $project->files : collect()" :file-class="\App\Models\ProjectFile::class" with-thumbnail insertable />
         </x-admin.section>
 
         <x-admin.form-actions :cancel="route('admin.projets.index')" />

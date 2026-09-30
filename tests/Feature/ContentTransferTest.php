@@ -85,8 +85,8 @@ class ContentTransferTest extends TestCase
         $project = Project::sole();
         $this->assertSame(['Projets personnels'], $project->themes->pluck('name')->all());
         $this->assertSame(['Arduino'], $project->skills->pluck('name')->all());
-        $this->assertStringNotContainsString('<b>', $project->description);
-        $this->assertStringContainsString('• A', $project->description);
+        $this->assertSame(['paragraph', 'list'], array_column($project->description['blocks'], 'type'));
+        $this->assertSame('Un <b>projet</b>', $project->description['blocks'][0]['data']['text']);
 
         $article = Article::sole();
         $this->assertTrue($article->is_pinned);

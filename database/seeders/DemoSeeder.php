@@ -65,7 +65,7 @@ class DemoSeeder extends Seeder
             ['Application de gestion de stock', 0, [0, 2, 3], 'Application web de gestion de stock avec tableaux de bord et exports Excel.'],
             ['Serveur domotique', 2, [6, 7], 'Serveur domotique auto-hébergé sur Raspberry Pi avec Home Assistant.'],
         ] as $i => [$title, $theme, $skillIndexes, $description]) {
-            $project = Project::create(['title' => $title, 'published_on' => now()->subMonths($i * 3), 'description' => $description."\n\nContexte, objectifs, réalisation et bilan du projet."]);
+            $project = Project::create(['title' => $title, 'published_on' => now()->subMonths($i * 3), 'description' => \App\Support\EditorContent::fromText($description."\n\nContexte, objectifs, réalisation et bilan du projet.")]);
             $project->themes()->sync([$themes[$theme]->id]);
             $project->skills()->sync($skills->only($skillIndexes)->pluck('id'));
             $project->links()->create(['url' => 'https://github.com/example/'.str($title)->slug(), 'position' => 0]);

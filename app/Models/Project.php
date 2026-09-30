@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUniqueSlug;
+use App\Support\EditorContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 #[Fillable(['title', 'published_on', 'description', 'thumbnail_file_id'])]
 class Project extends Model
@@ -20,6 +22,7 @@ class Project extends Model
     {
         return [
             'published_on' => 'date',
+            'description'  => 'array',
         ];
     }
 
@@ -72,6 +75,12 @@ class Project extends Model
     public function documents(): Collection
     {
         return $this->files->where('is_image', false)->values();
+    }
+
+    /** Résumé en texte brut de la description (cartes, balises meta). */
+    public function excerpt(int $limit = 180): string
+    {
+        return Str::limit(Str::squish(EditorContent::toText($this->description)), $limit);
     }
 
     public function thumbnailUrl(): ?string

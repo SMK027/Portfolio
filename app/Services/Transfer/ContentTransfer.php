@@ -16,6 +16,7 @@ use App\Models\Skill;
 use App\Models\Theme;
 use App\Models\User;
 use App\Services\RemoteImageFetcher;
+use App\Support\EditorContent;
 use App\Support\PreciseDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -238,7 +239,7 @@ class ContentTransfer
                 'certifications' => [['name' => 'Pix', 'issuer' => null, 'issued_at' => '2024-05']],
                 'hobbies'        => [['name' => 'Photographie', 'description' => '…']],
                 'projects'       => [[
-                    'title' => 'TechSolutions — Réseaux', 'published_on' => '2025-01-15', 'description' => 'Description du projet…',
+                    'title' => 'TechSolutions — Réseaux', 'published_on' => '2025-01-15', 'description' => '<p>Description du projet en <b>HTML</b>, en texte brut ou au format Editor.js…</p>',
                     'themes' => ['Réseau'], 'skills' => ['Cisco IOS'], 'links' => [['label' => 'Dépôt', 'url' => 'https://github.com/SMK027/exemple']],
                 ]],
                 'articles'       => [[
@@ -521,7 +522,7 @@ class ContentTransfer
             'title'         => ['required', 'string', 'max:255'],
             'slug'          => ['nullable', 'string', 'max:255'],
             'published_on'  => ['required', 'date'],
-            'description'   => ['required', 'string', 'max:20000'],
+            'description'   => ['required'],
             'themes'        => ['nullable', 'array'],
             'themes.*'      => ['string', 'max:100'],
             'skills'        => ['nullable', 'array'],
@@ -534,6 +535,14 @@ class ContentTransfer
             return;
         }
 
+        // Description : contenu Editor.js, HTML (converti, images récupérées) ou texte brut.
+        $description = EditorContent::fromInput($data['description'], $this->imageResolver());
+        if (EditorContent::isEmpty($description)) {
+            $this->fail('projects', $label.' « '.$data['title'].' »', 'description vide');
+
+            return;
+        }
+
         $project = (filled($data['slug'] ?? null) ? Project::where('slug', $data['slug'])->first() : null)
             ?? Project::where('title', $data['title'])->first()
             ?? new Project;
@@ -542,8 +551,7 @@ class ContentTransfer
         $project->fill([
             'title'        => $data['title'],
             'published_on' => Carbon::parse($data['published_on'])->toDateString(),
-            // Une description HTML (ancien site) est convertie en texte.
-            'description'  => $this->plainText($data['description']),
+            'description'  => $description,
         ])->save();
 
         $project->themes()->sync($this->themeIds($data['themes'] ?? [], 'projects'));
@@ -775,7 +783,13 @@ class ContentTransfer
             return null;
         }
 
-        $resolver = $this->downloadImages
+        return $this->htmlConverter->withImageResolver($this->imageResolver())->convert($html);
+    }
+
+    /** Récupération des images distantes sur le site (si demandée). */
+    protected function imageResolver(): ?callable
+    {
+        return $this->downloadImages
             ? function (string $src): ?string {
                 try {
                     return $this->imageFetcher->fetch($src, 'editor/'.now()->format('Y/m'));
@@ -784,19 +798,6 @@ class ContentTransfer
                 }
             }
             : null;
-
-        return $this->htmlConverter->withImageResolver($resolver)->convert($html);
-    }
-
-    protected function plainText(string $value): string
-    {
-        if ($value === strip_tags($value)) {
-            return $value;
-        }
-
-        $text = preg_replace(['#<br\s*/?>#i', '#</(p|div|li|h[1-6])>#i', '#<li[^>]*>#i'], ["\n", "\n\n", '• '], $value);
-
-        return trim(preg_replace("/\n{3,}/", "\n\n", html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5)));
     }
 
     protected function count(string $section, bool $created, bool $autoCreated = false): void

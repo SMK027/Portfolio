@@ -1,4 +1,4 @@
-<x-public-layout :page="$page" :title="$project->title" :description="\Illuminate\Support\Str::limit($project->description, 160)" :image="$project->thumbnailUrl()">
+<x-public-layout :page="$page" :title="$project->title" :description="$project->excerpt(160)" :image="$project->thumbnailUrl()">
     <article>
         <header class="border-b border-slate-200 bg-white">
             <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -25,7 +25,7 @@
 
                 <section>
                     <h2 class="sr-only">Description</h2>
-                    <div class="prose prose-slate max-w-none whitespace-pre-line">{{ $project->description }}</div>
+                    <div class="editor-content">@editorjs($project->description)</div>
                 </section>
 
                 @if ($project->documents()->isNotEmpty())
