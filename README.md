@@ -21,6 +21,11 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
   - contenu d'article en HTML (`content_html`) accepté et converti en blocs Editor.js, avec récupération possible des images distantes.
 - **Non inclus** : les fichiers (photos, images de fond, badges, pièces jointes).
 
+**Éditeur visuel ou Markdown** (articles et projets) : un sélecteur permet d'écrire avec l'éditeur visuel (Editor.js) ou en Markdown (GitHub Flavored Markdown), avec une barre de mise en forme et un aperçu en direct.
+- Le contenu est converti automatiquement à chaque changement d'éditeur ; le choix d'éditeur et le texte Markdown saisi sont conservés.
+- Le contenu est toujours enregistré au même format (blocs Editor.js), ce qui garantit un rendu identique sur le site quel que soit l'éditeur.
+- Ce que Markdown ne sait pas exprimer (couleurs, surlignage, soulignement, alignement, options d'image, avertissements, vidéos) apparaît en HTML dans le Markdown et n'est jamais perdu. La conversion aller-retour est testée sur tous les types de blocs.
+
 **Éditeur de texte (Editor.js)** : le contenu collé est conservé.
 - Images collées (balise `<img>`, capture en base64, lien direct) : elles sont récupérées et hébergées sur le site. Le téléchargement est protégé contre les requêtes vers le réseau interne (SSRF).
 - Vidéos intégrées (`<iframe>` YouTube, Vimeo, CodePen) : elles deviennent des blocs vidéo ; les autres iframes deviennent un lien.

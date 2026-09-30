@@ -13,7 +13,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'excerpt', 'content', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at'])]
+#[Fillable(['title', 'excerpt', 'content', 'content_editor', 'content_markdown', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at'])]
 class Article extends Model
 {
     use HasUniqueSlug;

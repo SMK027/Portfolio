@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\HandlesRichText;
 use App\Http\Controllers\Admin\Concerns\StoresAttachments;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\Skill;
 use App\Models\Theme;
-use App\Support\EditorContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
-    use StoresAttachments;
+    use HandlesRichText, StoresAttachments;
 
     public function index(Request $request): View
     {
@@ -86,7 +85,6 @@ class ProjectController extends Controller
         $data = $request->validate([
             'title'         => ['required', 'string', 'max:255'],
             'published_on'  => ['required', 'date'],
-            'description'   => ['required', 'string', 'max:2000000'],
             'links'         => ['nullable', 'array', 'max:20'],
             'links.*.label' => ['nullable', 'string', 'max:100'],
             'links.*.url'   => ['nullable', 'url:http,https', 'max:2048'],
@@ -98,16 +96,10 @@ class ProjectController extends Controller
             ...$this->attachmentRules(ProjectFile::class),
         ]);
 
-        // Contenu Editor.js (le texte brut reste accepté, converti en paragraphes).
-        $description = EditorContent::fromInput($data['description']);
-        if (EditorContent::isEmpty($description)) {
-            throw ValidationException::withMessages(['description' => 'La description est obligatoire.']);
-        }
-
         $project->fill([
             'title'        => $data['title'],
             'published_on' => $data['published_on'],
-            'description'  => $description,
+            ...$this->richText($request, 'description', true, 'description'),
         ])->save();
 
         $project->skills()->sync($data['skills'] ?? []);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\HandlesRichText;
 use App\Http\Controllers\Admin\Concerns\HandlesUploads;
 use App\Http\Controllers\Admin\Concerns\StoresAttachments;
 use App\Http\Controllers\Controller;
@@ -18,7 +19,7 @@ use Illuminate\View\View;
 
 class ArticleController extends Controller
 {
-    use HandlesUploads, StoresAttachments;
+    use HandlesRichText, HandlesUploads, StoresAttachments;
 
     public function index(Request $request): View
     {
@@ -83,7 +84,6 @@ class ArticleController extends Controller
         $data = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
             'excerpt'      => ['nullable', 'string', 'max:500'],
-            'content'      => ['nullable', 'string', 'max:2000000'],
             'author_id'    => ['required', 'integer', 'exists:users,id'],
             'coauthors'    => ['nullable', 'array'],
             'coauthors.*'  => ['integer', 'exists:users,id', Rule::notIn([(int) $request->input('author_id')])],
@@ -109,7 +109,7 @@ class ArticleController extends Controller
         $article->fill([
             'title'          => $data['title'],
             'excerpt'        => $data['excerpt'] ?? null,
-            'content'        => $this->editorContent($request, 'content'),
+            ...$this->richText($request, 'content', false, 'contenu'),
             'author_id'      => $data['author_id'],
             'is_pinned'      => $request->boolean('is_pinned'),
             'published_at'   => $publishedAt,

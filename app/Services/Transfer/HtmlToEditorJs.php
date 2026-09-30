@@ -24,6 +24,7 @@ class HtmlToEditorJs
     protected const EMBEDS = [
         'youtube' => '#^https?://(?:www\.)?(?:youtube(?:-nocookie)?\.com/embed/|youtu\.be/)([\w-]+)#i',
         'vimeo'   => '#^https?://player\.vimeo\.com/video/(\d+)#i',
+        'codepen' => '#^https://codepen\.io/([^/]+)/embed/(?:preview/)?([\w-]+)#i',
     ];
 
     /** @var list<array<string, mixed>> */
@@ -85,22 +86,19 @@ class HtmlToEditorJs
         $tag = strtolower($el->tagName);
 
         match (true) {
+            $tag === 'aside' && $el->getAttribute('data-type') === 'warning' => $this->warning($el),
             in_array($tag, self::CONTAINERS, true)         => $this->walk($el),
             (bool) preg_match('/^h[1-6]$/', $tag)          => $this->add('header', [
-                'text'  => $this->innerHtml($el),
+                'text'  => trim($this->innerHtml($el)),
                 'level' => max(2, min(4, (int) substr($tag, 1) + ($tag === 'h1' ? 1 : 0))),
-            ]),
+            ], $this->alignment($el)),
             $tag === 'p'                                   => $this->paragraphWithImages($el),
             $tag === 'ul', $tag === 'ol'                   => $this->add('list', [
-                'style' => $tag === 'ol' ? 'ordered' : 'unordered',
-                'meta'  => [],
+                'style' => $tag === 'ol' ? 'ordered' : ($el->getElementsByTagName('input')->length > 0 ? 'checklist' : 'unordered'),
+                'meta'  => $tag === 'ol' ? ['counterType' => 'numeric', 'start' => 1] : [],
                 'items' => $this->listItems($el),
             ]),
-            $tag === 'blockquote'                          => $this->add('quote', [
-                'text'      => trim(strip_tags($this->innerHtml($el), '<b><strong><i><em><a><br>')),
-                'caption'   => '',
-                'alignment' => 'left',
-            ]),
+            $tag === 'blockquote'                          => $this->quote($el),
             $tag === 'pre'                                 => $this->add('code', ['code' => rtrim($el->textContent)]),
             $tag === 'hr'                                  => $this->add('delimiter', []),
             $tag === 'img'                                 => $this->image($el, ''),
@@ -115,7 +113,7 @@ class HtmlToEditorJs
     protected function paragraphWithImages(DOMElement $p): void
     {
         if ($p->getElementsByTagName('img')->length === 0 && $p->getElementsByTagName('iframe')->length === 0) {
-            $this->flushParagraph($this->innerHtml($p));
+            $this->flushParagraph($this->innerHtml($p), $this->alignment($p));
 
             return;
         }
@@ -134,21 +132,26 @@ class HtmlToEditorJs
 
             $content = '';
             $children = [];
+            $meta = [];
             foreach ($li->childNodes as $child) {
                 if ($child instanceof DOMElement && in_array(strtolower($child->tagName), ['ul', 'ol'], true)) {
                     $children = array_merge($children, $this->listItems($child));
+                } elseif ($child instanceof DOMElement && strtolower($child->tagName) === 'input' && $child->getAttribute('type') === 'checkbox') {
+                    $meta['checked'] = $child->hasAttribute('checked');
+                } elseif ($child instanceof DOMElement && strtolower($child->tagName) === 'p') {
+                    $content .= ($content !== '' ? '<br>' : '').$this->innerHtml($child); // liste « aérée »
                 } else {
                     $content .= $this->outerHtml($child);
                 }
             }
 
-            $items[] = ['content' => trim($content), 'meta' => [], 'items' => $children];
+            $items[] = ['content' => trim($content), 'meta' => $meta, 'items' => $children];
         }
 
         return $items;
     }
 
-    protected function image(DOMElement $img, string $caption): void
+    protected function image(DOMElement $img, string $caption, array $options = []): void
     {
         $src = trim($img->getAttribute('src'));
         if ($src === '') {
@@ -162,10 +165,64 @@ class HtmlToEditorJs
         $this->add('image', [
             'file'           => ['url' => $src],
             'caption'        => $caption !== '' ? $caption : trim($img->getAttribute('alt')),
-            'withBorder'     => false,
-            'withBackground' => false,
-            'stretched'      => false,
+            'withBorder'     => $options['withBorder'] ?? false,
+            'withBackground' => $options['withBackground'] ?? false,
+            'stretched'      => $options['stretched'] ?? false,
         ]);
+    }
+
+    protected function quote(DOMElement $blockquote): void
+    {
+        $caption = '';
+        foreach (iterator_to_array($blockquote->getElementsByTagName('cite')) as $cite) {
+            $caption = trim($this->innerHtml($cite));
+            $parent = $cite->parentNode;
+            $parent->removeChild($cite);
+            if ($parent instanceof DOMElement && $parent !== $blockquote && trim($parent->textContent) === '') {
+                $parent->parentNode->removeChild($parent);
+            }
+        }
+
+        $paragraphs = [];
+        foreach ($blockquote->childNodes as $child) {
+            $html = trim($child instanceof DOMElement && strtolower($child->tagName) === 'p' ? $this->innerHtml($child) : $this->outerHtml($child));
+            if ($html !== '') {
+                $paragraphs[] = $html;
+            }
+        }
+
+        $this->add('quote', [
+            'text'      => implode('<br>', $paragraphs),
+            'caption'   => $caption,
+            'alignment' => $blockquote->getAttribute('data-align') === 'center' ? 'center' : 'left',
+        ]);
+    }
+
+    protected function warning(DOMElement $aside): void
+    {
+        // Titre : premier <strong> (ou <b>) placé directement dans l'encadré.
+        $title = '';
+        foreach ($aside->childNodes as $child) {
+            if ($child instanceof DOMElement && in_array(strtolower($child->tagName), ['strong', 'b'], true)) {
+                $title = trim($this->innerHtml($child));
+                $aside->removeChild($child);
+                break;
+            }
+        }
+
+        $message = trim(preg_replace('#^<p>(.*)</p>$#s', '$1', trim($this->innerHtml($aside))));
+        $this->add('warning', ['title' => $title, 'message' => $message]);
+    }
+
+    /** Alignement (attribut align ou style text-align) → réglage « alignment » d'Editor.js. */
+    protected function alignment(DOMElement $el): array
+    {
+        $align = strtolower($el->getAttribute('align'));
+        if ($align === '' && preg_match('/text-align\s*:\s*(\w+)/i', $el->getAttribute('style'), $m)) {
+            $align = strtolower($m[1]);
+        }
+
+        return in_array($align, ['center', 'right', 'justify'], true) ? ['alignment' => ['alignment' => $align]] : [];
     }
 
     protected function figure(DOMElement $figure): void
@@ -177,7 +234,12 @@ class HtmlToEditorJs
 
         $img = $figure->getElementsByTagName('img')->item(0);
         if ($img instanceof DOMElement) {
-            $this->image($img, $caption);
+            $flags = preg_split('/\s+/', trim($figure->getAttribute('data-editor'))) ?: [];
+            $this->image($img, $caption, [
+                'withBorder'     => in_array('border', $flags, true),
+                'withBackground' => in_array('background', $flags, true),
+                'stretched'      => in_array('stretched', $flags, true),
+            ]);
 
             return;
         }
@@ -228,6 +290,11 @@ class HtmlToEditorJs
                 'service' => 'vimeo', 'source' => 'https://vimeo.com/'.$m[1],
                 'embed' => 'https://player.vimeo.com/video/'.$m[1].'?title=0&byline=0', 'width' => 580, 'height' => 320, 'caption' => $caption,
             ]);
+        } elseif (preg_match(self::EMBEDS['codepen'], $src, $m)) {
+            $this->add('embed', [
+                'service' => 'codepen', 'source' => 'https://codepen.io/'.$m[1].'/pen/'.$m[2],
+                'embed' => $src, 'width' => 600, 'height' => 300, 'caption' => $caption,
+            ]);
         } elseif (preg_match('#^https?://#i', $src)) {
             // Contenu intégré non pris en charge : conservé sous forme de lien.
             $label = htmlspecialchars($iframe->getAttribute('title') ?: $src, ENT_QUOTES);
@@ -235,7 +302,7 @@ class HtmlToEditorJs
         }
     }
 
-    protected function flushParagraph(string $html): void
+    protected function flushParagraph(string $html, array $tunes = []): void
     {
         $html = trim(preg_replace('/\s+/u', ' ', $html));
         $html = preg_replace('#^(<br\s*/?>\s*)+|(\s*<br\s*/?>)+$#i', '', $html);
@@ -244,13 +311,17 @@ class HtmlToEditorJs
             return;
         }
 
-        $this->add('paragraph', ['text' => $html]);
+        $this->add('paragraph', ['text' => $html], $tunes);
     }
 
     /** @param array<string, mixed> $data */
-    protected function add(string $type, array $data): void
+    protected function add(string $type, array $data, array $tunes = []): void
     {
-        $this->blocks[] = ['id' => substr(bin2hex(random_bytes(6)), 0, 10), 'type' => $type, 'data' => $data];
+        $block = ['id' => substr(bin2hex(random_bytes(6)), 0, 10), 'type' => $type, 'data' => $data];
+        if ($tunes) {
+            $block['tunes'] = $tunes;
+        }
+        $this->blocks[] = $block;
     }
 
     protected function isInline(DOMNode $node): bool

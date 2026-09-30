@@ -21,7 +21,7 @@
                 <x-form.input name="title" label="Titre" :value="$project->title" required />
                 <x-form.input name="published_on" type="date" label="Date de création / publication" :value="$project->published_on?->toDateString()" required />
             </div>
-            <x-form.editor name="description" label="Description *" :value="$project->description" placeholder="Présentez le projet : contexte, objectifs, réalisation, bilan…" />
+            <x-form.editor name="description" label="Description *" :value="$project->description" :mode="$project->description_editor" :markdown="$project->description_markdown" with-markdown placeholder="Présentez le projet : contexte, objectifs, réalisation, bilan…" />
         </x-admin.section>
 
         <x-admin.section title="Classement">

@@ -230,6 +230,8 @@ export function mountEditors() {
             placeholder: holder.dataset.placeholder || 'Commencez à écrire…',
             tools: buildTools(holder.dataset.uploadUrl, holder.dataset.uploadByUrl),
         });
+        // Accessible au sélecteur d'éditeur (visuel / Markdown).
+        holder.editorInstance = editor;
 
         // Collage : pré-traitement du HTML (iframes) puis relance de l'événement pour Editor.js.
         holder.addEventListener('paste', (event) => {
@@ -250,6 +252,8 @@ export function mountEditors() {
         // Insertion d'une image déjà envoyée (galerie) : événement « editor-insert-image »
         // émis dans le même formulaire, avec { url, caption }.
         holder.closest('form')?.addEventListener('editor-insert-image', async (event) => {
+            // En mode Markdown, c'est le composant Markdown qui insère l'image.
+            if (holder.closest('[data-rich-editor]')?.dataset.mode === 'markdown') return;
             await editor.isReady;
             const { url, caption = '' } = event.detail || {};
             if (!url) return;

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'published_on', 'description', 'thumbnail_file_id'])]
+#[Fillable(['title', 'published_on', 'description', 'description_editor', 'description_markdown', 'thumbnail_file_id'])]
 class Project extends Model
 {
     use HasUniqueSlug;

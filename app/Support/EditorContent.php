@@ -68,13 +68,44 @@ final class EditorContent
     public static function toText(?array $content): string
     {
         return collect($content['blocks'] ?? [])
-            ->map(fn ($block) => collect(Arr::flatten((array) ($block['data'] ?? [])))
-                ->filter(fn ($v) => is_string($v) && ! str_starts_with($v, 'http') && ! str_starts_with($v, '/'))
-                ->map(fn ($v) => html_entity_decode(strip_tags(str_replace(['<br>', '<br/>', '<br />'], ' ', $v)), ENT_QUOTES | ENT_HTML5))
+            ->map(fn ($block) => collect(self::blockTexts((array) $block))
+                ->map(fn ($v) => html_entity_decode(strip_tags(preg_replace('#<br\s*/?>#i', ' ', (string) $v)), ENT_QUOTES | ENT_HTML5))
                 ->implode(' '))
             ->map(fn ($text) => trim(preg_replace('/\s+/u', ' ', $text)))
             ->filter()
             ->implode("\n\n");
+    }
+
+    /**
+     * Textes lisibles d'un bloc (les réglages techniques — style de liste, URL… — sont ignorés).
+     *
+     * @return list<string>
+     */
+    protected static function blockTexts(array $block): array
+    {
+        $data = (array) ($block['data'] ?? []);
+        $listTexts = function (array $items) use (&$listTexts): array {
+            $texts = [];
+            foreach ($items as $item) {
+                $texts[] = is_array($item) ? ($item['content'] ?? $item['text'] ?? '') : (string) $item;
+                if (is_array($item) && ! empty($item['items'])) {
+                    array_push($texts, ...$listTexts((array) $item['items']));
+                }
+            }
+
+            return $texts;
+        };
+
+        return array_values(array_filter(match ($block['type'] ?? '') {
+            'paragraph', 'header'  => [$data['text'] ?? ''],
+            'list', 'checklist'    => $listTexts((array) ($data['items'] ?? [])),
+            'quote'                => [$data['text'] ?? '', $data['caption'] ?? ''],
+            'warning'              => [$data['title'] ?? '', $data['message'] ?? ''],
+            'table'                => Arr::flatten((array) ($data['content'] ?? [])),
+            'code'                 => [$data['code'] ?? ''],
+            'image', 'embed'       => [$data['caption'] ?? ''],
+            default                => [],
+        }, fn ($v) => is_string($v) && trim($v) !== ''));
     }
 
     /** Le contenu contient-il au moins un bloc non vide ? */

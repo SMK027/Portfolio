@@ -15,6 +15,7 @@ use App\Models\Project;
 use App\Models\Skill;
 use App\Models\Theme;
 use App\Models\User;
+use App\Services\Markdown\MarkdownToEditorJs;
 use App\Services\RemoteImageFetcher;
 use App\Support\EditorContent;
 use App\Support\PreciseDate;
@@ -66,6 +67,7 @@ class ContentTransfer
     public function __construct(
         protected HtmlToEditorJs $htmlConverter,
         protected RemoteImageFetcher $imageFetcher,
+        protected MarkdownToEditorJs $markdownConverter,
     ) {
     }
 
@@ -170,6 +172,7 @@ class ContentTransfer
             'slug'         => $p->slug,
             'published_on' => $p->published_on->toDateString(),
             'description'  => $p->description,
+            ...($p->description_editor === 'markdown' ? ['description_markdown' => $p->description_markdown] : []),
             'themes'       => $p->themes->pluck('name')->all(),
             'skills'       => $p->skills->pluck('name')->all(),
             'links'        => $p->links->map(fn ($l) => ['label' => $l->label, 'url' => $l->url])->all(),
@@ -183,6 +186,7 @@ class ContentTransfer
             'slug'         => $a->slug,
             'excerpt'      => $a->excerpt,
             'content'      => $a->content,
+            ...($a->content_editor === 'markdown' ? ['content_markdown' => $a->content_markdown] : []),
             'author'       => $a->author?->email,
             'coauthors'    => $a->coauthors->pluck('email')->all(),
             'themes'       => $a->themes->pluck('name')->all(),
@@ -224,7 +228,7 @@ class ContentTransfer
             'version'  => self::VERSION,
             '_aide'    => 'Toutes les sections et tous les champs facultatifs peuvent être omis. Dates : « 2024 », « 2024-09 » ou « 2024-09-15 » (la précision est déduite). '
                 .'Thèmes et compétences sont désignés par leur nom (créés s\'ils n\'existent pas), auteurs par leur e-mail. '
-                .'Un élément déjà présent (même slug, même titre…) est mis à jour. Le contenu d\'un article peut être fourni en HTML (content_html) : il est converti.',
+                .'Un élément déjà présent (même slug, même titre…) est mis à jour. Le contenu d\'un article peut être fourni en HTML (content_html) ou en Markdown (content_markdown), la description d\'un projet en Markdown (description_markdown) : ils sont convertis.',
             'sections' => [
                 'profile'        => [
                     'first_name' => 'Léo', 'last_name' => 'Franz', 'headline' => 'Développeur web',
@@ -522,7 +526,8 @@ class ContentTransfer
             'title'         => ['required', 'string', 'max:255'],
             'slug'          => ['nullable', 'string', 'max:255'],
             'published_on'  => ['required', 'date'],
-            'description'   => ['required'],
+            'description'          => ['required_without:description_markdown'],
+            'description_markdown' => ['nullable', 'string'],
             'themes'        => ['nullable', 'array'],
             'themes.*'      => ['string', 'max:100'],
             'skills'        => ['nullable', 'array'],
@@ -535,8 +540,11 @@ class ContentTransfer
             return;
         }
 
-        // Description : contenu Editor.js, HTML (converti, images récupérées) ou texte brut.
-        $description = EditorContent::fromInput($data['description'], $this->imageResolver());
+        // Description : Markdown, contenu Editor.js, HTML (converti, images récupérées) ou texte brut.
+        $markdown = $data['description_markdown'] ?? null;
+        $description = filled($markdown)
+            ? $this->markdownConverter->convert($markdown)
+            : EditorContent::fromInput($data['description'] ?? null, $this->imageResolver());
         if (EditorContent::isEmpty($description)) {
             $this->fail('projects', $label.' « '.$data['title'].' »', 'description vide');
 
@@ -551,7 +559,9 @@ class ContentTransfer
         $project->fill([
             'title'        => $data['title'],
             'published_on' => Carbon::parse($data['published_on'])->toDateString(),
-            'description'  => $description,
+            'description'          => $description,
+            'description_editor'   => filled($markdown) ? 'markdown' : 'blocks',
+            'description_markdown' => filled($markdown) ? $markdown : null,
         ])->save();
 
         $project->themes()->sync($this->themeIds($data['themes'] ?? [], 'projects'));
@@ -575,6 +585,7 @@ class ContentTransfer
             'excerpt'      => ['nullable', 'string', 'max:500'],
             'content'      => ['nullable'],
             'content_html' => ['nullable', 'string'],
+            'content_markdown' => ['nullable', 'string'],
             'author'       => ['nullable', 'email'],
             'coauthors'    => ['nullable', 'array'],
             'coauthors.*'  => ['email'],
@@ -600,7 +611,11 @@ class ContentTransfer
         $article->fill([
             'title'        => $data['title'],
             'excerpt'      => $data['excerpt'] ?? null,
-            'content'      => $this->editorContent($data['content'] ?? null, $data['content_html'] ?? null),
+            'content'          => filled($data['content_markdown'] ?? null)
+                ? $this->markdownConverter->convert($data['content_markdown'])
+                : $this->editorContent($data['content'] ?? null, $data['content_html'] ?? null),
+            'content_editor'   => filled($data['content_markdown'] ?? null) ? 'markdown' : 'blocks',
+            'content_markdown' => filled($data['content_markdown'] ?? null) ? $data['content_markdown'] : null,
             'author_id'    => ($author ?? ($article->author_id ? null : $this->importer))?->id ?? $article->author_id,
             'is_pinned'    => (bool) ($data['is_pinned'] ?? false),
             'published_at' => filled($data['published_at'] ?? null) ? Carbon::parse($data['published_at']) : null,

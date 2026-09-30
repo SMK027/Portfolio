@@ -141,6 +141,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/uploads/image', Admin\EditorUploadController::class)
         ->middleware('throttle:60,1')
         ->name('uploads.image');
+    Route::post('/editeur/vers-markdown', [Admin\EditorConversionController::class, 'toMarkdown'])
+        ->middleware('throttle:120,1')->name('editor.to-markdown');
+    Route::post('/editeur/vers-blocs', [Admin\EditorConversionController::class, 'toBlocks'])
+        ->middleware('throttle:240,1')->name('editor.to-blocks');
+
     Route::post('/uploads/image-url', Admin\EditorImageUrlController::class)
         ->middleware('throttle:120,1')
         ->name('uploads.image-url');
