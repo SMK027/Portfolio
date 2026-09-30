@@ -40,6 +40,14 @@
                 @endif
             </header>
 
+            @php
+                $notes = $report['_notes'] ?? [];
+                $report = collect($report)->reject(fn ($line, $key) => str_starts_with($key, '_'))->all();
+            @endphp
+            @foreach ($notes as $note)
+                <p class="border-b border-slate-100 bg-sky-50 px-4 py-3 text-sm text-sky-900 sm:px-6">{{ $note }}</p>
+            @endforeach
+
             @if (empty($report))
                 <p class="px-6 py-4 text-sm text-slate-500">Aucune des sections choisies n'est présente dans le fichier.</p>
             @else

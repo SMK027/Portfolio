@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\Markdown\MarkdownToEditorJs;
 use App\Services\RemoteImageFetcher;
 use App\Support\EditorContent;
+use App\Support\Mojibake;
 use App\Support\PreciseDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -278,6 +279,16 @@ class ContentTransfer
         return $summary;
     }
 
+    /** Nombre de chaînes du fichier qui seraient modifiées par la réparation d'encodage. */
+    protected function countRepairs(mixed $value): int
+    {
+        if (is_string($value)) {
+            return Mojibake::suspect($value) && Mojibake::fix($value) !== $value ? 1 : 0;
+        }
+
+        return is_array($value) ? array_sum(array_map(fn ($item) => $this->countRepairs($item), $value)) : 0;
+    }
+
     /** Vérifie l'enveloppe du fichier ; retourne un message d'erreur ou null. */
     public function envelopeError(mixed $payload): ?string
     {
@@ -306,6 +317,13 @@ class ContentTransfer
     {
         $this->report = [];
         $this->importer = $importer;
+
+        // Accents mal encodés dans le fichier (« Ã© » au lieu de « é ») : réparés à la volée.
+        $repaired = $this->countRepairs($payload['sections']);
+        if ($repaired > 0) {
+            $payload['sections'] = Mojibake::fixDeep($payload['sections']);
+            $this->report['_notes'][] = "{$repaired} texte(s) du fichier contenaient des accents mal encodés (« Ã© » au lieu de « é ») : ils ont été réparés automatiquement.";
+        }
         // Les images ne sont jamais téléchargées pendant une simulation.
         $this->downloadImages = $downloadImages && ! $dryRun;
 

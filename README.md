@@ -121,6 +121,17 @@ En développement, `docker-compose.dev.yml` fournit toujours son propre MariaDB,
 
 L'image de production compile elle-même les assets (étape Node du `Dockerfile`) : aucun `npm run build` n'est nécessaire sur le serveur. Laravel fait confiance aux en-têtes `X-Forwarded-*` de Traefik (réseaux Docker privés uniquement), ce qui lui permet de générer des URL en `https://`.
 
+### Dépannage : accents mal encodés (« Ã© » au lieu de « é »)
+
+Des textes importés depuis une source mal décodée (ancien site, fichier converti) peuvent contenir « Ã© », « â€™ »… La commande suivante les détecte dans tout le contenu et affiche un aperçu, sans rien modifier :
+
+```bash
+docker compose exec app php artisan portfolio:repair-encoding           # simulation
+docker compose exec app php artisan portfolio:repair-encoding --apply   # réparation
+```
+
+La réparation est faite séquence par séquence : les accents corrects d'un même texte ne sont pas touchés. L'import JSON répare aussi automatiquement ces textes et le signale dans la simulation.
+
 ### Dépannage : « Bad Gateway » (502)
 
 Traefik a trouvé le routeur (le certificat est émis), mais rien ne répond sur le port 80 du conteneur. Apache ne démarre qu'**après** l'attente de la base et les migrations : pendant cette phase, ou si le conteneur redémarre en boucle, Docker affiche « Up » alors que Traefik renvoie 502.
