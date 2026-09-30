@@ -24,8 +24,8 @@
                     <x-form.editor name="content" :value="$article->content" placeholder="Rédigez votre article…" />
                 </x-admin.section>
 
-                <x-admin.section title="Galerie et documents" description="Les images s'affichent en carrousel sous l'en-tête de l'article, les documents sont proposés en téléchargement à la fin. Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice et ZIP — 20 Mo max. par fichier.">
-                    <x-admin.attachments :files="$editing ? $article->files : collect()" :file-class="\App\Models\ArticleFile::class" />
+                <x-admin.section title="Galerie et documents" description="Les images s'affichent en carrousel sous l'en-tête de l'article (« Insérer dans le texte » les place aussi dans le contenu), les documents sont proposés en téléchargement à la fin. Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice et ZIP — 20 Mo max. par fichier.">
+                    <x-admin.attachments :files="$editing ? $article->files : collect()" :file-class="\App\Models\ArticleFile::class" insertable />
                 </x-admin.section>
             </div>
 

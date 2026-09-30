@@ -8,7 +8,7 @@
     @if ($label)<span class="form-label">{{ $label }}</span>@endif
     <input type="hidden" name="{{ $name }}" id="{{ $id }}" value="{{ $json }}">
     <div class="editorjs-holder editor-content" data-editorjs data-input="{{ $id }}"
-         data-upload-url="{{ route('admin.uploads.image') }}" data-placeholder="{{ $placeholder }}"></div>
+         data-upload-url="{{ route('admin.uploads.image') }}" data-upload-by-url="{{ route('admin.uploads.image-url') }}" data-placeholder="{{ $placeholder }}"></div>
     <p class="form-help">
         {{ $help ?? 'Cliquez sur « + » pour ajouter un bloc (titre, liste, image, code, tableau…). Sélectionnez du texte pour le mettre en forme (gras, couleur, surlignage, lien…).' }}
     </p>

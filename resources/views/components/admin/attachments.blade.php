@@ -4,8 +4,9 @@
     - fileClass      : classe du modèle de fichier (extensions autorisées)
     - withThumbnail  : permet de choisir une image comme miniature ; nécessite une
                        variable Alpine "thumbnail" déclarée sur le formulaire parent
+    - insertable     : bouton « Insérer dans le texte » sur les images (éditeur du même formulaire)
 --}}
-@props(['files', 'fileClass', 'withThumbnail' => false])
+@props(['files', 'fileClass', 'withThumbnail' => false, 'insertable' => false])
 
 @if ($files->isNotEmpty())
     <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -26,6 +27,13 @@
                     <a href="{{ $file->downloadUrl() }}" class="block truncate text-sm font-medium text-slate-800 hover:text-primary-600" title="{{ $file->original_name }}">{{ $file->original_name }}</a>
                     <p class="text-xs text-slate-400">{{ $file->is_image ? 'Image' : strtoupper($file->extension()) }} · {{ $file->humanSize() }}</p>
                     <div class="mt-1 flex flex-wrap gap-3 text-xs">
+                        @if ($insertable && $file->is_image)
+                            <button type="button" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700"
+                                    title="Ajoute l'image à la position du curseur dans le contenu. Si vous supprimez ce fichier, l'image disparaîtra aussi du texte."
+                                    @click="$dispatch('editor-insert-image', { url: @js(parse_url($file->url(), PHP_URL_PATH)), caption: '' })">
+                                <x-icon name="plus" class="h-3.5 w-3.5" /> Insérer dans le texte
+                            </button>
+                        @endif
                         @if ($withThumbnail && $file->is_image)
                             <label class="inline-flex cursor-pointer items-center gap-1 text-slate-600">
                                 <input type="radio" value="file:{{ $file->id }}" x-model="thumbnail" class="border-slate-300 text-primary-600 focus:ring-primary-500"> Miniature
