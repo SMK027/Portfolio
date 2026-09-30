@@ -20,14 +20,27 @@ class HandleMaintenanceMode
         'admin', 'admin/*', 'robots.txt',
     ];
 
+    /**
+     * Accessibles aussi aux collaborateurs (rédacteurs) : panel d'administration et
+     * rédaction d'articles uniquement. Le site public leur reste masqué.
+     */
+    protected const WRITER_PATHS = [
+        'dashboard',              // redirection après connexion
+        'profile',                // « Mon compte »
+        'veille/*/fichiers/*',    // pièces jointes affichées dans l'éditeur et la consultation
+    ];
+
     public function __construct(protected Maintenance $maintenance)
     {
     }
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->isAdmin()
+        $user = $request->user();
+
+        if ($user?->isAdmin()
             || $request->is(...self::ALLOWED_PATHS)
+            || ($user?->canWriteArticles() && $request->is(...self::WRITER_PATHS))
             || ! $this->maintenance->isActive()) {
             return $next($request);
         }

@@ -76,11 +76,52 @@ class MaintenanceTest extends TestCase
         $this->assertDatabaseHas('skills', ['name' => 'PHP']);
     }
 
-    public function test_non_admin_users_see_the_maintenance_page(): void
+    public function test_contributors_see_the_maintenance_page_on_the_public_site(): void
     {
         $this->maintenance()->enable();
 
-        $this->actingAs(User::factory()->create())->get('/')->assertSee('Site en maintenance');
+        foreach (['/', '/projets', '/veille', '/contact'] as $url) {
+            $this->actingAs(User::factory()->create())->get($url)->assertOk()->assertSee('Site en maintenance');
+        }
+    }
+
+    public function test_contributors_keep_access_to_the_admin_panel_and_article_writing(): void
+    {
+        Storage::fake('local');
+        $contributor = User::factory()->create();
+        $this->maintenance()->enable();
+
+        // Connexion : redirection vers la rédaction, sans passer par la page de maintenance.
+        $this->post('/login', ['email' => $contributor->email, 'password' => 'password'])
+            ->assertRedirect(route('dashboard', absolute: false));
+        $this->get('/dashboard')->assertRedirect(route('admin.articles.index'));
+
+        $this->get(route('admin.articles.index'))->assertOk()->assertDontSee('Site en maintenance')
+            ->assertSee('les pages publiques sont inaccessibles');
+        $this->get(route('admin.articles.create'))->assertOk();
+        $this->get('/profile')->assertOk()->assertDontSee('Site en maintenance');
+
+        $this->post(route('admin.articles.store'), [
+            'title'   => 'Rédigé pendant la maintenance',
+            'content' => json_encode(['blocks' => [['type' => 'paragraph', 'data' => ['text' => 'Texte']]]]),
+            'files'   => [UploadedFile::fake()->image('schema.png')],
+        ])->assertSessionHasNoErrors();
+
+        // Pièces jointes visibles dans l'éditeur…
+        $file = \App\Models\Article::sole()->files->first();
+        $this->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/png');
+
+        // …mais toujours pas le reste de l'administration.
+        $this->get(route('admin.dashboard'))->assertForbidden();
+    }
+
+    public function test_writer_paths_stay_blocked_for_guests(): void
+    {
+        $this->maintenance()->enable();
+
+        // Visiteur non connecté : renvoyé vers la connexion, rien n'est exposé.
+        $this->get('/profile')->assertRedirect(route('login'));
+        $this->get('/dashboard')->assertRedirect(route('login'));
     }
 
     public function test_login_stays_reachable_during_maintenance(): void
