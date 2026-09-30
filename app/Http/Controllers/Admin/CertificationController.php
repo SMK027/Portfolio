@@ -56,7 +56,7 @@ class CertificationController extends Controller
     {
         $data = $request->validate([
             'name'           => ['required', 'string', 'max:255'],
-            'issuer'         => ['required', 'string', 'max:255'],
+            'issuer'         => ['nullable', 'string', 'max:255'],
             'issued_at'      => ['required', 'date'],
             'expires_at'     => ['nullable', 'date', 'after_or_equal:issued_at'],
             'credential_id'  => ['nullable', 'string', 'max:255'],

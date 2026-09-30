@@ -16,7 +16,7 @@
                             @endif
                             <div class="min-w-0">
                                 <h2 class="font-display text-lg font-semibold leading-snug text-slate-900">{{ $certification->name }}</h2>
-                                <p class="text-sm text-slate-600">{{ $certification->issuer }}</p>
+                                @if ($certification->issuer)<p class="text-sm text-slate-600">{{ $certification->issuer }}</p>@endif
                             </div>
                         </div>
                         <dl class="mt-4 space-y-1 text-sm text-slate-500">

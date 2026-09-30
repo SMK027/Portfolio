@@ -10,7 +10,7 @@
         <x-admin.section>
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="name" label="Nom de la certification" :value="$certification->name" required />
-                <x-form.input name="issuer" label="Organisme" :value="$certification->issuer" required />
+                <x-form.input name="issuer" label="Organisme" :value="$certification->issuer" help="Facultatif (ex. : Pix, niveau de langue)." />
                 <x-form.input name="issued_at" type="date" label="Date d'obtention" :value="$certification->issued_at?->toDateString()" required />
                 <x-form.input name="expires_at" type="date" label="Date d'expiration" :value="$certification->expires_at?->toDateString()" help="Facultatif." />
                 <x-form.input name="credential_id" label="Identifiant" :value="$certification->credential_id" />

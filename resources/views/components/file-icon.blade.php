@@ -7,6 +7,7 @@
         'slides'  => ['bg-orange-50 text-orange-600', 'presentation'],
         'drawing' => ['bg-purple-50 text-purple-600', 'photo'],
         'image'   => ['bg-sky-50 text-sky-600', 'photo'],
+        'archive' => ['bg-amber-50 text-amber-700', 'archive'],
     ];
     [$classes, $icon] = $styles[$kind] ?? ['bg-slate-100 text-slate-600', 'document'];
 @endphp

@@ -20,6 +20,7 @@ trait IsAttachment
         'pdf',
         'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
         'odt', 'ods', 'odp', 'odg',
+        'zip',
     ];
 
     /** Types MIME réellement détectés acceptés pour une image. */
@@ -67,6 +68,7 @@ trait IsAttachment
             'xls', 'xlsx', 'ods'  => 'sheet',
             'ppt', 'pptx', 'odp'  => 'slides',
             'odg'                 => 'drawing',
+            'zip'                 => 'archive',
             default               => $this->is_image ? 'image' : 'file',
         };
     }

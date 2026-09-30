@@ -77,6 +77,31 @@ class ProjectTest extends TestCase
         $this->get(route('projects.theme', $theme))->assertOk()->assertSee('Supervision réseau');
     }
 
+    public function test_zip_archives_are_accepted_and_downloaded(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $zip = UploadedFile::fake()->create('Montre.zip', 5 * 1024, 'application/zip');
+
+        $project = $this->createProject($admin, ['files' => [$zip]]);
+        $file = $project->files->first();
+
+        $this->assertSame('archive', $file->kind());
+        $this->assertFalse($file->is_image);
+        auth()->logout();
+        $this->get(route('projects.show', $project))->assertSee('Montre.zip');
+        $this->get($file->url())->assertOk()->assertDownload('Montre.zip');
+    }
+
+    public function test_zip_archives_are_limited_to_20_mb(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->post(route('admin.projets.store'), [
+            'title' => 'X', 'published_on' => '2026-01-01', 'description' => 'X',
+            'files' => [UploadedFile::fake()->create('gros.zip', 21 * 1024, 'application/zip')],
+        ])->assertSessionHasErrors('files.0');
+    }
+
     public function test_thumbnail_must_be_an_image(): void
     {
         $admin = User::factory()->admin()->create();
