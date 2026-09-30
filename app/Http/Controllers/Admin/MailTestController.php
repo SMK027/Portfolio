@@ -17,7 +17,10 @@ class MailTestController extends Controller
     {
         $email = $request->user()->email;
 
-        if ($mailer->send($email, new TestMail, 'e-mail de test')) {
+        $sent = $mailer->send($email, new TestMail, 'e-mail de test');
+        app(\App\Services\AuditTrail::class)->record('mail.test', meta: ['destinataire' => $email, 'envoyé' => $sent]);
+
+        if ($sent) {
             return back()->with('success', "E-mail de test envoyé à {$email}. Vérifiez votre boîte de réception (et les indésirables).");
         }
 

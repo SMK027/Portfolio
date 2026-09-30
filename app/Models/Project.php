@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasUniqueSlug;
 use App\Support\EditorContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,7 @@ use Illuminate\Support\Str;
 #[Fillable(['title', 'published_on', 'description', 'description_editor', 'description_markdown', 'thumbnail_file_id'])]
 class Project extends Model
 {
-    use HasUniqueSlug;
+    use Auditable, HasUniqueSlug;
 
     protected function casts(): array
     {

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Models\Concerns\IsAttachment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ArticleFile extends Model
 {
-    use IsAttachment;
+    use Auditable, IsAttachment;
 
     public function article(): BelongsTo
     {

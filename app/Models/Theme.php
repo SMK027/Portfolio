@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasUniqueSlug;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 #[Fillable(['name', 'description', 'background_path', 'position'])]
 class Theme extends Model
 {
-    use HasUniqueSlug;
+    use Auditable, HasUniqueSlug;
 
     protected function slugSource(): string
     {

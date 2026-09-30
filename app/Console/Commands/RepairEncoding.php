@@ -82,6 +82,9 @@ class RepairEncoding extends Command
         $this->table(['Table', 'Colonne', 'ID', 'Avant', 'Après'], $rows);
 
         if ($apply) {
+            app(\App\Services\AuditTrail::class)->record('encoding.repaired', meta: [
+                'champs' => collect($rows)->map(fn ($r) => "{$r[0]}.{$r[1]} #{$r[2]}")->all(),
+            ]);
             $this->info("{$total} champ(s) réparé(s).");
         } else {
             $this->warn("Simulation : {$total} champ(s) à réparer. Relancez avec --apply pour enregistrer "

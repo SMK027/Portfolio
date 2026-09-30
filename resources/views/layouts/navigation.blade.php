@@ -37,6 +37,13 @@
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],
         ],
     ] : $sections;
+
+    // Réservé aux super-administrateurs
+    if ($user->isSuperAdmin()) {
+        $sections['Sécurité'] = [
+            ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
+        ];
+    }
 @endphp
 
 <div class="flex h-16 flex-none items-center justify-between gap-2 border-b border-white/10 px-5">

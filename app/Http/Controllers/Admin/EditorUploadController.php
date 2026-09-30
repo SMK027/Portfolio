@@ -24,6 +24,7 @@ class EditorUploadController extends Controller
         }
 
         $path = $request->file('image')->store('editor/'.now()->format('Y/m'), 'public');
+        app(\App\Services\AuditTrail::class)->record('editor.image_uploaded', meta: ['fichier' => '/storage/'.$path, 'nom' => $request->file('image')->getClientOriginalName()]);
 
         return response()->json([
             'success' => 1,

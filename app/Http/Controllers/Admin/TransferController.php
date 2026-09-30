@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditTrail;
 use App\Services\Transfer\ContentTransfer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,8 @@ class TransferController extends Controller
             'sections'   => ['required', 'array', 'min:1'],
             'sections.*' => [Rule::in(array_keys(ContentTransfer::SECTIONS))],
         ], ['sections.required' => 'Choisissez au moins une section à exporter.']);
+
+        app(AuditTrail::class)->record('content.exported', meta: ['sections' => $data['sections']]);
 
         return $this->jsonDownload($transfer->export($data['sections']), 'portfolio-export-'.now()->format('Y-m-d-His').'.json');
     }
@@ -95,6 +98,12 @@ class TransferController extends Controller
         $report = $transfer->import($payload, $pending['sections'], false, $request->user(), $pending['download_images']);
 
         $this->discardPending($request);
+
+        app(AuditTrail::class)->record('content.imported', meta: [
+            'fichier'  => $pending['name'],
+            'résultat' => collect($report)->reject(fn ($l, $k) => str_starts_with($k, '_'))
+                ->map(fn ($l) => ['créés' => $l['created'], 'mis à jour' => $l['updated'], 'ignorés' => $l['skipped']])->all(),
+        ]);
 
         return redirect()->route('admin.transfer.index')
             ->with('transfer.report', $report)

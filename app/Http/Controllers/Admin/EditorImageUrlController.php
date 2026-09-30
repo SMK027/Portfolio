@@ -28,7 +28,12 @@ class EditorImageUrlController extends Controller
         }
 
         try {
-            return $this->success($fetcher->fetch($url, 'editor/'.now()->format('Y/m')));
+            $stored = $fetcher->fetch($url, 'editor/'.now()->format('Y/m'));
+            app(\App\Services\AuditTrail::class)->record('editor.image_uploaded', meta: [
+                'fichier' => $stored, 'source' => str_starts_with($url, 'data:') ? 'image collée (base64)' : mb_substr($url, 0, 300),
+            ]);
+
+            return $this->success($stored);
         } catch (Throwable $e) {
             Log::warning('Import d\'image collée impossible ('.mb_substr($url, 0, 200).') : '.$e->getMessage());
 

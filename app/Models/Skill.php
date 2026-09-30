@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 #[Fillable(['name', 'category', 'level', 'description', 'position'])]
 class Skill extends Model
 {
+    use Auditable;
+
     /** Niveau maximal d'une compétence (affiché sous forme de jauge). */
     public const MAX_LEVEL = 5;
 

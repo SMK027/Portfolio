@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasDatePrecision;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 ])]
 class Certification extends Model
 {
-    use HasDatePrecision;
+    use Auditable, HasDatePrecision;
 
     protected function casts(): array
     {

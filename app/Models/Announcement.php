@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class Announcement extends Model
 {
+    use Auditable;
+
     /** Styles disponibles : libellé et icône. */
     public const STYLES = [
         'primary' => ['Mise en avant', 'megaphone'],

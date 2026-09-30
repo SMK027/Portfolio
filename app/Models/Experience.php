@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasDatePrecision;
 use App\Support\EditorContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable(['title', 'company', 'location', 'contract_type', 'start_date', 'end_date', 'description', 'description_editor', 'description_markdown', 'position'])]
 class Experience extends Model
 {
-    use HasDatePrecision;
+    use Auditable, HasDatePrecision;
 
     /** Suggestions proposées dans le formulaire (saisie libre possible). */
     public const CONTRACT_TYPES = ['CDI', 'CDD', 'Alternance', 'Stage', 'Freelance', 'Intérim', 'Job étudiant', 'Bénévolat'];

@@ -11,6 +11,7 @@ use App\Models\Article;
 use App\Models\ArticleFile;
 use App\Models\Theme;
 use App\Models\User;
+use App\Services\AuditTrail;
 use App\Services\SafeMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class ArticleController extends Controller
 {
     use HandlesRichText, HandlesUploads, StoresAttachments;
 
-    public function __construct(protected SafeMailer $mailer)
+    public function __construct(protected SafeMailer $mailer, protected AuditTrail $audit)
     {
     }
 
@@ -119,6 +120,7 @@ class ArticleController extends Controller
             'reviewed_at'   => now(),
         ]);
 
+        $this->audit->record('article.approved', $article, meta: ['published_at' => $article->published_at?->toDateTimeString()]);
         $this->notifyAuthor($article, ArticleReviewNotification::APPROVED);
 
         return back()->with('success', $article->isPublished() ? 'Article validé et publié.' : 'Article validé : publication programmée.');
@@ -138,6 +140,7 @@ class ArticleController extends Controller
             'reviewed_at'   => now(),
         ]);
 
+        $this->audit->record('article.changes_requested', $article, meta: ['commentaire' => $data['review_note']]);
         $this->notifyAuthor($article, ArticleReviewNotification::CHANGES_REQUESTED);
 
         return back()->with('success', 'Article renvoyé en brouillon à son auteur.');
@@ -157,6 +160,7 @@ class ArticleController extends Controller
     {
         $user = $request->user();
         $canPublish = Gate::allows('publish', Article::class);
+        $relationsBefore = $this->relations($article);
         $authorId = $canPublish ? (int) $request->input('author_id') : ($article->author_id ?? $user->id);
 
         $data = $request->validate([
@@ -226,11 +230,27 @@ class ArticleController extends Controller
 
         $this->syncAttachments($request, $article->files(), ArticleFile::class, 'articles/'.$article->id);
 
+        $this->audit->recordRelations($article, $relationsBefore, $this->relations($article->fresh()));
+
         if ($submitted) {
+            $this->audit->record('article.submitted', $article);
             $this->notifyAdmins($article);
         }
 
         return $article;
+    }
+
+    /** @return array<string, list<string>> */
+    protected function relations(Article $article): array
+    {
+        if (! $article->exists) {
+            return ['thèmes' => [], 'co-auteurs' => []];
+        }
+
+        return [
+            'thèmes'     => $article->themes()->pluck('name')->all(),
+            'co-auteurs' => $article->coauthors()->pluck('name')->all(),
+        ];
     }
 
     protected function savedMessage(Request $request, string $default): string

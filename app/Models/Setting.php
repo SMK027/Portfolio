@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -15,6 +16,8 @@ use Illuminate\Support\Collection;
 #[Fillable(['key', 'value'])]
 class Setting extends Model
 {
+    use Auditable;
+
     /** Le site peut-il être indexé par les moteurs de recherche ? */
     public const INDEXABLE = 'site.indexable';
 
@@ -32,6 +35,19 @@ class Setting extends Model
         return [
             'value' => 'json',
         ];
+    }
+
+    /** Libellés lisibles pour le journal d'activité. */
+    public function auditLabel(): string
+    {
+        return [
+            self::INDEXABLE             => 'Indexation du site',
+            'maintenance.enabled'       => 'Maintenance : activation',
+            'maintenance.ends_at'       => 'Maintenance : date de fin',
+            'maintenance.reason'        => 'Maintenance : motif',
+            'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
+            'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
+        ][$this->key] ?? $this->key;
     }
 
     public static function flushCache(): void

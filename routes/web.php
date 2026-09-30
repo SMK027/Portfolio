@@ -140,6 +140,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
 
+    Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
+    Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
+
     Route::resource('utilisateurs', Admin\UserController::class)
         ->except('show')->parameters(['utilisateurs' => 'user']);
 

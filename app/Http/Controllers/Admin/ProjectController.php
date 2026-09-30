@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\Skill;
 use App\Models\Theme;
+use App\Services\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +97,8 @@ class ProjectController extends Controller
             ...$this->attachmentRules(ProjectFile::class),
         ]);
 
+        $relationsBefore = $this->relations($project);
+
         $project->fill([
             'title'        => $data['title'],
             'published_on' => $data['published_on'],
@@ -118,9 +121,25 @@ class ProjectController extends Controller
 
         $newFiles = $this->syncAttachments($request, $project->files(), ProjectFile::class, 'projects/'.$project->id);
 
+        app(AuditTrail::class)->recordRelations($project, $relationsBefore, $this->relations($project->fresh()));
+
         $project->forceFill(['thumbnail_file_id' => $this->resolveThumbnail($project, $data['thumbnail'] ?? null, $newFiles)])->save();
 
         return $project;
+    }
+
+    /** @return array<string, list<string>> */
+    protected function relations(Project $project): array
+    {
+        if (! $project->exists) {
+            return ['thèmes' => [], 'compétences' => [], 'liens' => []];
+        }
+
+        return [
+            'thèmes'      => $project->themes()->pluck('name')->all(),
+            'compétences' => $project->skills()->pluck('name')->all(),
+            'liens'       => $project->links()->pluck('url')->all(),
+        ];
     }
 
     /**
