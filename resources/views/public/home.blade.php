@@ -1,4 +1,7 @@
-@php $canSee = fn (string $key) => \App\Models\Page::isKeyAccessibleBy($key, auth()->user()); @endphp
+@php
+    $canSee = fn (string $key) => \App\Models\Page::isKeyAccessibleBy($key, auth()->user());
+    $hasAbout = ! empty($profile->about['blocks']);
+@endphp
 <x-public-layout :page="$page" :image="$profile->photoUrl()">
     {{-- Présentation --}}
     <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-primary-900">
@@ -7,10 +10,19 @@
 
         <div class="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 md:grid-cols-[1fr_auto]">
             <div class="order-2 md:order-1">
-                <p class="text-sm font-semibold uppercase tracking-widest text-primary-300">Bonjour, je suis</p>
-                <h1 class="mt-3 font-display text-4xl font-bold tracking-tight text-white sm:text-6xl">{{ $profile->fullName() }}</h1>
-                @if ($profile->headline)
-                    <p class="mt-4 text-xl text-slate-300 sm:text-2xl">{{ $profile->headline }}</p>
+                @if ($hasAbout)
+                    {{-- Texte « À propos » mis en avant ; le nom reste le titre de la page (SEO) --}}
+                    <h1 class="text-sm font-semibold uppercase tracking-widest text-primary-300">Bonjour, je suis {{ $profile->fullName() }}</h1>
+                    @if ($profile->headline)
+                        <p class="mt-1 text-sm text-slate-400">{{ $profile->headline }}</p>
+                    @endif
+                    <div class="editor-content hero-about mt-5">@editorjs($profile->about)</div>
+                @else
+                    <p class="text-sm font-semibold uppercase tracking-widest text-primary-300">Bonjour, je suis</p>
+                    <h1 class="mt-3 font-display text-4xl font-bold tracking-tight text-white sm:text-6xl">{{ $profile->fullName() }}</h1>
+                    @if ($profile->headline)
+                        <p class="mt-4 text-xl text-slate-300 sm:text-2xl">{{ $profile->headline }}</p>
+                    @endif
                 @endif
 
                 <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-400">
@@ -51,15 +63,6 @@
             </div>
         </div>
     </section>
-
-    @if (! empty($profile->about['blocks']))
-        <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <div class="grid gap-8 md:grid-cols-[200px_1fr]">
-                <h2 class="font-display text-2xl font-bold text-slate-900">À propos</h2>
-                <div class="editor-content">@editorjs($profile->about)</div>
-            </div>
-        </section>
-    @endif
 
     {{-- Accès rapides au parcours --}}
     @php
