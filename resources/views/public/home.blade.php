@@ -10,19 +10,23 @@
 
         <div class="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 md:grid-cols-[1fr_auto]">
             <div class="order-2 md:order-1">
-                @if ($hasAbout)
-                    {{-- Texte « À propos » mis en avant ; le nom reste le titre de la page (SEO) --}}
+                {{-- Accroche en avant ; le nom reste le titre de la page (SEO) --}}
+                @if ($profile->headline)
                     <h1 class="text-sm font-semibold uppercase tracking-widest text-primary-300">Bonjour, je suis {{ $profile->fullName() }}</h1>
-                    @if ($profile->headline)
-                        <p class="mt-1 text-sm text-slate-400">{{ $profile->headline }}</p>
-                    @endif
-                    <div class="editor-content hero-about mt-5">@editorjs($profile->about)</div>
+                    <p class="mt-3 font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl">{{ $profile->headline }}</p>
                 @else
                     <p class="text-sm font-semibold uppercase tracking-widest text-primary-300">Bonjour, je suis</p>
                     <h1 class="mt-3 font-display text-4xl font-bold tracking-tight text-white sm:text-6xl">{{ $profile->fullName() }}</h1>
-                    @if ($profile->headline)
-                        <p class="mt-4 text-xl text-slate-300 sm:text-2xl">{{ $profile->headline }}</p>
-                    @endif
+                @endif
+
+                {{-- « À propos » : texte courant, replié s'il est long --}}
+                @if ($hasAbout)
+                    <div class="mt-6 max-w-2xl" x-data="{ open: false, long: false }" x-init="long = $refs.about.scrollHeight > $refs.about.clientHeight + 4">
+                        <div x-ref="about" class="editor-content hero-about overflow-hidden"
+                             :class="{ 'max-h-36': ! open, 'hero-about-faded': long && ! open }">@editorjs($profile->about)</div>
+                        <button type="button" x-show="long" x-cloak @click="open = ! open" class="mt-2 text-sm font-semibold text-primary-300 hover:text-primary-200"
+                                x-text="open ? 'Réduire' : 'Lire la suite'"></button>
+                    </div>
                 @endif
 
                 <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-400">
