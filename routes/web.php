@@ -109,6 +109,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('certifications', Admin\CertificationController::class)->except('show');
     Route::resource('competences', Admin\SkillController::class)
         ->except('show')->parameters(['competences' => 'skill']);
+    Route::post('/themes/rapide', [Admin\ThemeController::class, 'quickStore'])->name('themes.quick');
     Route::resource('themes', Admin\ThemeController::class)->except('show');
     Route::resource('projets', Admin\ProjectController::class)
         ->except('show')->parameters(['projets' => 'project']);

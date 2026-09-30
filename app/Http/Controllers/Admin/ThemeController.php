@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Concerns\HandlesUploads;
 use App\Http\Controllers\Controller;
 use App\Models\Theme;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -31,6 +32,20 @@ class ThemeController extends Controller
         $theme->fill($this->validated($request, $theme))->save();
 
         return redirect()->route('admin.themes.index')->with('success', 'Thème ajouté.');
+    }
+
+    /**
+     * Création rapide depuis le formulaire d'un projet ou d'un article.
+     * Un thème de même nom (casse ignorée) est réutilisé plutôt que dupliqué.
+     */
+    public function quickStore(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->validate(['name' => ['required', 'string', 'max:100']])['name']);
+
+        $theme = Theme::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first()
+            ?? Theme::create(['name' => $name, 'position' => (int) Theme::max('position') + 1]);
+
+        return response()->json(['id' => $theme->id, 'name' => $theme->name], $theme->wasRecentlyCreated ? 201 : 200);
     }
 
     public function edit(Theme $theme): View

@@ -54,7 +54,8 @@
                 </x-admin.section>
 
                 <x-admin.section title="Thèmes">
-                    <x-form.chips name="themes" :options="$themes->pluck('name', 'id')" :selected="$article->themes->pluck('id')" empty="Aucun thème disponible." />
+                    <x-form.chips name="themes" :options="$themes->pluck('name', 'id')" :selected="$article->themes->pluck('id')"
+                                  :create-url="route('admin.themes.quick')" create-label="Nouveau thème" />
                 </x-admin.section>
 
                 <x-admin.section title="Miniature">

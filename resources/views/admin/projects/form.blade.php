@@ -25,7 +25,8 @@
         </x-admin.section>
 
         <x-admin.section title="Classement">
-            <x-form.chips name="themes" label="Thèmes" :options="$themes->pluck('name', 'id')" :selected="$project->themes->pluck('id')" empty="Aucun thème : créez-en depuis le menu « Thèmes »." />
+            <x-form.chips name="themes" label="Thèmes" :options="$themes->pluck('name', 'id')" :selected="$project->themes->pluck('id')"
+                          :create-url="route('admin.themes.quick')" create-label="Nouveau thème" />
             <x-form.chips name="skills" label="Compétences mises en avant" :options="$skills->pluck('name', 'id')" :selected="$project->skills->pluck('id')" empty="Aucune compétence : créez-en depuis le menu « Compétences »." />
         </x-admin.section>
 
