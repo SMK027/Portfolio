@@ -32,7 +32,7 @@ class DemoSeeder extends Seeder
             'headline'   => 'Développeuse web & administratrice réseau',
             'location'   => 'Lyon, France',
             'email'      => 'camille.martin@example.com',
-            'github_url' => 'https://github.com/example',
+            'social_links' => [['name' => 'GitHub', 'url' => 'https://github.com/example']],
             'about'      => ['blocks' => [
                 ['type' => 'paragraph', 'data' => ['text' => 'Passionnée par le <b>développement web</b> et les <mark class="cdx-marker">infrastructures réseau</mark>, je conçois des applications robustes et sécurisées.']],
                 ['type' => 'paragraph', 'data' => ['text' => 'Ce portfolio présente mon parcours, mes projets et ma veille technologique.']],

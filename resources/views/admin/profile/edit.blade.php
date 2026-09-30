@@ -22,14 +22,11 @@
             <x-form.editor name="about" :value="$profile->about" placeholder="Présentez-vous…" />
         </x-admin.section>
 
-        <x-admin.section title="Coordonnées et liens">
+        <x-admin.section title="Coordonnées">
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="email" type="email" label="E-mail de contact" :value="$profile->email" help="Reçoit aussi les messages du formulaire de contact (sauf si CONTACT_RECIPIENT est défini)." />
                 <x-form.input name="phone" label="Téléphone" :value="$profile->phone" />
                 <x-form.input name="location" label="Localisation" :value="$profile->location" placeholder="Ex. : Lyon, France" />
-                <x-form.input name="github_url" type="url" label="GitHub" :value="$profile->github_url" placeholder="https://github.com/…" />
-                <x-form.input name="linkedin_url" type="url" label="LinkedIn" :value="$profile->linkedin_url" placeholder="https://www.linkedin.com/in/…" />
-                <x-form.input name="website_url" type="url" label="Site web" :value="$profile->website_url" />
             </div>
             <div>
                 <x-form.input name="cv" type="file" label="CV (PDF)" accept="application/pdf" help="10 Mo max." />
@@ -41,6 +38,25 @@
                         </label>
                     </div>
                 @endif
+            </div>
+        </x-admin.section>
+
+        <x-admin.section title="Réseaux sociaux" description="GitHub, LinkedIn, X, site web… L'icône est choisie automatiquement d'après l'adresse.">
+            @php
+                $socialLinks = old('social_links', collect($profile->social_links ?? [])->map(fn ($l) => ['label' => $l['name'] ?? '', 'url' => $l['url'] ?? ''])->all());
+                $socialLinks = array_map(fn ($l) => ['label' => $l['label'] ?? $l['name'] ?? '', 'url' => $l['url'] ?? ''], array_values($socialLinks));
+            @endphp
+            <div x-data="linkList(@js($socialLinks))" class="space-y-3">
+                <template x-for="(link, i) in links" :key="i">
+                    <div class="flex flex-col gap-2 rounded-lg border border-slate-200 p-3 sm:flex-row sm:items-center sm:border-0 sm:p-0">
+                        <input type="text" :name="`social_links[${i}][name]`" x-model="link.label" placeholder="Nom (ex. : X)" maxlength="50" class="form-input sm:w-48">
+                        <input type="url" :name="`social_links[${i}][url]`" x-model="link.url" placeholder="https://x.com/…" class="form-input flex-1" required>
+                        <button type="button" @click="remove(i)" class="btn-ghost self-end text-red-600 sm:self-auto" aria-label="Retirer ce réseau"><x-icon name="trash" class="h-4 w-4" /></button>
+                    </div>
+                </template>
+                <button type="button" @click="add()" class="btn-secondary btn-sm"><x-icon name="plus" class="h-4 w-4" /> Ajouter un réseau</button>
+                @error('social_links.*.url')<p class="form-error">{{ $message }}</p>@enderror
+                @error('social_links.*.name')<p class="form-error">{{ $message }}</p>@enderror
             </div>
         </x-admin.section>
 

@@ -32,15 +32,21 @@ class ProfileController extends Controller
             'location'     => ['nullable', 'string', 'max:255'],
             'email'        => ['nullable', 'email', 'max:255'],
             'phone'        => ['nullable', 'string', 'max:30'],
-            'github_url'   => ['nullable', 'url:https', 'max:255'],
-            'linkedin_url' => ['nullable', 'url:https', 'max:255'],
-            'website_url'  => ['nullable', 'url:http,https', 'max:255'],
+            'social_links'        => ['nullable', 'array', 'max:20'],
+            'social_links.*.name' => ['nullable', 'string', 'max:50'],
+            'social_links.*.url'  => ['nullable', 'url:http,https', 'max:255'],
             'about'        => ['nullable', 'string', 'max:500000'],
             'photo'        => $this->imageRules(),
             'cv'           => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
         $data['about'] = $this->editorContent($request, 'about');
+        // Les lignes sans URL sont ignorées.
+        $data['social_links'] = collect($data['social_links'] ?? [])
+            ->filter(fn ($link) => filled($link['url'] ?? null))
+            ->map(fn ($link) => ['name' => trim((string) ($link['name'] ?? '')), 'url' => $link['url']])
+            ->values()
+            ->all();
         $data['photo_path'] = $this->syncPublicFile($request, 'photo', $profile->photo_path, 'profile');
         $data['cv_path'] = $this->syncPublicFile($request, 'cv', $profile->cv_path, 'profile');
         unset($data['photo'], $data['cv']);

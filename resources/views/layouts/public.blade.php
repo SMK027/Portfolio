@@ -124,15 +124,7 @@
                 @if ($siteProfile->headline)<p class="text-sm text-slate-500">{{ $siteProfile->headline }}</p>@endif
             </div>
             <div class="flex items-center gap-2">
-                @if ($siteProfile->github_url)
-                    <a href="{{ $siteProfile->github_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="GitHub"><x-icon name="github" /></a>
-                @endif
-                @if ($siteProfile->linkedin_url)
-                    <a href="{{ $siteProfile->linkedin_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="LinkedIn"><x-icon name="linkedin" /></a>
-                @endif
-                @if ($siteProfile->website_url)
-                    <a href="{{ $siteProfile->website_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Site web"><x-icon name="globe" /></a>
-                @endif
+                <x-social-links :profile="$siteProfile" />
             </div>
         </div>
         <div class="border-t border-slate-100">

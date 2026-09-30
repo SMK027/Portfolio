@@ -35,15 +35,7 @@
                 </div>
 
                 <div class="mt-8 flex gap-2">
-                    @if ($profile->github_url)
-                        <a href="{{ $profile->github_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="GitHub"><x-icon name="github" class="h-6 w-6" /></a>
-                    @endif
-                    @if ($profile->linkedin_url)
-                        <a href="{{ $profile->linkedin_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="LinkedIn"><x-icon name="linkedin" class="h-6 w-6" /></a>
-                    @endif
-                    @if ($profile->website_url)
-                        <a href="{{ $profile->website_url }}" target="_blank" rel="noopener" class="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Site web"><x-icon name="globe" class="h-6 w-6" /></a>
-                    @endif
+                    <x-social-links :profile="$profile" icon-class="h-6 w-6" link-class="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white" />
                 </div>
             </div>
 
