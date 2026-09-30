@@ -26,7 +26,7 @@ class SocialLinksTest extends TestCase
 
         $links = Profile::current()->socialLinks();
         $this->assertCount(2, $links);
-        $this->assertSame('x', $links[0]['icon']);
+        $this->assertSame('x-twitter', $links[0]['icon']);
         $this->assertSame('github', $links[1]['icon']);
 
         $this->get('/')->assertSee('https://x.com/smk_027')->assertSee('aria-label="X"', false);
