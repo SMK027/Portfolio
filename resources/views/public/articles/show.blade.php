@@ -1,8 +1,24 @@
-<x-public-layout :page="$page" :title="$article->title" :description="$article->excerpt" :image="$article->thumbnailUrl()">
+<x-public-layout :page="$page" :title="$article->title" :description="$article->excerpt" :image="$article->thumbnailUrl()" type="article">
+    @push('head')
+        <meta property="article:published_time" content="{{ $article->published_at?->toAtomString() }}">
+        <meta property="article:modified_time" content="{{ $article->updated_at?->toAtomString() }}">
+        <script type="application/ld+json">{!! json_encode(array_filter([
+            '@context'      => 'https://schema.org',
+            '@type'         => 'BlogPosting',
+            'headline'      => \Illuminate\Support\Str::limit($article->title, 110),
+            'description'   => $article->excerpt,
+            'image'         => $article->thumbnailUrl() ? url($article->thumbnailUrl()) : null,
+            'datePublished' => $article->published_at?->toAtomString(),
+            'dateModified'  => $article->updated_at?->toAtomString(),
+            'author'        => array_values(array_filter([$article->author, ...$article->coauthors]))
+                ? collect([$article->author, ...$article->coauthors])->filter()->map(fn ($u) => ['@type' => 'Person', 'name' => $u->name])->values()->all() : null,
+            'mainEntityOfPage' => route('articles.show', $article),
+        ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+    @endpush
     <article>
         <header class="relative overflow-hidden bg-slate-900">
             @if ($article->thumbnailUrl())
-                <img src="{{ $article->thumbnailUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover opacity-30">
+                <img src="{{ $article->thumbnailUrl() }}" alt="" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover opacity-30">
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-slate-900/40"></div>
             @else
                 <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-primary-900"></div>

@@ -176,7 +176,7 @@ class EditorJsRenderer
         $alt = e(trim(html_entity_decode(strip_tags($caption))));
         $figcaption = trim(strip_tags($caption)) !== '' ? '<figcaption>'.$this->inline($caption).'</figcaption>' : '';
 
-        return '<figure class="'.implode(' ', $classes).'"><img src="'.e($url).'" alt="'.$alt.'" loading="lazy">'
+        return '<figure class="'.implode(' ', $classes).'"><img src="'.e($url).'" alt="'.$alt.'" loading="lazy" decoding="async">'
             .$figcaption.'</figure>';
     }
 

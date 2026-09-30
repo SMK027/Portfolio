@@ -5,7 +5,7 @@
     'bg-slate-900' => $background,
 ])>
     @if ($background)
-        <img src="{{ $background }}" alt="" class="absolute inset-0 h-full w-full object-cover opacity-40">
+        <img src="{{ $background }}" alt="" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover opacity-40">
         <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-slate-900/30"></div>
     @else
         <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary-500/20 blur-3xl"></div>

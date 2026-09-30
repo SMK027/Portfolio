@@ -46,6 +46,12 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Référencement** : *Administration → Référencement* permet de désindexer tout le site. Les pages reçoivent alors une balise `noindex` et toutes les réponses l'en-tête `X-Robots-Tag: noindex, nofollow`. Le `robots.txt`, généré dynamiquement, bloque les images publiques (`/storage/`) mais laisse les pages explorables, pour que les moteurs lisent la consigne et retirent les pages déjà indexées. L'administration et la connexion ne sont jamais indexées.
 
+**SEO et performances** :
+- `sitemap.xml` liste les pages publiques, les projets, les thèmes et les articles publiés (vide quand le site est désindexé) ; le `robots.txt` y renvoie ;
+- chaque page publique porte une URL canonique, les balises Open Graph et Twitter, et des données structurées JSON-LD (`Person` sur l'accueil, `BlogPosting` sur les articles) ;
+- les images hors écran et les vidéos intégrées sont chargées à la demande (`loading="lazy"`), l'image principale de chaque page est prioritaire (`fetchpriority="high"`) ; les polices ne bloquent plus l'affichage ; les scripts sont des modules (différés) et Editor.js n'est chargé que dans l'éditeur ;
+- Apache compresse les réponses texte et met en cache les assets versionnés (`/build/assets/`, 1 an) et les fichiers publics (`/storage/`, 7 jours).
+
 **Maintenance** : *Administration → Maintenance* met le site en maintenance, avec une date de désactivation automatique et un motif, tous deux facultatifs. Les visiteurs voient alors une page de maintenance (motif, date de retour, compte à rebours) à la place des pages et des fichiers. Elle est renvoyée avec un **statut HTTP 200** pour ne pas fausser la surveillance de disponibilité. Les administrateurs connectés continuent de naviguer et de modifier le site, et la page de connexion reste accessible. Les collaborateurs (contributeurs) conservent l'accès au panel d'administration pour la rédaction d'articles (avec leurs pièces jointes et « Mon compte ») ; le site public leur reste masqué.
 
 **E-mails tolérants aux pannes** : une panne SMTP, une configuration `MAIL_*` invalide ou un compte de messagerie désactivé ne bloquent jamais le site. Dans ce cas :

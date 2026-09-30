@@ -3,7 +3,7 @@
 <article class="group card relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
     <a href="{{ route('projects.show', $project) }}" class="relative block aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary-100 to-accent-100" tabindex="-1" aria-hidden="true">
         @if ($thumb)
-            <img src="{{ $thumb }}" alt="" loading="lazy" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
+            <img src="{{ $thumb }}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
         @else
             <span class="absolute inset-0 flex items-center justify-center font-display text-5xl font-bold text-primary-300">{{ mb_strtoupper(mb_substr($project->title, 0, 1)) }}</span>
         @endif

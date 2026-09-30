@@ -3,6 +3,18 @@
     $hasAbout = ! empty($profile->about['blocks']);
 @endphp
 <x-public-layout :page="$page" :image="$profile->photoUrl()">
+    @push('head')
+        <script type="application/ld+json">{!! json_encode(array_filter([
+            '@context' => 'https://schema.org',
+            '@type'    => 'Person',
+            'name'     => $profile->fullName(),
+            'jobTitle' => $profile->headline,
+            'url'      => url('/'),
+            'image'    => $profile->photoUrl() ? url($profile->photoUrl()) : null,
+            'address'  => $profile->location ? ['@type' => 'PostalAddress', 'addressLocality' => $profile->location] : null,
+            'sameAs'   => $profile->socialLinks()->pluck('url')->values()->all() ?: null,
+        ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+    @endpush
     {{-- Présentation --}}
     <section class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-primary-900">
         <div class="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-primary-500/25 blur-3xl"></div>
@@ -59,7 +71,7 @@
                 <div class="relative">
                     <div class="absolute -inset-3 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 opacity-60 blur-lg"></div>
                     @if ($profile->photoUrl())
-                        <img src="{{ $profile->photoUrl() }}" alt="Photo de {{ $profile->fullName() }}" class="relative h-44 w-44 rounded-full border-4 border-white/20 object-cover sm:h-64 sm:w-64">
+                        <img src="{{ $profile->photoUrl() }}" alt="Photo de {{ $profile->fullName() }}" fetchpriority="high" decoding="async" class="relative h-44 w-44 rounded-full border-4 border-white/20 object-cover sm:h-64 sm:w-64">
                     @else
                         <div class="relative flex h-44 w-44 items-center justify-center rounded-full border-4 border-white/20 bg-slate-800 font-display text-6xl font-bold text-white sm:h-64 sm:w-64">{{ $profile->initials() }}</div>
                     @endif

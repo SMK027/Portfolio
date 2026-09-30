@@ -2,7 +2,7 @@
 <article @class(['group card relative flex overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg', 'flex-col md:flex-row' => $featured, 'flex-col' => ! $featured])>
     <div @class(['relative overflow-hidden bg-gradient-to-br from-slate-200 to-primary-100', 'aspect-[16/9] md:aspect-auto md:w-2/5' => $featured, 'aspect-[16/9]' => ! $featured])>
         @if ($article->thumbnailUrl())
-            <img src="{{ $article->thumbnailUrl() }}" alt="" loading="lazy" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
+            <img src="{{ $article->thumbnailUrl() }}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
         @else
             <span class="absolute inset-0 flex items-center justify-center text-primary-300"><x-icon name="newspaper" class="h-12 w-12" /></span>
         @endif

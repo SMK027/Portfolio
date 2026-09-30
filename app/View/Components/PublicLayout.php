@@ -13,6 +13,7 @@ class PublicLayout extends Component
         public ?string $description = null,
         public ?Page $page = null,
         public ?string $image = null,
+        public string $type = 'website',
     ) {
     }
 

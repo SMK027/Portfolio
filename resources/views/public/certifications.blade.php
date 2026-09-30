@@ -10,7 +10,7 @@
                     <article class="card flex flex-col p-6">
                         <div class="flex items-start gap-4">
                             @if ($certification->badgeUrl())
-                                <img src="{{ $certification->badgeUrl() }}" alt="Badge {{ $certification->name }}" class="h-16 w-16 flex-none rounded-xl object-contain">
+                                <img src="{{ $certification->badgeUrl() }}" alt="Badge {{ $certification->name }}" loading="lazy" decoding="async" width="64" height="64" class="h-16 w-16 flex-none rounded-xl object-contain">
                             @else
                                 <span class="flex h-16 w-16 flex-none items-center justify-center rounded-xl bg-accent-50 text-accent-600"><x-icon name="badge" class="h-8 w-8" /></span>
                             @endif

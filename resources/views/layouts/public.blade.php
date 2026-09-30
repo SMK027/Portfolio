@@ -8,18 +8,29 @@
     @php
         $siteName = $siteProfile->fullName();
         $pageTitle = $title ? $title.' — '.$siteName : $siteName.($siteProfile->headline ? ' — '.$siteProfile->headline : '');
+        // URL canonique : sans paramètres, sauf la pagination
+        $canonical = request()->url().(request()->integer('page') > 1 ? '?page='.request()->integer('page') : '');
         $metaDescription = \Illuminate\Support\Str::limit(strip_tags($description ?? $page?->intro ?? $siteProfile->headline ?? ''), 160);
     @endphp
     <title>{{ $pageTitle }}</title>
     <meta name="description" content="{{ $metaDescription }}">
     <meta property="og:title" content="{{ $pageTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="{{ $type }}">
+    <meta property="og:url" content="{{ $canonical }}">
+    <meta property="og:site_name" content="{{ $siteName }}">
+    <meta property="og:locale" content="{{ str_replace('-', '_', config('app.locale')) === 'fr' ? 'fr_FR' : config('app.locale') }}">
+    <meta name="twitter:card" content="{{ $image ? 'summary_large_image' : 'summary' }}">
     @if ($image)<meta property="og:image" content="{{ url($image) }}">@endif
+    <link rel="canonical" href="{{ $canonical }}">
     @if (! $indexable || ($page && ! $page->is_public))<meta name="robots" content="noindex, nofollow">@endif
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|space-grotesk:500,600,700&display=swap" rel="stylesheet" />
+    {{-- Polices chargées sans bloquer l'affichage (font-display: swap) --}}
+    @php $fontsUrl = 'https://fonts.bunny.net/css?family=figtree:400,500,600,700|space-grotesk:500,600,700&display=swap'; @endphp
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link rel="preload" as="style" href="{{ $fontsUrl }}">
+    <link rel="stylesheet" href="{{ $fontsUrl }}" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="{{ $fontsUrl }}"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
@@ -71,7 +82,7 @@
         <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="Navigation principale">
             <a href="{{ $homePage?->isAccessibleBy(auth()->user()) ? route('home') : ($navPages->first()?->url() ?? '#') }}" class="flex min-w-0 items-center gap-3">
                 @if ($siteProfile->photoUrl())
-                    <img src="{{ $siteProfile->photoUrl() }}" alt="" class="h-9 w-9 flex-none rounded-full object-cover ring-2 ring-primary-100">
+                    <img src="{{ $siteProfile->photoUrl() }}" alt="" decoding="async" width="36" height="36" class="h-9 w-9 flex-none rounded-full object-cover ring-2 ring-primary-100">
                 @else
                     <span class="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 text-sm font-bold text-white">{{ $siteProfile->initials() }}</span>
                 @endif

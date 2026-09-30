@@ -1,3 +1,18 @@
+# Assets compilés par Vite : noms versionnés (empreinte), mis en cache un an.
+<IfModule mod_headers.c>
+    <If "%{REQUEST_URI} =~ m#^/build/assets/#">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </If>
+    <ElseIf "%{REQUEST_URI} =~ m#^/storage/#">
+        Header set Cache-Control "public, max-age=604800"
+    </ElseIf>
+</IfModule>
+
+# Compression des réponses texte
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/xml application/javascript application/json image/svg+xml
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

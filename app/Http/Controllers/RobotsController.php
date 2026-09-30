@@ -21,6 +21,10 @@ class RobotsController extends Controller
         // déjà l'en-tête "noindex", qu'un blocage empêcherait les moteurs de lire.
         $lines = ['User-agent: *'];
         $lines[] = Setting::siteIsIndexable() ? 'Disallow:' : 'Disallow: /storage/';
+        if (Setting::siteIsIndexable()) {
+            $lines[] = '';
+            $lines[] = 'Sitemap: '.route('sitemap');
+        }
 
         return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
