@@ -3,7 +3,8 @@
     <x-slot name="title">{{ $editing ? 'Modifier la certification' : 'Nouvelle certification' }}</x-slot>
     <x-slot name="header">{{ $editing ? 'Modifier la certification' : 'Nouvelle certification' }}</x-slot>
 
-    <form method="POST" action="{{ $editing ? route('admin.certifications.update', $certification) : route('admin.certifications.store') }}" enctype="multipart/form-data" class="space-y-6">
+    <form method="POST" action="{{ $editing ? route('admin.certifications.update', $certification) : route('admin.certifications.store') }}" enctype="multipart/form-data" class="space-y-6"
+          x-data="{ precision: @js(old('date_precision', $certification->datePrecision())) }">
         @csrf
         @if ($editing) @method('PUT') @endif
 
@@ -11,8 +12,9 @@
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="name" label="Nom de la certification" :value="$certification->name" required />
                 <x-form.input name="issuer" label="Organisme" :value="$certification->issuer" help="Facultatif (ex. : Pix, niveau de langue)." />
-                <x-form.input name="issued_at" type="date" label="Date d'obtention" :value="$certification->issued_at?->toDateString()" required />
-                <x-form.input name="expires_at" type="date" label="Date d'expiration" :value="$certification->expires_at?->toDateString()" help="Facultatif." />
+                <x-form.date-precision :value="$certification->datePrecision()" class="sm:col-span-2" />
+                <x-form.precise-date name="issued_at" label="Obtention" :model="$certification" field="issued_at" required />
+                <x-form.precise-date name="expires_at" label="Expiration" :model="$certification" field="expires_at" help="Facultatif." />
                 <x-form.input name="credential_id" label="Identifiant" :value="$certification->credential_id" />
                 <x-form.input name="credential_url" type="url" label="Lien de vérification" :value="$certification->credential_url" placeholder="https://…" />
             </div>

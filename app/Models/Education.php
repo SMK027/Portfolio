@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDatePrecision;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable(['title', 'institution', 'location', 'start_date', 'end_date', 'description', 'position'])]
 class Education extends Model
 {
+    use HasDatePrecision;
+
     protected $table = 'educations';
 
     protected function casts(): array
@@ -27,6 +30,6 @@ class Education extends Model
 
     public function isOngoing(): bool
     {
-        return $this->end_date === null || $this->end_date->isFuture();
+        return $this->end_date === null || $this->periodEnd($this->end_date)->isFuture();
     }
 }

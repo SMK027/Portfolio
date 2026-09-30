@@ -13,7 +13,7 @@
                     @foreach ($educations as $education)
                         <tr>
                             <td><p class="font-medium text-slate-900">{{ $education->title }}</p><p class="text-xs text-slate-500">{{ $education->institution }}</p></td>
-                            <td class="hidden whitespace-nowrap md:table-cell">{{ $education->start_date->format('m/Y') }} — {{ $education->end_date?->format('m/Y') ?? 'en cours' }}</td>
+                            <td class="hidden whitespace-nowrap md:table-cell">{{ $education->formatDate($education->start_date, true) }} — {{ $education->formatDate($education->end_date, true) ?? 'en cours' }}</td>
                             <td class="hidden sm:table-cell">{{ $education->position }}</td>
                             <td class="whitespace-nowrap text-right">
                                 <x-admin.edit-link :href="route('admin.formations.edit', $education)" />

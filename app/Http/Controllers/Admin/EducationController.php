@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ValidatesPreciseDates;
 use App\Http\Controllers\Controller;
 use App\Models\Education;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,8 @@ use Illuminate\View\View;
 
 class EducationController extends Controller
 {
+    use ValidatesPreciseDates;
+
     public function index(): View
     {
         return view('admin.educations.index', ['educations' => Education::ordered()->get()]);
@@ -17,7 +20,7 @@ class EducationController extends Controller
 
     public function create(): View
     {
-        return view('admin.educations.form', ['education' => new Education(['position' => 0])]);
+        return view('admin.educations.form', ['education' => new Education(['position' => 0, 'date_precision' => 'year'])]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -53,12 +56,20 @@ class EducationController extends Controller
             'title'       => ['required', 'string', 'max:255'],
             'institution' => ['required', 'string', 'max:255'],
             'location'    => ['nullable', 'string', 'max:255'],
-            'start_date'  => ['required', 'date'],
-            'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
             'description' => ['nullable', 'string', 'max:5000'],
             'position'    => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
 
-        return ['position' => (int) ($data['position'] ?? 0)] + $data;
+        // « En cours » : pas de date de fin.
+        $dates = $this->preciseDates($request, [
+            'start_date' => true,
+            'end_date'   => false,
+        ], ['start_date', 'end_date']);
+
+        if ($request->boolean('ongoing')) {
+            $dates['end_date'] = null;
+        }
+
+        return ['position' => (int) ($data['position'] ?? 0)] + $dates + $data;
     }
 }

@@ -16,8 +16,9 @@ class CertificationTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post(route('admin.certifications.store'), [
-            'name'      => 'Pix',
-            'issued_at' => '2024-05-10',
+            'name'           => 'Pix',
+            'date_precision' => 'day',
+            'issued_at'      => '2024-05-10',
         ])->assertSessionHasNoErrors();
 
         $this->assertNull(Certification::sole()->issuer);

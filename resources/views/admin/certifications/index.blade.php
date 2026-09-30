@@ -20,10 +20,10 @@
                                     <div><p class="font-medium text-slate-900">{{ $certification->name }}</p><p class="text-xs text-slate-500">{{ $certification->issuer }}</p></div>
                                 </div>
                             </td>
-                            <td class="hidden md:table-cell">{{ $certification->issued_at->format('m/Y') }}</td>
+                            <td class="hidden md:table-cell">{{ $certification->formatDate($certification->issued_at, true) }}</td>
                             <td class="hidden md:table-cell">
                                 @if ($certification->expires_at)
-                                    <span class="{{ $certification->isExpired() ? 'text-red-600' : '' }}">{{ $certification->expires_at->format('m/Y') }}</span>
+                                    <span class="{{ $certification->isExpired() ? 'text-red-600' : '' }}">{{ $certification->formatDate($certification->expires_at, true) }}</span>
                                 @else
                                     <span class="text-slate-400">—</span>
                                 @endif

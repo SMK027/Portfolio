@@ -3,7 +3,8 @@
     <x-slot name="title">{{ $editing ? 'Modifier le diplôme' : 'Nouveau diplôme' }}</x-slot>
     <x-slot name="header">{{ $editing ? 'Modifier le diplôme' : 'Nouveau diplôme' }}</x-slot>
 
-    <form method="POST" action="{{ $editing ? route('admin.diplomes.update', $diploma) : route('admin.diplomes.store') }}" class="space-y-6">
+    <form method="POST" action="{{ $editing ? route('admin.diplomes.update', $diploma) : route('admin.diplomes.store') }}" class="space-y-6"
+          x-data="{ precision: @js(old('date_precision', $diploma->datePrecision())) }">
         @csrf
         @if ($editing) @method('PUT') @endif
 
@@ -11,7 +12,8 @@
             <x-form.input name="title" label="Intitulé du diplôme" :value="$diploma->title" required />
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="institution" label="Établissement" :value="$diploma->institution" required />
-                <x-form.input name="obtained_at" type="date" label="Date d'obtention" :value="$diploma->obtained_at?->toDateString()" required />
+                <x-form.date-precision :value="$diploma->datePrecision()" class="sm:col-span-2" />
+                <x-form.precise-date name="obtained_at" label="Obtention" :model="$diploma" field="obtained_at" required />
                 <x-form.input name="level" label="Niveau" :value="$diploma->level" placeholder="Ex. : Bac+2, niveau 5" />
                 <x-form.input name="mention" label="Mention" :value="$diploma->mention" placeholder="Ex. : Bien" />
             </div>

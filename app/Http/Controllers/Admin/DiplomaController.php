@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ValidatesPreciseDates;
 use App\Http\Controllers\Controller;
 use App\Models\Diploma;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,8 @@ use Illuminate\View\View;
 
 class DiplomaController extends Controller
 {
+    use ValidatesPreciseDates;
+
     public function index(): View
     {
         return view('admin.diplomas.index', ['diplomas' => Diploma::ordered()->get()]);
@@ -17,7 +20,7 @@ class DiplomaController extends Controller
 
     public function create(): View
     {
-        return view('admin.diplomas.form', ['diploma' => new Diploma(['position' => 0])]);
+        return view('admin.diplomas.form', ['diploma' => new Diploma(['position' => 0, 'date_precision' => 'year'])]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -54,11 +57,12 @@ class DiplomaController extends Controller
             'institution' => ['required', 'string', 'max:255'],
             'level'       => ['nullable', 'string', 'max:50'],
             'mention'     => ['nullable', 'string', 'max:100'],
-            'obtained_at' => ['required', 'date'],
             'description' => ['nullable', 'string', 'max:5000'],
             'position'    => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
 
-        return ['position' => (int) ($data['position'] ?? 0)] + $data;
+        $dates = $this->preciseDates($request, ['obtained_at' => true]);
+
+        return ['position' => (int) ($data['position'] ?? 0)] + $dates + $data;
     }
 }

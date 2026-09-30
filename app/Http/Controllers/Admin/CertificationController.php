@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Concerns\HandlesUploads;
+use App\Http\Controllers\Admin\Concerns\ValidatesPreciseDates;
 use App\Http\Controllers\Controller;
 use App\Models\Certification;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +12,7 @@ use Illuminate\View\View;
 
 class CertificationController extends Controller
 {
-    use HandlesUploads;
+    use HandlesUploads, ValidatesPreciseDates;
 
     public function index(): View
     {
@@ -20,7 +21,7 @@ class CertificationController extends Controller
 
     public function create(): View
     {
-        return view('admin.certifications.form', ['certification' => new Certification(['position' => 0])]);
+        return view('admin.certifications.form', ['certification' => new Certification(['position' => 0, 'date_precision' => 'year'])]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -57,14 +58,17 @@ class CertificationController extends Controller
         $data = $request->validate([
             'name'           => ['required', 'string', 'max:255'],
             'issuer'         => ['nullable', 'string', 'max:255'],
-            'issued_at'      => ['required', 'date'],
-            'expires_at'     => ['nullable', 'date', 'after_or_equal:issued_at'],
             'credential_id'  => ['nullable', 'string', 'max:255'],
             'credential_url' => ['nullable', 'url:http,https', 'max:255'],
             'description'    => ['nullable', 'string', 'max:5000'],
             'position'       => ['nullable', 'integer', 'min:0', 'max:999'],
             'badge'          => $this->imageRules(2048),
         ]);
+
+        $data += $this->preciseDates($request, [
+            'issued_at'  => true,
+            'expires_at' => false,
+        ], ['issued_at', 'expires_at']);
 
         $data['badge_path'] = $this->syncPublicFile($request, 'badge', $certification->badge_path, 'certifications');
         $data['position'] = (int) ($data['position'] ?? 0);

@@ -11,7 +11,7 @@
                         <span class="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary-50 text-primary-600"><x-icon name="diploma" class="h-6 w-6" /></span>
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2 text-xs">
-                                <span class="font-medium text-slate-500">{{ $diploma->obtained_at->translatedFormat('F Y') }}</span>
+                                <span class="font-medium text-slate-500">{{ $diploma->formatDate($diploma->obtained_at) }}</span>
                                 @if ($diploma->level)<span class="badge-primary">{{ $diploma->level }}</span>@endif
                                 @if ($diploma->mention)<span class="badge-amber">Mention {{ $diploma->mention }}</span>@endif
                             </div>

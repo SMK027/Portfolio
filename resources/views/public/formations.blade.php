@@ -13,7 +13,7 @@
                             <div class="flex flex-wrap items-center gap-2 text-sm">
                                 <span class="inline-flex items-center gap-1 font-medium text-primary-700">
                                     <x-icon name="calendar" class="h-4 w-4" />
-                                    {{ $education->start_date->translatedFormat('M Y') }} — {{ $education->end_date?->translatedFormat('M Y') ?? 'aujourd\'hui' }}
+                                    {{ $education->formatDate($education->start_date) }} — {{ $education->formatDate($education->end_date) ?? 'aujourd\'hui' }}
                                 </span>
                                 @if ($education->isOngoing())
                                     <span class="badge-green">En cours</span>

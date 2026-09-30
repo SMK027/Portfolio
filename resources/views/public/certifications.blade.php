@@ -20,11 +20,11 @@
                             </div>
                         </div>
                         <dl class="mt-4 space-y-1 text-sm text-slate-500">
-                            <div class="flex gap-2"><dt>Obtenue :</dt><dd class="font-medium text-slate-700">{{ $certification->issued_at->translatedFormat('F Y') }}</dd></div>
+                            <div class="flex gap-2"><dt>Obtenue :</dt><dd class="font-medium text-slate-700">{{ $certification->formatDate($certification->issued_at) }}</dd></div>
                             @if ($certification->expires_at)
                                 <div class="flex items-center gap-2">
-                                    <dt>{{ $certification->isExpired() ? 'Expirée :' : 'Valable jusqu\'en' }}</dt>
-                                    <dd class="font-medium {{ $certification->isExpired() ? 'text-red-600' : 'text-slate-700' }}">{{ $certification->expires_at->translatedFormat('F Y') }}</dd>
+                                    <dt>{{ $certification->isExpired() ? 'Expirée :' : 'Valable jusqu\'à :' }}</dt>
+                                    <dd class="font-medium {{ $certification->isExpired() ? 'text-red-600' : 'text-slate-700' }}">{{ $certification->formatDate($certification->expires_at) }}</dd>
                                 </div>
                             @endif
                             @if ($certification->credential_id)

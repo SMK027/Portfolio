@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDatePrecision;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 ])]
 class Certification extends Model
 {
+    use HasDatePrecision;
+
     protected function casts(): array
     {
         return [
@@ -28,7 +31,7 @@ class Certification extends Model
 
     public function isExpired(): bool
     {
-        return $this->expires_at !== null && $this->expires_at->isPast();
+        return $this->expires_at !== null && $this->periodEnd($this->expires_at)->isPast();
     }
 
     public function badgeUrl(): ?string

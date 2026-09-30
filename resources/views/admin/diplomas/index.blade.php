@@ -13,7 +13,7 @@
                     @foreach ($diplomas as $diploma)
                         <tr>
                             <td><p class="font-medium text-slate-900">{{ $diploma->title }}</p><p class="text-xs text-slate-500">{{ $diploma->institution }}@if ($diploma->level) · {{ $diploma->level }}@endif</p></td>
-                            <td class="hidden md:table-cell">{{ $diploma->obtained_at->format('m/Y') }}</td>
+                            <td class="hidden md:table-cell">{{ $diploma->formatDate($diploma->obtained_at, true) }}</td>
                             <td class="hidden sm:table-cell">{{ $diploma->position }}</td>
                             <td class="whitespace-nowrap text-right">
                                 <x-admin.edit-link :href="route('admin.diplomes.edit', $diploma)" />
