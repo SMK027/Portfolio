@@ -23,6 +23,7 @@
             ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*'],
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'],
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*'],
+            ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*'],
             ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'],
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],

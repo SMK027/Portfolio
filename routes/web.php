@@ -121,6 +121,15 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('annonces', Admin\AnnouncementController::class)
         ->except('show')->parameters(['annonces' => 'announcement']);
 
+    Route::prefix('import-export')->name('transfer.')->controller(Admin\TransferController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/export', 'export')->name('export');
+        Route::get('/modele', 'example')->name('example');
+        Route::post('/simulation', 'preview')->name('preview');
+        Route::post('/import', 'import')->name('import');
+        Route::delete('/import', 'cancel')->name('cancel');
+    });
+
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');

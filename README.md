@@ -11,6 +11,22 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature, des pièces jointes (images en carrousel, documents à télécharger, comme pour les projets) et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
 - **Contact** : nom, prénom, e-mail, objet, message et consentement obligatoire. Le formulaire est protégé par Google reCAPTCHA v3, un champ piège et une limite de débit. Chaque message est enregistré en base et notifié par e-mail
 
+**Import / export** (*Administration → Import / export*) :
+- **Export** : JSON de tout ou partie du contenu (présentation, pages, thèmes, compétences, formations, expériences, diplômes, certifications, loisirs, projets, articles, annonces). Il sert de sauvegarde ou de base de migration.
+- **Import** en deux temps : une simulation détaille ce qui sera créé, mis à jour ou ignoré, puis l'import est confirmé. Un élément déjà présent (même slug, même titre…) est mis à jour et non dupliqué ; relancer un import est donc sans risque.
+- **Format souple** (voir le **fichier modèle** téléchargeable) :
+  - dates `2024`, `2024-09` ou `2024-09-15`, la précision étant déduite du format ;
+  - thèmes et compétences désignés par leur nom, et créés s'ils manquent ;
+  - auteurs désignés par leur e-mail ;
+  - contenu d'article en HTML (`content_html`) accepté et converti en blocs Editor.js, avec récupération possible des images distantes.
+- **Non inclus** : les fichiers (photos, images de fond, badges, pièces jointes).
+
+**Éditeur de texte (Editor.js)** : le contenu collé est conservé.
+- Images collées (balise `<img>`, capture en base64, lien direct) : elles sont récupérées et hébergées sur le site. Le téléchargement est protégé contre les requêtes vers le réseau interne (SSRF).
+- Vidéos intégrées (`<iframe>` YouTube, Vimeo, CodePen) : elles deviennent des blocs vidéo ; les autres iframes deviennent un lien.
+- Listes imbriquées : leur structure est conservée.
+- Galerie d'un article : le bouton « Insérer dans le texte » place une image déjà envoyée dans le contenu.
+
 **Annonces** : des bandeaux s'affichent sous le menu, sur toutes les pages publiques (recherche de stage ou d'alternance, disponibilité, actualité…). Depuis *Administration → Annonces*, chaque annonce se règle ainsi :
 - titre, message et style (mise en avant, recherche / disponibilité, information, important) ;
 - lien facultatif avec un bouton ;
