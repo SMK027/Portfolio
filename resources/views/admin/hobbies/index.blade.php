@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Loisirs</x-slot>
     <x-slot name="header">Loisirs</x-slot>
+    @can('panel', 'hobbies.write')
     <x-slot name="actions"><a href="{{ route('admin.loisirs.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     @if ($hobbies->isEmpty())
         <x-empty-state icon="heart" message="Aucun loisir pour l'instant." />
@@ -16,8 +18,8 @@
                         <p class="truncate font-medium text-slate-900">{{ $hobby->name }}</p>
                         <p class="text-xs text-slate-500">Ordre {{ $hobby->position }}</p>
                     </div>
-                    <x-admin.edit-link :href="route('admin.loisirs.edit', $hobby)" />
-                    <x-admin.delete-button :action="route('admin.loisirs.destroy', $hobby)" />
+                    <x-admin.edit-link can="hobbies.write" :href="route('admin.loisirs.edit', $hobby)" />
+                    <x-admin.delete-button can="hobbies.delete" :action="route('admin.loisirs.destroy', $hobby)" />
                 </div>
             @endforeach
         </div>

@@ -26,7 +26,7 @@
 
         <x-admin.section title="Classement">
             <x-form.chips name="themes" label="Thèmes" :options="$themes->pluck('name', 'id')" :selected="$project->themes->pluck('id')"
-                          :create-url="auth()->user()->isAdmin() ? route('admin.themes.quick') : null" create-label="Nouveau thème" />
+                          :create-url="auth()->user()->can('panel', 'themes.write') ? route('admin.themes.quick') : null" create-label="Nouveau thème" />
             <x-form.chips name="skills" label="Compétences mises en avant" :options="$skills->pluck('name', 'id')" :selected="$project->skills->pluck('id')" empty="Aucune compétence : créez-en depuis le menu « Compétences »." />
         </x-admin.section>
 
@@ -48,10 +48,6 @@
             <x-admin.attachments :files="$editing ? $project->files : collect()" :file-class="\App\Models\ProjectFile::class" with-thumbnail insertable />
         </x-admin.section>
 
-        @can('panel', 'projects.write')
-            <x-admin.form-actions :cancel="route('admin.projets.index')" />
-        @else
-            <p class="text-sm text-slate-500">Lecture seule : ce compte n'est pas autorisé à enregistrer des modifications.</p>
-        @endcan
+        <x-admin.form-actions can="projects.write" :cancel="route('admin.projets.index')" />
     </form>
 </x-app-layout>

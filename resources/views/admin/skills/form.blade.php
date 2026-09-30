@@ -20,6 +20,6 @@
             <x-form.textarea name="description" label="Description" :value="$skill->description" rows="2" maxlength="500" />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.competences.index')" />
+        <x-admin.form-actions can="skills.write" :cancel="route('admin.competences.index')" />
     </form>
 </x-app-layout>

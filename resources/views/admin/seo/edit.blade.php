@@ -45,6 +45,6 @@
             </div>
         </x-admin.section>
 
-        <x-admin.form-actions />
+        <x-admin.form-actions can="seo.write" />
     </form>
 </x-app-layout>

@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Certifications</x-slot>
     <x-slot name="header">Certifications</x-slot>
+    @can('panel', 'certifications.write')
     <x-slot name="actions"><a href="{{ route('admin.certifications.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     @if ($certifications->isEmpty())
         <x-empty-state icon="badge" message="Aucune certification pour l'instant." />
@@ -29,8 +31,8 @@
                                 @endif
                             </td>
                             <td class="whitespace-nowrap text-right">
-                                <x-admin.edit-link :href="route('admin.certifications.edit', $certification)" />
-                                <x-admin.delete-button :action="route('admin.certifications.destroy', $certification)" />
+                                <x-admin.edit-link can="certifications.write" :href="route('admin.certifications.edit', $certification)" />
+                                <x-admin.delete-button can="certifications.delete" :action="route('admin.certifications.destroy', $certification)" />
                             </td>
                         </tr>
                     @endforeach

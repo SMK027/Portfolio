@@ -64,12 +64,15 @@ class AppServiceProvider extends ServiceProvider
     {
         Carbon::setLocale(config('app.locale'));
 
-        Gate::define('manage-users', fn (User $user) => $user->isSuperAdmin());
+        // Comptes : super-admins ; bots autorisés, pour les seuls comptes contributeurs.
+        Gate::define('manage-users', fn (User $user, ?User $target = null, string $permission = 'users.write') => $user->isSuperAdmin()
+            || ($user->hasBotPermission($permission) && (! $target?->exists || $target->global_role === 'user')));
         Gate::define('write-articles', fn (User $user) => $user->canWriteArticles());
         // Section du panel : administrateurs, ou bots autorisés (« a|b » = l'une ou l'autre)
         Gate::define('panel', fn (User $user, string $permissions) => $user->canUsePanel($permissions));
         // Outils de l'éditeur (images, conversions) : rédacteurs d'articles ou de projets
-        Gate::define('use-editor', fn (User $user) => $user->canWriteArticles() || $user->canUsePanel('projects.write'));
+        Gate::define('use-editor', fn (User $user) => $user->canWriteArticles()
+            || $user->canUsePanel('projects.write|experiences.write|profile.write'));
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
 

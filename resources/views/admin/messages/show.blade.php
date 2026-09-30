@@ -30,12 +30,12 @@
         <div class="whitespace-pre-line p-4 text-sm leading-relaxed text-slate-700 sm:p-6">{{ $message->message }}</div>
         <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 sm:px-6">
             <a href="mailto:{{ $message->email }}?subject={{ rawurlencode('Re: '.$message->subject) }}" class="btn-primary"><x-icon name="mail" class="h-4 w-4" /> Répondre</a>
-            @if (auth()->user()->isAdmin())
+            @can('panel', 'messages.delete')
             <form method="POST" action="{{ route('admin.messages.destroy', $message) }}" onsubmit="return confirm('Supprimer ce message ?')">
                 @csrf @method('DELETE')
                 <button class="btn-danger"><x-icon name="trash" class="h-4 w-4" /> Supprimer</button>
             </form>
-            @endif
+            @endcan
         </footer>
     </article>
 </x-app-layout>

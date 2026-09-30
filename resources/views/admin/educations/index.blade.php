@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Formations</x-slot>
     <x-slot name="header">Formations</x-slot>
+    @can('panel', 'educations.write')
     <x-slot name="actions"><a href="{{ route('admin.formations.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     @if ($educations->isEmpty())
         <x-empty-state icon="academic-cap" message="Aucune formation pour l'instant." />
@@ -16,8 +18,8 @@
                             <td class="hidden whitespace-nowrap md:table-cell">{{ $education->formatDate($education->start_date, true) }} — {{ $education->formatDate($education->end_date, true) ?? 'en cours' }}</td>
                             <td class="hidden sm:table-cell">{{ $education->position }}</td>
                             <td class="whitespace-nowrap text-right">
-                                <x-admin.edit-link :href="route('admin.formations.edit', $education)" />
-                                <x-admin.delete-button :action="route('admin.formations.destroy', $education)" />
+                                <x-admin.edit-link can="educations.write" :href="route('admin.formations.edit', $education)" />
+                                <x-admin.delete-button can="educations.delete" :action="route('admin.formations.destroy', $education)" />
                             </td>
                         </tr>
                     @endforeach

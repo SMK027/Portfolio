@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Diplômes</x-slot>
     <x-slot name="header">Diplômes</x-slot>
+    @can('panel', 'diplomas.write')
     <x-slot name="actions"><a href="{{ route('admin.diplomes.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     @if ($diplomas->isEmpty())
         <x-empty-state icon="diploma" message="Aucun diplôme pour l'instant." />
@@ -16,8 +18,8 @@
                             <td class="hidden md:table-cell">{{ $diploma->formatDate($diploma->obtained_at, true) }}</td>
                             <td class="hidden sm:table-cell">{{ $diploma->position }}</td>
                             <td class="whitespace-nowrap text-right">
-                                <x-admin.edit-link :href="route('admin.diplomes.edit', $diploma)" />
-                                <x-admin.delete-button :action="route('admin.diplomes.destroy', $diploma)" />
+                                <x-admin.edit-link can="diplomas.write" :href="route('admin.diplomes.edit', $diploma)" />
+                                <x-admin.delete-button can="diplomas.delete" :action="route('admin.diplomes.destroy', $diploma)" />
                             </td>
                         </tr>
                     @endforeach

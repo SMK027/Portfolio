@@ -21,6 +21,6 @@
             <x-form.input name="position" type="number" label="Ordre d'affichage" :value="$diploma->position" min="0" max="999" class="sm:w-40" help="0 = automatique (du plus récent au plus ancien)." />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.diplomes.index')" />
+        <x-admin.form-actions can="diplomas.write" :cancel="route('admin.diplomes.index')" />
     </form>
 </x-app-layout>

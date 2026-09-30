@@ -60,10 +60,6 @@
                              help="Une annonce masquée réapparaît si vous la modifiez." />
         </x-admin.section>
 
-        @can('panel', 'announcements.write')
-            <x-admin.form-actions :cancel="route('admin.annonces.index')" />
-        @else
-            <p class="text-sm text-slate-500">Lecture seule : ce compte n'est pas autorisé à enregistrer des modifications.</p>
-        @endcan
+        <x-admin.form-actions can="announcements.write" :cancel="route('admin.annonces.index')" />
     </form>
 </x-app-layout>

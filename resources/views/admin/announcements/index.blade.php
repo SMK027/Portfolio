@@ -34,8 +34,8 @@
                                 <span @class(['badge-green' => $status === 'En ligne', 'badge-amber' => $status === 'Programmée', 'badge-slate' => in_array($status, ['Désactivée', 'Expirée'])])>{{ $status }}</span>
                             </td>
                             <td class="whitespace-nowrap text-right">
-                                <x-admin.edit-link :href="route('admin.annonces.edit', $announcement)" />
-                                @can('panel', 'announcements.write')<x-admin.delete-button :action="route('admin.annonces.destroy', $announcement)" />@endcan
+                                <x-admin.edit-link can="announcements.write" :href="route('admin.annonces.edit', $announcement)" />
+                                <x-admin.delete-button can="announcements.delete" :action="route('admin.annonces.destroy', $announcement)" />
                             </td>
                         </tr>
                     @endforeach

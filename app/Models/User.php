@@ -95,10 +95,11 @@ class User extends Authenticatable
         return $this->isService() || $this->isBot();
     }
 
-    /** Autorisation API d'un compte de service actif. */
-    public function hasServicePermission(string $permission): bool
+    /** Autorisation API d'un compte de service actif (une ou plusieurs séparées par « | »). */
+    public function hasServicePermission(string $permissions): bool
     {
-        return $this->isService() && $this->is_active && in_array($permission, $this->permissions ?? [], true);
+        return $this->isService() && $this->is_active
+            && (bool) array_intersect(explode('|', $permissions), $this->permissions ?? []);
     }
 
     /** Autorisation d'un bot actif (une ou plusieurs séparées par « | »). */

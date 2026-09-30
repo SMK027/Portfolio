@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Compétences</x-slot>
     <x-slot name="header">Compétences</x-slot>
+    @can('panel', 'skills.write')
     <x-slot name="actions"><a href="{{ route('admin.competences.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     @forelse ($groups as $category => $skills)
         <div class="card overflow-x-auto">
@@ -14,8 +16,8 @@
                             <td class="hidden sm:table-cell"><x-skill-level :level="$skill->level" /></td>
                             <td class="hidden text-xs text-slate-500 md:table-cell">{{ $skill->projects_count }} projet(s)</td>
                             <td class="w-24 whitespace-nowrap text-right">
-                                <x-admin.edit-link :href="route('admin.competences.edit', $skill)" />
-                                <x-admin.delete-button :action="route('admin.competences.destroy', $skill)" />
+                                <x-admin.edit-link can="skills.write" :href="route('admin.competences.edit', $skill)" />
+                                <x-admin.delete-button can="skills.delete" :action="route('admin.competences.destroy', $skill)" />
                             </td>
                         </tr>
                     @endforeach

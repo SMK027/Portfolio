@@ -1,4 +1,6 @@
-@props(['action', 'confirm' => 'Supprimer définitivement cet élément ?', 'label' => 'Supprimer'])
+@props(['action', 'confirm' => 'Supprimer définitivement cet élément ?', 'label' => 'Supprimer', 'can' => null])
+{{-- can : autorisation requise ; le bouton est masqué sans elle --}}
+@if (! $can || auth()->user()?->can('panel', $can))
 <form method="POST" action="{{ $action }}" onsubmit="return confirm(@js($confirm))" class="inline">
     @csrf
     @method('DELETE')
@@ -6,3 +8,4 @@
         <x-icon name="trash" class="h-4 w-4" />
     </button>
 </form>
+@endif

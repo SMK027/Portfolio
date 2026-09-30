@@ -16,6 +16,6 @@
             <x-form.image name="background" label="Image de fond" :current="$theme->backgroundUrl()" help="Format paysage recommandé (ex. 1600×900) — 8 Mo max." />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.themes.index')" />
+        <x-admin.form-actions can="themes.write" :cancel="route('admin.themes.index')" />
     </form>
 </x-app-layout>

@@ -24,11 +24,13 @@ curl -X POST {{ url('/api/v1/articles') }} \
                         ['POST /projects · PATCH /projects/{id}', 'projects.write', 'title, published_on, description | description_markdown | description_html, themes, skills (noms), links [{label, url}]'],
                         ['DELETE /projects/{id}', 'projects.delete', ''],
                         ['GET /announcements · /announcements/{id}', 'announcements.read', ''],
-                        ['POST · PATCH · DELETE /announcements', 'announcements.write', 'title, message, style, link_url, link_label, is_active, starts_at, ends_at…'],
+                        ['POST · PATCH /announcements', 'announcements.write', 'title, message, style, link_url, link_label, is_active, starts_at, ends_at…'],
                         ['GET /messages · /messages/{id}', 'messages.read', 'Filtre unread ; chaque lecture est journalisée'],
                         ['GET /export', 'content.export', 'sections[] facultatif ; même format que la page Import / export'],
                         ['POST /import', 'content.import', 'data (fichier d\'export), sections, dry_run (obligatoire : true = simulation)'],
-                        ['GET · PUT /maintenance', 'maintenance.manage', 'enabled, ends_at, reason'],
+                        ['DELETE /announcements/{id}', 'announcements.delete', ''],
+                        ['GET /maintenance', 'maintenance.read ou maintenance.manage', ''],
+                        ['PUT /maintenance', 'maintenance.manage', 'enabled, ends_at, reason'],
                     ] as [$route, $permission, $notes])
                         <tr><td class="whitespace-nowrap font-mono text-xs">{{ $route }}</td><td class="font-mono text-xs">{{ $permission }}</td><td class="text-xs text-slate-500">{{ $notes }}</td></tr>
                     @endforeach

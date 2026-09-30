@@ -16,6 +16,6 @@
             <x-form.image name="image" label="Image" :current="$hobby->imageUrl()" help="Facultative — 5 Mo max." />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.loisirs.index')" />
+        <x-admin.form-actions can="hobbies.write" :cancel="route('admin.loisirs.index')" />
     </form>
 </x-app-layout>

@@ -43,7 +43,7 @@ Route::prefix('v1')->middleware('auth.service')->group(function () {
     Route::get('/announcements/{announcement}', [Api\AnnouncementController::class, 'show'])->middleware('service.can:announcements.read');
     Route::post('/announcements', [Api\AnnouncementController::class, 'store'])->middleware('service.can:announcements.write');
     Route::patch('/announcements/{announcement}', [Api\AnnouncementController::class, 'update'])->middleware('service.can:announcements.write');
-    Route::delete('/announcements/{announcement}', [Api\AnnouncementController::class, 'destroy'])->middleware('service.can:announcements.write');
+    Route::delete('/announcements/{announcement}', [Api\AnnouncementController::class, 'destroy'])->middleware('service.can:announcements.delete');
 
     // Messages de contact
     Route::get('/messages', [Api\MessageController::class, 'index'])->middleware('service.can:messages.read');
@@ -54,6 +54,6 @@ Route::prefix('v1')->middleware('auth.service')->group(function () {
     Route::post('/import', [Api\ContentController::class, 'import'])->middleware('service.can:content.import');
 
     // Maintenance
-    Route::get('/maintenance', [Api\MaintenanceController::class, 'show'])->middleware('service.can:maintenance.manage');
+    Route::get('/maintenance', [Api\MaintenanceController::class, 'show'])->middleware('service.can:maintenance.read|maintenance.manage');
     Route::put('/maintenance', [Api\MaintenanceController::class, 'update'])->middleware('service.can:maintenance.manage');
 });

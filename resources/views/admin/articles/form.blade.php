@@ -89,7 +89,7 @@
                 <x-admin.section title="Thèmes">
                     @if ($canPublish)
                         <x-form.chips name="themes" :options="$themes->pluck('name', 'id')" :selected="$article->themes->pluck('id')"
-                                      :create-url="route('admin.themes.quick')" create-label="Nouveau thème" />
+                                      :create-url="auth()->user()->can('panel', 'themes.write') ? route('admin.themes.quick') : null" create-label="Nouveau thème" />
                     @else
                         <x-form.chips name="themes" :options="$themes->pluck('name', 'id')" :selected="$article->themes->pluck('id')" empty="Aucun thème disponible." />
                     @endif

@@ -39,7 +39,9 @@
                                 <label class="flex items-start gap-2 text-sm text-slate-700">
                                     <input type="checkbox" name="permissions[]" value="{{ $key }}" @checked(in_array($key, $granted, true))
                                            class="mt-0.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                    <span>{{ $label }} <code class="text-xs text-slate-400">{{ $key }}</code></span>
+                                    <span>{{ $label }} <code class="text-xs text-slate-400">{{ $key }}</code>
+                                        @unless (\App\Support\ServicePermissions::isApi($key))<span class="badge-slate ml-1" title="Sans effet sur l'API">bots uniquement</span>@endunless
+                                    </span>
                                 </label>
                             @endforeach
                         </div>

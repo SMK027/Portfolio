@@ -28,6 +28,6 @@
             <x-form.input name="position" type="number" label="Ordre d'affichage" :value="$education->position" min="0" max="999" class="sm:w-40" help="0 = automatique (du plus récent au plus ancien)." />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.formations.index')" />
+        <x-admin.form-actions can="educations.write" :cancel="route('admin.formations.index')" />
     </form>
 </x-app-layout>

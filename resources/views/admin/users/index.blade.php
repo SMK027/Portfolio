@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="title">Comptes</x-slot>
     <x-slot name="header">Comptes</x-slot>
-    @can('manage-users')
+    @can('manage-users', [null])
         <x-slot name="actions"><a href="{{ route('admin.utilisateurs.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Nouveau compte</a></x-slot>
     @endcan
 
@@ -22,8 +22,10 @@
                         <td><span @class(['badge-primary' => $user->isAdmin(), 'badge-slate' => ! $user->isAdmin()])>{{ \Illuminate\Support\Str::before($user->roleLabel(), ' (') }}</span></td>
                         <td class="hidden sm:table-cell">{{ $user->articles_count }}</td>
                         <td class="whitespace-nowrap text-right">
-                            @can('manage-users')
+                            @can('manage-users', $user)
                                 <x-admin.edit-link :href="route('admin.utilisateurs.edit', $user)" />
+                            @endcan
+                            @can('manage-users', [$user, 'users.delete'])
                                 @unless ($user->is(auth()->user()))
                                     <x-admin.delete-button :action="route('admin.utilisateurs.destroy', $user)" confirm="Supprimer ce compte ?" />
                                 @endunless

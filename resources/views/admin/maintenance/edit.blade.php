@@ -55,6 +55,6 @@
             <p class="mt-2">Les administrateurs connectés naviguent normalement ; la page de connexion reste accessible.</p>
         </div>
 
-        <x-admin.form-actions />
+        <x-admin.form-actions can="maintenance.manage" />
     </form>
 </x-app-layout>

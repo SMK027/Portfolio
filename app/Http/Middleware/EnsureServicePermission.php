@@ -23,7 +23,7 @@ class EnsureServicePermission
             ], force: true);
 
             return response()->json([
-                'message'    => 'Autorisation manquante : '.ServicePermissions::label($permission).'.',
+                'message'    => 'Autorisation manquante : '.collect(explode('|', $permission))->map(ServicePermissions::label(...))->join(' ou ').'.',
                 'permission' => $permission,
             ], 403);
         }

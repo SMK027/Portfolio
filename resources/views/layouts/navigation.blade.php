@@ -1,53 +1,18 @@
 @php
     $user = auth()->user();
-    $unread = $user->isAdmin() ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
-    $maintenanceActive = $user->isAdmin() && app(\App\Services\Maintenance::class)->isActive();
+    $unread = $user->can('panel', 'messages.read') ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
+    $maintenanceActive = $user->can('panel', 'maintenance.read|maintenance.manage') && app(\App\Services\Maintenance::class)->isActive();
 
     $pendingArticles = $user->isAdmin() ? \App\Models\Article::pendingReview()->count() : 0;
 
-    $sections = $user->isContributor() ? [
-        'Rédaction' => [
-            ['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*'],
-        ],
-    ] : [];
-
-    if ($user->isBot()) {
-        $sections = ['Sections autorisées' => array_values(array_filter([
-            $user->canWriteArticles() ? ['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*'] : null,
-            $user->hasBotPermission('projects.read|projects.write') ? ['admin.projets.index', 'Projets', 'folder', 'admin.projets.*'] : null,
-            $user->hasBotPermission('announcements.read|announcements.write') ? ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*'] : null,
-            $user->hasBotPermission('messages.read') ? ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'] : null,
-            $user->hasBotPermission('content.export|content.import') ? ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*'] : null,
-            $user->hasBotPermission('maintenance.manage') ? ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'] : null,
-        ]))];
-    }
-
-    $sections = $user->isAdmin() ? [
-        '' => [
-            ['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard'],
-        ],
-        'Contenu' => [
-            ['admin.profile.edit', 'Présentation', 'user', 'admin.profile.*'],
-            ['admin.formations.index', 'Formations', 'academic-cap', 'admin.formations.*'],
-            ['admin.experiences.index', 'Expériences', 'briefcase', 'admin.experiences.*'],
-            ['admin.diplomes.index', 'Diplômes', 'diploma', 'admin.diplomes.*'],
-            ['admin.certifications.index', 'Certifications', 'badge', 'admin.certifications.*'],
-            ['admin.competences.index', 'Compétences', 'sparkles', 'admin.competences.*'],
-            ['admin.loisirs.index', 'Loisirs', 'heart', 'admin.loisirs.*'],
-            ['admin.themes.index', 'Thèmes', 'tag', 'admin.themes.*'],
-            ['admin.projets.index', 'Projets', 'folder', 'admin.projets.*'],
-            ['admin.articles.index', 'Veille', 'newspaper', 'admin.articles.*'],
-        ],
-        'Site' => [
-            ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*'],
-            ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*'],
-            ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*'],
-            ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*'],
-            ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*'],
-            ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*'],
-            ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*'],
-        ],
-    ] : $sections;
+    // Administrateurs : tout ; bots : sections couvertes par leurs autorisations ;
+    // contributeurs : rédaction d'articles.
+    $sections = match (true) {
+        $user->isAdmin()       => ['' => [['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard']]] + \App\Support\PanelSections::for($user),
+        $user->isBot()         => \App\Support\PanelSections::for($user),
+        $user->isContributor() => ['Rédaction' => [['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*']]],
+        default                => [],
+    };
 
     // Réservé aux super-administrateurs
     if ($user->isSuperAdmin()) {

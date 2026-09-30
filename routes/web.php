@@ -70,14 +70,7 @@ Route::get('/dashboard', function () {
 
     return match (true) {
         $user->isAdmin()          => redirect()->route('admin.dashboard'),
-        $user->isBot()            => redirect(collect([
-            $user->canWriteArticles() ? route('admin.articles.index') : null,
-            $user->hasBotPermission('projects.read|projects.write') ? route('admin.projets.index') : null,
-            $user->hasBotPermission('announcements.read|announcements.write') ? route('admin.annonces.index') : null,
-            $user->hasBotPermission('messages.read') ? route('admin.messages.index') : null,
-            $user->hasBotPermission('content.export|content.import') ? route('admin.transfer.index') : null,
-            $user->hasBotPermission('maintenance.manage') ? route('admin.maintenance.edit') : null,
-        ])->filter()->first() ?? route('bot.idle')),
+        $user->isBot()            => redirect()->route(\App\Support\PanelSections::firstRouteFor($user) ?? 'bot.idle'),
         $user->canWriteArticles() => redirect()->route('admin.articles.index'),
         default                   => redirect()->route('profile.edit'),
     };
@@ -101,33 +94,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', Admin\DashboardController::class)->name('dashboard');
 
-    Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/presentation', [Admin\ProfileController::class, 'update'])->name('profile.update');
-
     Route::post('/email-test', Admin\MailTestController::class)
         ->middleware('throttle:5,1')
         ->name('mail.test');
-
-    Route::get('/referencement', [Admin\SeoController::class, 'edit'])->name('seo.edit');
-    Route::put('/referencement', [Admin\SeoController::class, 'update'])->name('seo.update');
-
-    Route::get('/pages', [Admin\PageController::class, 'index'])->name('pages.index');
-    Route::put('/pages', [Admin\PageController::class, 'update'])->name('pages.update');
-
-    Route::resource('formations', Admin\EducationController::class)
-        ->except('show')->parameters(['formations' => 'education']);
-    Route::resource('experiences', Admin\ExperienceController::class)->except('show');
-    Route::resource('loisirs', Admin\HobbyController::class)
-        ->except('show')->parameters(['loisirs' => 'hobby']);
-    Route::resource('diplomes', Admin\DiplomaController::class)
-        ->except('show')->parameters(['diplomes' => 'diploma']);
-    Route::resource('certifications', Admin\CertificationController::class)->except('show');
-    Route::resource('competences', Admin\SkillController::class)
-        ->except('show')->parameters(['competences' => 'skill']);
-    Route::post('/themes/rapide', [Admin\ThemeController::class, 'quickStore'])->name('themes.quick');
-    Route::resource('themes', Admin\ThemeController::class)->except('show');
-
-    Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->name('messages.destroy');
 
     // Comptes de service et leurs autorisations : super-administrateurs uniquement
     Route::middleware('can:manage-service-accounts')->group(function () {
@@ -140,10 +109,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
-
-    Route::resource('utilisateurs', Admin\UserController::class)
-        ->except('show')->parameters(['utilisateurs' => 'user']);
-
 });
 
 /*
@@ -158,24 +123,53 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     // Guillemets : sans eux, le middleware « can » y verrait un nom de paramètre de route.
     $panel = fn (string $permissions) => "can:panel,'{$permissions}'";
 
-    Route::resource('projets', Admin\ProjectController::class)
-        ->except('show')->parameters(['projets' => 'project'])
-        ->middlewareFor(['index', 'edit'], $panel('projects.read|projects.write'))
-        ->middlewareFor(['create', 'store', 'update'], $panel('projects.write'))
-        ->middlewareFor('destroy', $panel('projects.delete'));
+    // Contenu à lecture / écriture / suppression : la page de modification sert
+    // aussi de consultation (formulaire en lecture seule sans « .write »).
+    $crud = function (string $uri, string $controller, string $permission, array $parameters = []) use ($panel) {
+        return Route::resource($uri, $controller)->except('show')->parameters($parameters)
+            ->middlewareFor(['index', 'edit'], $panel("{$permission}.read|{$permission}.write|{$permission}.delete"))
+            ->middlewareFor(['create', 'store', 'update'], $panel("{$permission}.write"))
+            ->middlewareFor('destroy', $panel("{$permission}.delete"));
+    };
+
+    Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->middleware($panel('profile.read|profile.write'))->name('profile.edit');
+    Route::put('/presentation', [Admin\ProfileController::class, 'update'])->middleware($panel('profile.write'))->name('profile.update');
+
+    $crud('formations', Admin\EducationController::class, 'educations', ['formations' => 'education']);
+    $crud('experiences', Admin\ExperienceController::class, 'experiences');
+    $crud('diplomes', Admin\DiplomaController::class, 'diplomas', ['diplomes' => 'diploma']);
+    $crud('certifications', Admin\CertificationController::class, 'certifications');
+    $crud('competences', Admin\SkillController::class, 'skills', ['competences' => 'skill']);
+    $crud('loisirs', Admin\HobbyController::class, 'hobbies', ['loisirs' => 'hobby']);
+    Route::post('/themes/rapide', [Admin\ThemeController::class, 'quickStore'])->middleware($panel('themes.write'))->name('themes.quick');
+    $crud('themes', Admin\ThemeController::class, 'themes');
+
+    $crud('projets', Admin\ProjectController::class, 'projects', ['projets' => 'project']);
     Route::delete('/projets/{project}/fichiers/{file}', [Admin\ProjectController::class, 'destroyFile'])
         ->scopeBindings()->middleware($panel('projects.write'))->name('projets.files.destroy');
 
-    Route::resource('annonces', Admin\AnnouncementController::class)
-        ->except('show')->parameters(['annonces' => 'announcement'])
-        ->middlewareFor(['index', 'edit'], $panel('announcements.read|announcements.write'))
-        ->middlewareFor(['create', 'store', 'update', 'destroy'], $panel('announcements.write'));
+    $crud('annonces', Admin\AnnouncementController::class, 'announcements', ['annonces' => 'announcement']);
 
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->middleware($panel('messages.read'))->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
+    Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->middleware($panel('messages.delete'))->name('messages.destroy');
 
-    Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->middleware($panel('maintenance.manage'))->name('maintenance.edit');
+    Route::get('/pages', [Admin\PageController::class, 'index'])->middleware($panel('pages.read|pages.write'))->name('pages.index');
+    Route::put('/pages', [Admin\PageController::class, 'update'])->middleware($panel('pages.write'))->name('pages.update');
+
+    Route::get('/referencement', [Admin\SeoController::class, 'edit'])->middleware($panel('seo.read|seo.write'))->name('seo.edit');
+    Route::put('/referencement', [Admin\SeoController::class, 'update'])->middleware($panel('seo.write'))->name('seo.update');
+
+    Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->middleware($panel('maintenance.read|maintenance.manage'))->name('maintenance.edit');
     Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->middleware($panel('maintenance.manage'))->name('maintenance.update');
+
+    // Comptes : consultation par les admins ; création, modification et suppression
+    // par les super-admins, ou par les bots autorisés pour les contributeurs (voir UserController).
+    Route::resource('utilisateurs', Admin\UserController::class)
+        ->except('show')->parameters(['utilisateurs' => 'user'])
+        ->middlewareFor('index', $panel('users.read|users.write|users.delete'))
+        ->middlewareFor(['create', 'store', 'edit', 'update'], $panel('users.write'))
+        ->middlewareFor('destroy', $panel('users.delete'));
 
     Route::prefix('import-export')->name('transfer.')->controller(Admin\TransferController::class)->group(function () use ($panel) {
         Route::get('/', 'index')->middleware($panel('content.export|content.import'))->name('index');

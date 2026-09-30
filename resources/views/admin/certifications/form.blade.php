@@ -23,6 +23,6 @@
             <x-form.input name="position" type="number" label="Ordre d'affichage" :value="$certification->position" min="0" max="999" class="sm:w-40" />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.certifications.index')" />
+        <x-admin.form-actions can="certifications.write" :cancel="route('admin.certifications.index')" />
     </form>
 </x-app-layout>

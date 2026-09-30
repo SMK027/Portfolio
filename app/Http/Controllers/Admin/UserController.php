@@ -14,6 +14,7 @@ use Illuminate\View\View;
 /**
  * Comptes : administrateurs et contributeurs (co-auteurs d'articles).
  * La consultation est ouverte aux admins, la modification aux super-admins.
+ * Un bot autorisé (users.write / users.delete) ne gère que les contributeurs.
  */
 class UserController extends Controller
 {
@@ -28,7 +29,7 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('admin.users.form', ['user' => new User(['global_role' => 'admin'])]);
+        return view('admin.users.form', ['user' => new User(['global_role' => request()->user()->isBot() ? 'user' : 'admin'])]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -45,20 +46,20 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        abort_if($user->isService(), 404); // géré dans « Comptes de service »
-        Gate::authorize('manage-users');
+        abort_if($user->isMachine(), 404); // géré dans « Comptes de service et bots »
+        Gate::authorize('manage-users', $user);
 
         return view('admin.users.form', ['user' => $user]);
     }
 
     public function update(Request $request, User $user): RedirectResponse
     {
-        abort_if($user->isService(), 404); // géré dans « Comptes de service »
-        Gate::authorize('manage-users');
+        abort_if($user->isMachine(), 404); // géré dans « Comptes de service et bots »
+        Gate::authorize('manage-users', $user);
 
         $data = $this->validated($request, $user);
 
-        if ($user->is($request->user()) && $data['global_role'] !== 'superadmin') {
+        if ($user->is($request->user()) && $user->isSuperAdmin() && $data['global_role'] !== 'superadmin') {
             return back()->withErrors(['global_role' => 'Vous ne pouvez pas retirer votre propre rôle de super-administrateur.']);
         }
 
@@ -73,8 +74,8 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        abort_if($user->isService(), 404); // géré dans « Comptes de service »
-        Gate::authorize('manage-users');
+        abort_if($user->isMachine(), 404); // géré dans « Comptes de service et bots »
+        Gate::authorize('manage-users', [$user, 'users.delete']);
 
         if ($user->is($request->user())) {
             return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte ici.');
@@ -96,7 +97,8 @@ class UserController extends Controller
             'name'        => ['required', 'string', 'max:255'],
             'username'    => ['required', 'string', 'alpha_dash', 'max:50', Rule::unique('users')->ignore($user)],
             'email'       => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user)],
-            'global_role' => ['required', Rule::in(array_keys(User::ROLES))],
+            // Un bot ne peut créer ou garder que des contributeurs.
+            'global_role' => ['required', Rule::in($request->user()->isBot() ? ['user'] : array_keys(User::ROLES))],
             'password'    => [$user->exists ? 'nullable' : 'required', 'confirmed', Password::defaults()],
         ]);
     }

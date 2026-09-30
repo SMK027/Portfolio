@@ -12,7 +12,7 @@
                 <x-form.input name="name" label="Nom affiché" :value="$user->name" required />
                 <x-form.input name="username" label="Identifiant" :value="$user->username" required help="Lettres, chiffres, tirets et underscores." />
                 <x-form.input name="email" type="email" label="Adresse e-mail" :value="$user->email" required />
-                <x-form.select name="global_role" label="Rôle" :value="$user->global_role" :options="\App\Models\User::ROLES" required />
+                <x-form.select name="global_role" label="Rôle" :value="$user->global_role" :options="auth()->user()->isBot() ? \Illuminate\Support\Arr::only(\App\Models\User::ROLES, 'user') : \App\Models\User::ROLES" required />
             </div>
         </x-admin.section>
 

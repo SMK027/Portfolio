@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="title">Thèmes</x-slot>
     <x-slot name="header">Thèmes</x-slot>
+    @can('panel', 'themes.write')
     <x-slot name="actions"><a href="{{ route('admin.themes.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a></x-slot>
+    @endcan
 
     <p class="text-sm text-slate-500">Les thèmes classent les projets (programmation, réseau, projets personnels…) et les articles de veille.</p>
 
@@ -21,8 +23,8 @@
                     <div class="flex items-center justify-between gap-2 px-4 py-3">
                         <span class="text-xs text-slate-500">{{ $theme->projects_count }} projet(s) · {{ $theme->articles_count }} article(s) · ordre {{ $theme->position }}</span>
                         <span class="flex-none">
-                            <x-admin.edit-link :href="route('admin.themes.edit', $theme)" />
-                            <x-admin.delete-button :action="route('admin.themes.destroy', $theme)" confirm="Supprimer ce thème ? Les projets et articles associés seront conservés." />
+                            <x-admin.edit-link can="themes.write" :href="route('admin.themes.edit', $theme)" />
+                            <x-admin.delete-button can="themes.delete" :action="route('admin.themes.destroy', $theme)" confirm="Supprimer ce thème ? Les projets et articles associés seront conservés." />
                         </span>
                     </div>
                 </div>

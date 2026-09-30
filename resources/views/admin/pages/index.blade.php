@@ -41,6 +41,6 @@
             </div>
         @endforeach
 
-        <x-admin.form-actions />
+        <x-admin.form-actions can="pages.write" />
     </form>
 </x-app-layout>

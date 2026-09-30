@@ -56,7 +56,7 @@ class BotTest extends TestCase
 
         $this->loginBot($plain);
         $this->get(route('dashboard'))->assertRedirect(route('admin.projets.index'));
-        $this->get(route('admin.projets.index'))->assertOk()->assertSee('Sections autorisées')->assertDontSee('Nouveau projet');
+        $this->get(route('admin.projets.index'))->assertOk()->assertSee('Projets')->assertDontSee('Formations')->assertDontSee('Nouveau projet');
         $this->get(route('admin.projets.edit', \App\Models\Project::create(['title' => 'P', 'published_on' => now(), 'description' => ['blocks' => []]])))->assertOk()->assertSee('Lecture seule');
 
         $this->get(route('admin.projets.create'))->assertForbidden();
@@ -164,5 +164,71 @@ class BotTest extends TestCase
         $this->get(route('login.bot'))->assertOk();
         $this->loginBot($plain);
         $this->get(route('admin.projets.index'))->assertOk();
+    }
+
+    /** Chaque section du menu : lecture seule, écriture et suppression séparées. */
+    public function test_content_sections_have_read_write_and_delete_permissions(): void
+    {
+        $skill = \App\Models\Skill::create(['name' => 'Laravel', 'category' => 'Web']);
+
+        [, , $plain] = $this->createBot(['skills.read']);
+        $this->loginBot($plain);
+        $this->get(route('dashboard'))->assertRedirect(route('admin.competences.index'));
+        $this->get(route('admin.competences.index'))->assertOk()->assertSee('Laravel')
+            ->assertDontSee(route('admin.competences.create'))->assertDontSee('Supprimer');
+        $this->get(route('admin.competences.edit', $skill))->assertOk()->assertSee('Lecture seule');
+        $this->put(route('admin.competences.update', $skill), ['name' => 'Modifié'])->assertForbidden();
+        $this->delete(route('admin.competences.destroy', $skill))->assertForbidden();
+        $this->get(route('admin.formations.index'))->assertForbidden();
+        $this->post(route('logout'));
+
+        [$bot, , $plain] = $this->createBot(['skills.write', 'skills.delete']);
+        $this->loginBot($plain);
+        $this->get(route('admin.competences.edit', $skill))->assertOk()->assertDontSee('Lecture seule');
+        $this->delete(route('admin.competences.destroy', $skill))->assertRedirect();
+        $this->assertModelMissing($skill);
+    }
+
+    public function test_single_page_sections(): void
+    {
+        [, , $plain] = $this->createBot(['seo.read', 'pages.write', 'maintenance.read']);
+        $this->loginBot($plain);
+
+        $this->get(route('admin.seo.edit'))->assertOk()->assertSee('Lecture seule');
+        $this->put(route('admin.seo.update'), [])->assertForbidden();
+        $this->get(route('admin.pages.index'))->assertOk()->assertDontSee('Lecture seule');
+        $this->get(route('admin.maintenance.edit'))->assertOk()->assertSee('Lecture seule');
+        $this->put(route('admin.maintenance.update'), [])->assertForbidden();
+        $this->get(route('admin.profile.edit'))->assertForbidden();
+    }
+
+    public function test_bots_only_manage_contributor_accounts(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contributor = User::factory()->create(['global_role' => 'user']);
+
+        [, , $plain] = $this->createBot(['users.write', 'users.delete']);
+        $this->loginBot($plain);
+
+        $this->get(route('admin.utilisateurs.edit', $admin))->assertForbidden();
+        $this->delete(route('admin.utilisateurs.destroy', $admin))->assertForbidden();
+        $this->post(route('admin.utilisateurs.store'), [
+            'name' => 'Pirate', 'username' => 'pirate', 'email' => 'p@example.com', 'global_role' => 'superadmin',
+            'password' => 'Mot-de-passe-2026!', 'password_confirmation' => 'Mot-de-passe-2026!',
+        ])->assertSessionHasErrors('global_role');
+        $this->assertDatabaseMissing('users', ['username' => 'pirate']);
+
+        $this->get(route('admin.utilisateurs.edit', $contributor))->assertOk();
+        $this->delete(route('admin.utilisateurs.destroy', $contributor))->assertRedirect();
+        $this->assertModelMissing($contributor);
+    }
+
+    public function test_announcement_deletion_needs_its_own_permission(): void
+    {
+        $announcement = \App\Models\Announcement::create(['title' => 'Info', 'message' => 'Bonjour', 'is_active' => true]);
+        [, , $plain] = $this->createBot(['announcements.write']);
+        $this->loginBot($plain);
+
+        $this->delete(route('admin.annonces.destroy', $announcement))->assertForbidden();
     }
 }
