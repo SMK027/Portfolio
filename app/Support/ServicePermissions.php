@@ -55,6 +55,7 @@ final class ServicePermissions
         'Maintenance' => [
             'maintenance.read'   => 'Consulter l\'état du mode maintenance',
             'maintenance.manage' => 'Activer, programmer et désactiver le mode maintenance',
+            'maintenance.bypass' => 'Accéder aux pages publiques pendant une maintenance',
         ],
         'Comptes' => [
             'users.read'   => 'Consulter la liste des comptes',

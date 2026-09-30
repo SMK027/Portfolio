@@ -27,6 +27,12 @@
 <body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased">
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">Aller au contenu</a>
 
+    @if ($maintenance && ! $isAdmin && auth()->user()?->hasBotPermission('maintenance.bypass'))
+        <div class="bg-amber-400 px-4 py-2 text-center text-xs font-medium text-amber-950">
+            Maintenance active : ce bot voit le site, les visiteurs voient la page de maintenance.
+        </div>
+    @endif
+
     @if ($isAdmin)
         {{-- Barre d'administration : visible uniquement par les administrateurs connectés --}}
         <div class="bg-slate-900 text-xs text-slate-300">

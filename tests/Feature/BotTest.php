@@ -231,4 +231,20 @@ class BotTest extends TestCase
 
         $this->delete(route('admin.annonces.destroy', $announcement))->assertForbidden();
     }
+
+    public function test_maintenance_bypass_permission_opens_public_pages(): void
+    {
+        app(\App\Services\Maintenance::class)->enable();
+
+        [, , $plain] = $this->createBot(['projects.read']);
+        $this->loginBot($plain);
+        $this->get(route('home'))->assertSee('maintenance')->assertDontSee('ce bot voit le site');
+        $this->post(route('logout'));
+
+        [, , $plain] = $this->createBot(['maintenance.bypass']);
+        $this->loginBot($plain);
+        $this->get(route('dashboard'))->assertRedirect(route('bot.idle'));
+        $this->get(route('home'))->assertOk()->assertSee('ce bot voit le site');
+        $this->get(route('admin.maintenance.edit'))->assertForbidden();
+    }
 }
