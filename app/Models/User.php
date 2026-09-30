@@ -124,6 +124,12 @@ class User extends Authenticatable
     }
 
     /** Comptes humains (hors comptes de service). */
+    /** Comptes pouvant être auteur principal d'un article : humains, bots et comptes de service actifs. */
+    public function scopeArticleAuthors(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where(fn ($q) => $q->whereNotIn('global_role', ['service', 'bot'])->orWhere('is_active', true));
+    }
+
     public function scopeHumans(\Illuminate\Database\Eloquent\Builder $query): void
     {
         $query->whereNotIn('global_role', ['service', 'bot']);

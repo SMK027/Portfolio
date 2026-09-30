@@ -83,7 +83,7 @@ class ContributorArticleTest extends TestCase
         $this->actingAs($this->contributor)->post(route('admin.articles.store'), [
             'title' => 'Mon article', 'content' => $this->content(),
             'status' => 'published', 'published_at' => now()->subDay()->toDateTimeString(), 'is_pinned' => '1',
-            'author_id' => $this->admin->id, 'intent' => 'draft',
+            'intent' => 'draft',
         ])->assertSessionHasNoErrors();
 
         $article = Article::sole();

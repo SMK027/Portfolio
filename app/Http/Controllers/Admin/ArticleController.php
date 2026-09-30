@@ -152,6 +152,8 @@ class ArticleController extends Controller
         return [
             'article' => $article,
             'users'   => User::humans()->orderBy('name')->get(),
+            'authors' => User::articleAuthors()->orderBy('name')->get()
+                ->mapWithKeys(fn (User $u) => [$u->id => $u->isMachine() ? $u->name.' ('.$u->roleLabel().')' : $u->name]),
             'themes'  => Theme::ordered()->get(),
         ];
     }
@@ -161,7 +163,8 @@ class ArticleController extends Controller
         $user = $request->user();
         $canPublish = Gate::allows('publish', Article::class);
         $relationsBefore = $this->relations($article);
-        $authorId = $canPublish ? (int) $request->input('author_id') : ($article->author_id ?? $user->id);
+        $canChangeAuthor = Gate::allows('changeAuthor', $article);
+        $authorId = $canChangeAuthor && $request->filled('author_id') ? (int) $request->input('author_id') : ($article->author_id ?? $user->id);
 
         $data = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
@@ -172,8 +175,10 @@ class ArticleController extends Controller
             'themes.*'     => ['integer', 'exists:themes,id'],
             'thumbnail'    => $this->imageRules(),
             ...$this->attachmentRules(ArticleFile::class),
+            ...($canChangeAuthor ? [
+                'author_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($q) => $q->whereNotIn('global_role', ['service', 'bot'])->orWhere('is_active', true))],
+            ] : []),
             ...($canPublish ? [
-                'author_id'    => ['required', 'integer', 'exists:users,id'],
                 'is_pinned'    => ['nullable', 'boolean'],
                 'status'       => ['required', Rule::in(['draft', 'published'])],
                 'published_at' => ['nullable', 'date'],

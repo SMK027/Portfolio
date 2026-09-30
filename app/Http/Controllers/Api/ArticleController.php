@@ -108,7 +108,7 @@ class ArticleController extends Controller
             'content_html'      => ['nullable', 'string', 'max:2000000'],
             'themes'            => ['nullable', 'array'],
             'themes.*'          => ['string', 'max:100'],
-            'author'            => ['nullable', 'email'],
+            'author'            => ['nullable', 'string', 'max:255'],
             'coauthors'         => ['nullable', 'array'],
             'coauthors.*'       => ['email'],
             'status'            => ['nullable', Rule::in(['draft', 'published'])],
@@ -126,6 +126,14 @@ class ArticleController extends Controller
             abort(403, 'Autorisation manquante : articles.publish (publication, programmation, épinglage).');
         }
 
+        // Auteur principal et co-auteurs : autorisation dédiée.
+        if ($request->hasAny(['author', 'coauthors']) && ! $account->hasServicePermission('articles.author')) {
+            $this->audit->record('api.forbidden', $article->exists ? $article : null, meta: [
+                'autorisation' => 'articles.author', 'route' => $request->method().' '.$request->path(),
+            ], force: true);
+            abort(403, 'Autorisation manquante : articles.author (auteur principal et co-auteurs).');
+        }
+
         $before = $creating ? ['thèmes' => [], 'co-auteurs' => []] : [
             'thèmes' => $article->themes()->pluck('name')->all(), 'co-auteurs' => $article->coauthors()->pluck('name')->all(),
         ];
@@ -134,7 +142,7 @@ class ArticleController extends Controller
         $values += $this->richTextInput($request, 'content') ?? [];
 
         if (filled($data['author'] ?? null)) {
-            $values['author_id'] = $this->humanByEmail($data['author'], 'author')->id;
+            $values['author_id'] = $this->authorAccount($data['author'])->id;
         } elseif ($creating) {
             $values['author_id'] = $account->id;
         }

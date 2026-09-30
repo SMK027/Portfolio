@@ -37,7 +37,18 @@ class ArticlePolicy
             || $user->hasBotPermission('articles.write');
     }
 
-    /** Publier, programmer, épingler, changer l'auteur principal. */
+    /**
+     * Changer l'auteur principal (et les co-auteurs) : administrateurs, bots
+     * autorisés (articles.author), contributeur auteur principal de l'article.
+     */
+    public function changeAuthor(User $user, ?Article $article = null): bool
+    {
+        return $user->isAdmin()
+            || ($user->hasBotPermission('articles.author') && $user->hasBotPermission('articles.write'))
+            || ($user->isContributor() && (! $article?->exists || $article->author_id === $user->id));
+    }
+
+    /** Publier, programmer, épingler. */
     public function publish(User $user, ?Article $article = null): bool
     {
         return $user->isAdmin() || $user->hasBotPermission('articles.publish');

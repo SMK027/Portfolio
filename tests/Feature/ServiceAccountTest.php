@@ -87,7 +87,8 @@ class ServiceAccountTest extends TestCase
 
         $this->actingAs($this->super)->get(route('admin.utilisateurs.index'))->assertDontSee('Import ancien site');
         $this->actingAs($this->super)->get(route('admin.utilisateurs.edit', $account))->assertNotFound();
-        $this->actingAs($this->super)->get(route('admin.articles.create'))->assertDontSee('Import ancien site');
+        // Choisissable comme auteur principal, jamais comme co-auteur (droits de modification).
+        $this->actingAs($this->super)->get(route('admin.articles.create'))->assertSee('Import ancien site (Compte de service)');
     }
 
     public function test_disabling_reenabling_and_deleting_a_code(): void

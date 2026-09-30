@@ -64,6 +64,13 @@ trait ResolvesContent
         return $ids;
     }
 
+    /** Auteur principal : tout compte actif (personne, bot, compte de service), par e-mail ou identifiant. */
+    protected function authorAccount(string $emailOrUsername): User
+    {
+        return User::articleAuthors()->where(fn ($q) => $q->where('email', $emailOrUsername)->orWhere('username', $emailOrUsername))->first()
+            ?? throw ValidationException::withMessages(['author' => "Aucun compte actif ne correspond à « {$emailOrUsername} »."]);
+    }
+
     protected function humanByEmail(string $email, string $field): User
     {
         return User::humans()->where('email', $email)->first()

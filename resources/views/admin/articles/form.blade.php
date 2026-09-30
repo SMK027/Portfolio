@@ -2,6 +2,7 @@
     $editing = $article->exists;
     $status = old('status', $article->published_at ? 'published' : 'draft');
     $canPublish = auth()->user()->can('publish', \App\Models\Article::class);
+    $canChangeAuthor = auth()->user()->can('changeAuthor', $article);
 @endphp
 <x-app-layout>
     <x-slot name="title">{{ $editing ? 'Modifier l\'article' : 'Nouvel article' }}</x-slot>
@@ -74,8 +75,9 @@
                 </x-admin.section>
 
                 <x-admin.section title="Auteurs">
-                    @if ($canPublish)
-                        <x-form.select name="author_id" label="Auteur principal" :value="$article->author_id" :options="$users->pluck('name', 'id')" required />
+                    @if ($canChangeAuthor)
+                        <x-form.select name="author_id" label="Auteur principal" :value="$article->author_id ?? auth()->id()" :options="$authors" required
+                                       help="{{ auth()->user()->isContributor() ? 'Si vous confiez l\'article à un autre auteur, vous restez co-auteur.' : 'Tout compte actif : personne, bot ou compte de service.' }}" />
                     @else
                         <div>
                             <span class="form-label">Auteur principal</span>
