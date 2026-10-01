@@ -84,3 +84,61 @@
     .editorjs-holder .ce-block__content,
     .editorjs-holder .ce-toolbar__content { max-width: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Mode sombre du site public : <html class="dark"> (layout public uniquement).
+   Les couleurs claires utilisées par les vues publiques sont converties ici,
+   sans dupliquer chaque classe en « dark: ». Le panel n'est pas concerné.
+--------------------------------------------------------------------------- */
+html.dark { color-scheme: dark; }
+html.dark body { @apply bg-slate-950 text-slate-200; }
+
+/* Fonds */
+html.dark .bg-white, html.dark .card, html.dark .focus\:bg-white:focus { @apply bg-slate-900; }
+html.dark .bg-white\/85, html.dark .bg-white\/80 { background-color: rgb(15 23 42 / 0.85); }
+html.dark .bg-slate-50 { @apply bg-slate-950; }
+html.dark .bg-slate-100, html.dark .bg-slate-200 { @apply bg-slate-800; }
+html.dark .bg-primary-50, html.dark .hover\:bg-primary-50:hover, html.dark .bg-accent-50 { background-color: rgb(99 102 241 / 0.15); }
+html.dark .hover\:bg-primary-100:hover { background-color: rgb(99 102 241 / 0.25); }
+html.dark .hover\:bg-slate-100:hover, html.dark .hover\:bg-slate-200:hover, html.dark .hover\:bg-slate-50:hover { @apply bg-slate-800; }
+html.dark .hover\:bg-white:hover { @apply bg-slate-800; }
+html.dark .bg-emerald-50 { background-color: rgb(16 185 129 / 0.12); }
+html.dark .bg-amber-50 { background-color: rgb(245 158 11 / 0.12); }
+html.dark .bg-red-50 { background-color: rgb(239 68 68 / 0.12); }
+
+/* Textes */
+html.dark .text-slate-900, html.dark .text-slate-800 { @apply text-slate-100; }
+html.dark .text-slate-700, html.dark .text-slate-600 { @apply text-slate-300; }
+html.dark .text-slate-500 { @apply text-slate-400; }
+html.dark .text-primary-700, html.dark .text-primary-600 { @apply text-primary-300; }
+html.dark .hover\:text-slate-900:hover, html.dark .hover\:text-primary-700:hover, html.dark .hover\:text-primary-600:hover { @apply text-white; }
+html.dark .text-emerald-800, html.dark .text-emerald-700 { @apply text-emerald-300; }
+html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900 { @apply text-amber-300; }
+html.dark .text-red-600, html.dark .text-red-800 { @apply text-red-400; }
+
+/* Bordures et séparateurs */
+html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-200\/80, html.dark .card { @apply border-slate-800; }
+html.dark .border-slate-300 { @apply border-slate-700; }
+html.dark .divide-slate-100 > * + *, html.dark .divide-slate-200 > * + * { @apply border-slate-800; }
+html.dark .border-primary-100, html.dark .border-emerald-200, html.dark .border-amber-200, html.dark .border-red-200 { @apply border-slate-700; }
+html.dark .hover\:border-primary-200:hover, html.dark .hover\:border-primary-300:hover { @apply border-primary-500; }
+html.dark .ring-primary-100 { --tw-ring-color: rgb(99 102 241 / 0.3); }
+
+/* Composants */
+html.dark .btn-secondary { @apply border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800; }
+html.dark .btn-ghost { @apply text-slate-300 hover:bg-slate-800 hover:text-white; }
+html.dark .form-input, html.dark .form-select, html.dark .form-textarea { @apply border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500; }
+html.dark .form-label { @apply text-slate-300; }
+html.dark .badge-slate { @apply bg-slate-800 text-slate-300; }
+html.dark .badge-primary { @apply bg-primary-500/15 text-primary-300 ring-primary-500/30; }
+html.dark .badge-green { @apply bg-emerald-500/15 text-emerald-300 ring-emerald-500/30; }
+html.dark .badge-amber { @apply bg-amber-500/15 text-amber-300 ring-amber-500/30; }
+html.dark .editor-content { @apply prose-invert; }
+html.dark .editor-content .inline-code { @apply bg-slate-800 text-pink-300; }
+html.dark .editor-content .editor-image.with-background { @apply bg-slate-800; }
+html.dark .editor-content .editor-warning { @apply border-amber-500/30 bg-amber-500/10 text-amber-200; }
+html.dark .editor-content .editor-delimiter { @apply border-slate-700; }
+html.dark .editor-content mark:not([style]) { @apply bg-yellow-500/30 text-inherit; }
+
+/* Vignettes sans image (cartes de projets et d'articles) */
+html.dark .from-primary-100, html.dark .from-slate-200 { background-image: linear-gradient(to bottom right, rgb(30 27 75), rgb(15 23 42)); }
