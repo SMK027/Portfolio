@@ -1,4 +1,5 @@
 <x-guest-layout>
+    <x-slot name="title">Double authentification</x-slot>
     <h1 class="mb-1 font-display text-xl font-bold text-slate-900">Double authentification</h1>
     <p class="mb-6 text-sm text-slate-500">Confirmez votre identité pour terminer la connexion.</p>
 

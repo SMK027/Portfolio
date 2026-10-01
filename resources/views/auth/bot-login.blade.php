@@ -1,4 +1,5 @@
 <x-guest-layout>
+    <x-slot name="title">Connexion d'un bot</x-slot>
     <h1 class="mb-1 font-display text-xl font-bold text-slate-900">Connexion d'un bot</h1>
     <p class="mb-6 text-sm text-slate-500">Saisissez le code d'application fourni par un super-administrateur.</p>
 

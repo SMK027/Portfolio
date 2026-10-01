@@ -6,7 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="robots" content="noindex, nofollow">
 
-        <title>Connexion — {{ config('app.name') }}</title>
+        <title>{{ $title ?? 'Connexion' }} — {{ config('app.name') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|space-grotesk:600,700&display=swap" rel="stylesheet" />

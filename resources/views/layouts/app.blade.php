@@ -6,7 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
 
-    <title>{{ isset($title) ? $title.' — ' : '' }}Administration — {{ config('app.name') }}</title>
+    {{-- Le slot est déjà échappé : l'afficher tel quel (une concaténation le ferait échapper deux fois) --}}
+    <title>{{ isset($title) ? new \Illuminate\Support\HtmlString($title.' — ') : '' }}Administration — {{ config('app.name') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|space-grotesk:500,600,700&display=swap" rel="stylesheet" />
