@@ -21,7 +21,7 @@ class EditorJsRendererTest extends TestCase
             ['type' => 'delimiter', 'data' => []],
         ]);
 
-        $this->assertStringContainsString('<h3 class="text-center">Titre</h3>', $html);
+        $this->assertStringContainsString('<h3 id="titre" class="text-center">Titre<a href="#titre" class="heading-anchor"', $html);
         $this->assertStringContainsString('<b>Gras</b>', $html);
         $this->assertStringContainsString('<mark class="cdx-marker">surligné</mark>', $html);
         $this->assertStringContainsString('&lt;?php echo 1;', $html);

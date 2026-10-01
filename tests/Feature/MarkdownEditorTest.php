@@ -45,7 +45,7 @@ class MarkdownEditorTest extends TestCase
         $this->assertSame(['header', 'paragraph', 'list', 'quote'], array_column($article->content['blocks'], 'type'));
 
         $this->get(route('articles.show', $article))
-            ->assertSee('<h2>Introduction</h2>', false)
+            ->assertSee('<h2 id="introduction">Introduction<a href="#introduction"', false)
             ->assertSee('<b>gras</b>', false)
             ->assertSee('<mark class="cdx-marker">note</mark>', false)
             ->assertSee('<ul><li>un</li><li>deux</li></ul>', false);
@@ -104,7 +104,7 @@ class MarkdownEditorTest extends TestCase
             ->postJson(route('admin.editor.to-blocks'), ['markdown' => "## Titre\n\n**Gras**"])
             ->assertOk()
             ->assertJsonPath('content.blocks.0.type', 'header')
-            ->assertJsonPath('html', "<h2>Titre</h2>\n<p><b>Gras</b></p>");
+            ->assertJsonPath('html', "<h2 id=\"titre\">Titre<a href=\"#titre\" class=\"heading-anchor\" aria-label=\"Lien vers cette section\">#</a></h2>\n<p><b>Gras</b></p>");
 
         auth()->logout();
         $this->postJson(route('admin.editor.to-blocks'), ['markdown' => 'x'])->assertUnauthorized();

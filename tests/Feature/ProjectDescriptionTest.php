@@ -37,7 +37,7 @@ class ProjectDescriptionTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('<h2>Contexte</h2>', false)
+            ->assertSee('<h2 id="contexte">Contexte<a href="#contexte"', false)
             ->assertSee('<b>Laravel</b>', false)
             ->assertDontSee('<script>alert(1)</script>', false);
 

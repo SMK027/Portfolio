@@ -137,6 +137,18 @@ class Article extends Model
     }
 
     /** Durée de lecture estimée, en minutes. */
+    /**
+     * Table des matières (titres de niveau 2 à 4) ; vide s'il y a moins de deux titres.
+     *
+     * @return list<array{level: int, text: string, id: string}>
+     */
+    public function tableOfContents(): array
+    {
+        $headings = app(\App\Services\EditorJsRenderer::class)->headings($this->content);
+
+        return count($headings) >= 2 ? $headings : [];
+    }
+
     public function readingTime(): int
     {
         $text = collect($this->content['blocks'] ?? [])

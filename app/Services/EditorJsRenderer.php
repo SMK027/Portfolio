@@ -4,6 +4,7 @@ namespace App\Services;
 
 use HTMLPurifier;
 use HTMLPurifier_Config;
+use Illuminate\Support\Str;
 
 /**
  * Convertit le JSON produit par Editor.js en HTML sûr.
@@ -39,24 +40,92 @@ class EditorJsRenderer
             return '';
         }
 
+        $this->headingIds = $this->headingIds($data['blocks']);
+
         return collect($data['blocks'])
             ->filter(fn ($block) => is_array($block) && isset($block['type']))
-            ->map(fn (array $block) => $this->renderBlock($block))
+            ->map(fn (array $block, $index) => $this->renderBlock($block, $this->headingIds[$index] ?? null))
             ->filter()
             ->implode("\n");
+    }
+
+    /** Identifiants des titres du rendu en cours (index du bloc => id). @var array<int, string> */
+    protected array $headingIds = [];
+
+    /**
+     * Titres du contenu pour la table des matières (même identifiants que le rendu).
+     *
+     * @return list<array{level: int, text: string, id: string}>
+     */
+    public function headings(array|string|null $data, int $maxLevel = 4): array
+    {
+        if (is_string($data)) {
+            $data = json_decode($data, true);
+        }
+        $blocks = is_array($data['blocks'] ?? null) ? $data['blocks'] : [];
+
+        $headings = [];
+        foreach ($this->headingIds($blocks) as $index => $id) {
+            $level = $this->headingLevel($blocks[$index]['data'] ?? []);
+            if ($level <= $maxLevel) {
+                $headings[] = ['level' => $level, 'text' => $this->headingText($blocks[$index]['data'] ?? []), 'id' => $id];
+            }
+        }
+
+        return $headings;
+    }
+
+    /**
+     * Identifiant lisible et unique pour chaque titre non vide (« mise-en-place », « mise-en-place-2 »…).
+     *
+     * @return array<int, string>
+     */
+    protected function headingIds(array $blocks): array
+    {
+        $ids = [];
+        $used = [];
+        foreach ($blocks as $index => $block) {
+            if (! is_array($block) || ($block['type'] ?? null) !== 'header') {
+                continue;
+            }
+            $text = $this->headingText(is_array($block['data'] ?? null) ? $block['data'] : []);
+            if ($text === '') {
+                continue;
+            }
+
+            $base = Str::slug($text) ?: 'section';
+            $id = $base;
+            for ($i = 2; isset($used[$id]); $i++) {
+                $id = $base.'-'.$i;
+            }
+            $used[$id] = true;
+            $ids[$index] = $id;
+        }
+
+        return $ids;
+    }
+
+    protected function headingLevel(array $data): int
+    {
+        return max(2, min(6, (int) ($data['level'] ?? 2)));
+    }
+
+    protected function headingText(array $data): string
+    {
+        return trim(html_entity_decode(strip_tags((string) ($data['text'] ?? '')), ENT_QUOTES | ENT_HTML5));
     }
 
     /**
      * @param  array<string, mixed>  $block
      */
-    protected function renderBlock(array $block): string
+    protected function renderBlock(array $block, ?string $headingId = null): string
     {
         $data = is_array($block['data'] ?? null) ? $block['data'] : [];
         $align = $this->alignmentClass($block);
 
         return match ($block['type']) {
             'paragraph' => $this->wrap('p', $this->inline($data['text'] ?? ''), $align),
-            'header'    => $this->header($data, $align),
+            'header'    => $this->header($data, $align, $headingId),
             'list'      => $this->list($data),
             'checklist' => $this->list(['style' => 'checklist', 'items' => array_map(
                 fn ($item) => ['content' => $item['text'] ?? '', 'meta' => ['checked' => (bool) ($item['checked'] ?? false)]],
@@ -87,11 +156,20 @@ class EditorJsRenderer
     /**
      * @param  array<string, mixed>  $data
      */
-    protected function header(array $data, string $align): string
+    protected function header(array $data, string $align, ?string $id = null): string
     {
-        $level = max(2, min(6, (int) ($data['level'] ?? 2)));
+        $level = $this->headingLevel($data);
+        $content = $this->inline($data['text'] ?? '');
+        if (! $id || trim(strip_tags($content)) === '') {
+            return $this->wrap("h{$level}", $content, $align);
+        }
 
-        return $this->wrap("h{$level}", $this->inline($data['text'] ?? ''), $align);
+        // Ancre partageable (lien vers la section)
+        $class = $align ? ' class="'.$align.'"' : '';
+
+        return "<h{$level} id=\"{$id}\"{$class}>{$content}"
+            .'<a href="#'.$id.'" class="heading-anchor" aria-label="Lien vers cette section">#</a>'
+            ."</h{$level}>";
     }
 
     /**

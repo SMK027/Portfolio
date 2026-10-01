@@ -77,7 +77,7 @@ class ArticleTest extends TestCase
         $this->get(route('articles.show', $article))
             ->assertOk()
             ->assertSee('Grace Hopper')
-            ->assertSee('<h2>Introduction</h2>', false)
+            ->assertSee('<h2 id="introduction">Introduction<a href="#introduction"', false)
             ->assertSee('color="#dc2626"', false)
             ->assertDontSee('<script>alert(1)</script>', false);
     }
