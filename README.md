@@ -46,6 +46,24 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Référencement** : *Administration → Référencement* permet de désindexer tout le site. Les pages reçoivent alors une balise `noindex` et toutes les réponses l'en-tête `X-Robots-Tag: noindex, nofollow`. Le `robots.txt`, généré dynamiquement, bloque les images publiques (`/storage/`) mais laisse les pages explorables, pour que les moteurs lisent la consigne et retirent les pages déjà indexées. L'administration et la connexion ne sont jamais indexées.
 
+**Statistiques de visite** (*Site → Statistiques*) : pages vues, visiteurs uniques par jour, tendance, pages les plus vues et sites d'origine, sur 7 jours à 12 mois. Sans cookie ni bandeau : aucune IP conservée (empreinte renouvelée chaque jour), robots, personnes connectées et navigateurs DNT / GPC ignorés ; données supprimées après 13 mois. Autorisation bot : `stats.read`.
+
+**Recherche** : bouton loupe, Ctrl+K / ⌘K ou « / » sur le site public ; articles publiés, projets, thèmes, compétences, parcours et certifications, en respectant la visibilité des pages. Page de résultats : `/recherche?q=…`.
+
+**Mode sombre** : bouton dans l'en-tête du site public (par défaut, le réglage de l'appareil ; choix mémorisé dans le navigateur).
+
+**Articles — relecture et historique** :
+- *Lien de relecture* (consultation d'un brouillon → « Lien de relecture ») : lien secret valable 24 h, 7 ou 30 jours pour faire relire un brouillon sans compte ; révocable, régénérable ;
+- *Historique* : une version à chaque modification du titre, du résumé ou du contenu (panel, API, restauration), 50 conservées ; comparaison ligne à ligne et restauration.
+
+**Projets — dépôts GitHub** : chaque lien `github.com/propriétaire/dépôt` affiche description, étoiles, forks, langage, licence et dernière activité (API GitHub, cache 12 h rafraîchi toutes les 6 h). `GITHUB_TOKEN` (facultatif) relève la limite de 60 requêtes par heure.
+
+**Rendez-vous** (*Site → Rendez-vous*, page publique `/rendez-vous`, privée par défaut) :
+- disponibilités : plages hebdomadaires, jours fermés, durée, délai de prévenance, horizon, lieu et sujets ;
+- le visiteur choisit un créneau libre et reçoit un accusé avec lien d'annulation ; vous êtes notifié ;
+- vous confirmez (avec un message, ex. lien de visio — invitation `.ics` jointe) ou refusez ; double réservation impossible ;
+- autorisations bot : `appointments.read`, `appointments.write`, `appointments.delete`.
+
 **SEO et performances** :
 - `sitemap.xml` liste les pages publiques, les projets, les thèmes et les articles publiés (vide quand le site est désindexé) ; le `robots.txt` y renvoie ;
 - chaque page publique porte une URL canonique, les balises Open Graph et Twitter, et des données structurées JSON-LD (`Person` sur l'accueil, `BlogPosting` sur les articles) ;
