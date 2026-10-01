@@ -137,7 +137,20 @@ class AppointmentController extends Controller
                 'color'      => $status[$appointment->status][0],
                 'editable'   => false,
                 'classNames' => ['appointment'],
-                'extendedProps' => ['kind' => 'appointment', 'status' => $status[$appointment->status][1]],
+                // Détails pour la fenêtre de décision ouverte au clic.
+                'extendedProps' => [
+                    'kind'      => 'appointment',
+                    'status'    => $appointment->status,
+                    'statusLabel' => $status[$appointment->status][1],
+                    'when'      => ucfirst($appointment->starts_at->translatedFormat('l j F Y')).', '.$appointment->starts_at->format('H:i').'–'.$appointment->ends_at->format('H:i'),
+                    'name'      => $appointment->name,
+                    'email'     => $appointment->email,
+                    'phone'     => $appointment->phone,
+                    'topic'     => $appointment->topic,
+                    'message'   => $appointment->message,
+                    'upcoming'  => $appointment->isUpcoming(),
+                    'decideUrl' => route('admin.appointments.decide', $appointment),
+                ],
             ]),
         ]);
     }

@@ -14,8 +14,9 @@
 
     {{-- Calendrier --}}
     <section class="card space-y-4 p-4 sm:p-6"
-             x-data="{ choice: null, notice: null, timer: null }"
+             x-data="{ choice: null, notice: null, timer: null, appointment: null, deciding: null }"
              @availability-choose.window="choice = $event.detail"
+             @appointment-open.window="appointment = $event.detail; deciding = null"
              @availability-notice.window="notice = $event.detail; clearTimeout(timer); timer = setTimeout(() => notice = null, 3500)">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="max-w-2xl text-sm text-slate-600">
@@ -53,6 +54,45 @@
                     </button>
                     <button type="button" class="btn-ghost" @click="choice = null">Annuler</button>
                 </div>
+            </div>
+        </div>
+
+        {{-- Rendez-vous cliqué dans le calendrier : détails et décision --}}
+        <div x-show="appointment" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="appointment = null">
+            <div @click.outside="appointment = null" class="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="appointment-title">
+                <div class="flex items-start justify-between gap-3">
+                    <h2 id="appointment-title" class="font-display text-lg font-semibold text-slate-900" x-text="appointment?.when"></h2>
+                    <span :class="appointment?.status === 'confirmed' ? 'badge-green' : 'badge-amber'" x-text="appointment?.statusLabel"></span>
+                </div>
+                <dl class="space-y-1 text-sm text-slate-700">
+                    <div><dt class="inline font-medium">Avec :</dt> <dd class="inline" x-text="appointment?.name"></dd></div>
+                    <div><dt class="inline font-medium">E-mail :</dt> <dd class="inline"><a :href="'mailto:' + appointment?.email" class="text-primary-600 hover:underline" x-text="appointment?.email"></a></dd></div>
+                    <div x-show="appointment?.phone"><dt class="inline font-medium">Téléphone :</dt> <dd class="inline" x-text="appointment?.phone"></dd></div>
+                    <div><dt class="inline font-medium">Sujet :</dt> <dd class="inline" x-text="appointment?.topic"></dd></div>
+                </dl>
+                <p x-show="appointment?.message" class="whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm text-slate-700" x-text="appointment?.message"></p>
+
+                @if ($editable)
+                    <template x-if="appointment?.upcoming">
+                        <div class="space-y-3 border-t border-slate-100 pt-4">
+                            <div x-show="! deciding" class="flex flex-wrap gap-2">
+                                <button type="button" x-show="appointment?.status === 'pending'" @click="deciding = 'confirmed'" class="btn-primary"><x-icon name="check" class="h-4 w-4" /> Confirmer</button>
+                                <button type="button" @click="deciding = 'declined'" class="btn-secondary text-red-600" x-text="appointment?.status === 'pending' ? 'Refuser' : 'Annuler le rendez-vous'"></button>
+                            </div>
+                            <form x-show="deciding" method="POST" :action="appointment?.decideUrl" class="space-y-3">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="decision" :value="deciding">
+                                <label for="calendar-note" class="form-label" x-text="deciding === 'confirmed' ? 'Message pour le visiteur (ex. : lien de visioconférence)' : 'Message pour le visiteur (facultatif)'"></label>
+                                <textarea id="calendar-note" name="admin_note" rows="2" maxlength="2000" class="form-input"></textarea>
+                                <div class="flex gap-2">
+                                    <button class="btn-primary" x-text="deciding === 'confirmed' ? 'Confirmer et prévenir' : 'Refuser et prévenir'"></button>
+                                    <button type="button" @click="deciding = null" class="btn-ghost">Retour</button>
+                                </div>
+                            </form>
+                        </div>
+                    </template>
+                @endif
+                <div class="text-right"><button type="button" @click="appointment = null" class="btn-ghost btn-sm">Fermer</button></div>
             </div>
         </div>
 

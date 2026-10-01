@@ -54,9 +54,13 @@ export function mountAvailabilityCalendar(element) {
         eventDrop: (info) => save(info),
         eventResize: (info) => save(info),
 
-        // Clic sur une plage : suppression.
+        // Clic sur un rendez-vous : détails et décision ; sur une plage : suppression.
         eventClick: (info) => {
             const { kind, key } = info.event.extendedProps;
+            if (kind === 'appointment') {
+                window.dispatchEvent(new CustomEvent('appointment-open', { detail: info.event.extendedProps }));
+                return;
+            }
             if (! editable || ! ['weekly', 'date'].includes(kind)) return;
             const what = kind === 'weekly' ? 'cette plage hebdomadaire (toutes les semaines)' : 'cette disponibilité ponctuelle';
             if (! window.confirm(`Supprimer ${what} ?`)) return;

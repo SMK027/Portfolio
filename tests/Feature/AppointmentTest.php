@@ -107,6 +107,12 @@ class AppointmentTest extends TestCase
         });
         $this->assertStringContainsString('DTSTART:20261006T123000Z', $first->fresh()->toIcs('Moi'));
 
+        // Le calendrier fournit de quoi décider depuis la fenêtre du rendez-vous.
+        $event = collect($this->getJson(route('admin.appointments.availability.events', ['start' => '2026-10-05T00:00:00', 'end' => '2026-10-12T00:00:00']))->json())
+            ->firstWhere('id', 'appointment-'.$second->id);
+        $this->assertSame(route('admin.appointments.decide', $second), $event['extendedProps']['decideUrl']);
+        $this->assertSame('pending', $event['extendedProps']['status']);
+
         $this->put(route('admin.appointments.decide', $second), ['decision' => 'declined'])->assertRedirect();
         $this->assertSame('declined', $second->fresh()->status);
         $this->put(route('admin.appointments.decide', $second), ['decision' => 'confirmed'])->assertStatus(409);
