@@ -89,7 +89,7 @@
                 <span class="truncate font-display text-lg font-bold text-slate-900">{{ $siteName }}</span>
             </a>
 
-            <div class="hidden items-center gap-1 lg:flex">
+            <div class="hidden items-center gap-1 xl:flex">
                 @foreach ($navPages as $navPage)
                     @php $active = request()->routeIs(\Illuminate\Support\Str::beforeLast($navPage->routeName(), '.').'*'); @endphp
                     <a href="{{ $navPage->url() }}"
@@ -107,14 +107,20 @@
                 @endforeach
             </div>
 
-            <button type="button" @click="open = !open" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            <div class="flex flex-none items-center gap-1">
+            {{-- Recherche globale (Ctrl+K ou /) --}}
+            <button type="button" @click="$dispatch('open-search')" class="inline-flex items-center gap-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900" aria-label="Rechercher (Ctrl+K)" title="Rechercher (Ctrl+K)">
+                <x-icon name="search" class="h-5 w-5" />
+            </button>
+            <button type="button" @click="open = !open" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 xl:hidden"
                     :aria-expanded="open.toString()" aria-controls="menu-mobile" aria-label="Ouvrir le menu">
                 <x-icon name="menu" class="h-6 w-6" x-show="!open" />
                 <x-icon name="x" class="h-6 w-6" x-show="open" x-cloak />
             </button>
+            </div>
         </nav>
 
-        <div id="menu-mobile" x-show="open" x-cloak x-transition.origin.top class="border-t border-slate-200 bg-white lg:hidden">
+        <div id="menu-mobile" x-show="open" x-cloak x-transition.origin.top class="border-t border-slate-200 bg-white xl:hidden">
             <div class="mx-auto max-w-6xl space-y-1 px-4 py-3 sm:px-6">
                 @foreach ($navPages as $navPage)
                     <a href="{{ $navPage->url() }}" class="flex items-center justify-between rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-100">
@@ -127,6 +133,8 @@
             </div>
         </div>
     </header>
+
+    @include('partials.search-palette')
 
     <x-announcements :announcements="$announcements" />
 

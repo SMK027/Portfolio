@@ -53,6 +53,8 @@ Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class
     ->scopeBindings()
     ->name('articles.files.show');
 
+Route::get('/recherche', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
+
 Route::middleware('page:contact')->group(function () {
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
     Route::post('/contact', [ContactController::class, 'store'])
