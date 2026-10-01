@@ -30,6 +30,38 @@ class Page extends Model
         'rendez-vous'    => 'appointments.show',
     ];
 
+    /**
+     * Menu du site public : groupes thématiques (sous-menus) et liens directs.
+     * Un groupe dont une seule page est visible s'affiche comme un lien simple.
+     */
+    public const NAV_GROUPS = [
+        'Parcours' => ['formations', 'experiences', 'diplomes', 'certifications', 'competences', 'loisirs'],
+        'Projets'  => ['projets'],
+        'Veille'   => ['veille'],
+        'Contact'  => ['contact', 'rendez-vous'],
+    ];
+
+    /**
+     * Pages visibles regroupées pour le menu : [libellé => Collection<Page>].
+     * Les pages absentes des groupes sont ajoutées à la fin, en lien direct.
+     */
+    public static function navigationFor(?User $user): array
+    {
+        $pages = static::visibleTo($user)->where('key', '!=', 'home')->keyBy('key');
+        $groups = [];
+        foreach (self::NAV_GROUPS as $label => $keys) {
+            $items = collect($keys)->map(fn ($key) => $pages->pull($key))->filter()->values();
+            if ($items->isNotEmpty()) {
+                $groups[$label] = $items;
+            }
+        }
+        foreach ($pages as $page) {
+            $groups[$page->title] = collect([$page]);
+        }
+
+        return $groups;
+    }
+
     /** Cache des pages pour la durée de la requête. */
     protected static ?Collection $cache = null;
 

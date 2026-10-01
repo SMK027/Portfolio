@@ -12,7 +12,7 @@ final class PanelSections
 {
     /** Groupe => liste de [route, libellé, icône, motif de route actif, autorisations]. */
     public const GROUPS = [
-        'Contenu' => [
+        'Parcours' => [
             ['admin.profile.edit', 'Présentation', 'user', 'admin.profile.*', 'profile.read|profile.write'],
             ['admin.formations.index', 'Formations', 'academic-cap', 'admin.formations.*', 'educations.read|educations.write|educations.delete'],
             ['admin.experiences.index', 'Expériences', 'briefcase', 'admin.experiences.*', 'experiences.read|experiences.write|experiences.delete'],
@@ -20,19 +20,27 @@ final class PanelSections
             ['admin.certifications.index', 'Certifications', 'badge', 'admin.certifications.*', 'certifications.read|certifications.write|certifications.delete'],
             ['admin.competences.index', 'Compétences', 'sparkles', 'admin.competences.*', 'skills.read|skills.write|skills.delete'],
             ['admin.loisirs.index', 'Loisirs', 'heart', 'admin.loisirs.*', 'hobbies.read|hobbies.write|hobbies.delete'],
-            ['admin.themes.index', 'Thèmes', 'tag', 'admin.themes.*', 'themes.read|themes.write|themes.delete'],
+        ],
+        'Réalisations' => [
             ['admin.projets.index', 'Projets', 'folder', 'admin.projets.*', 'projects.read|projects.write|projects.delete'],
+            ['admin.themes.index', 'Thèmes', 'tag', 'admin.themes.*', 'themes.read|themes.write|themes.delete'],
+        ],
+        'Veille' => [
             ['admin.articles.index', 'Veille', 'newspaper', 'admin.articles.*', 'articles.read|articles.write'],
         ],
-        'Site' => [
-            ['admin.statistics', 'Statistiques', 'squares', 'admin.statistics', 'stats.read'],
-            ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
+        'Échanges' => [
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*', 'messages.read'],
             ['admin.appointments.index', 'Rendez-vous', 'calendar', 'admin.appointments.*', 'appointments.read|appointments.write|appointments.delete'],
+            ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
+        ],
+        'Site' => [
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*', 'pages.read|pages.write'],
-            ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*', 'content.export|content.import'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*', 'seo.read|seo.write'],
+            ['admin.statistics', 'Statistiques', 'squares', 'admin.statistics', 'stats.read'],
             ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*', 'maintenance.read|maintenance.manage'],
+            ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*', 'content.export|content.import'],
+        ],
+        'Comptes et sécurité' => [
             ['admin.utilisateurs.index', 'Comptes', 'users', 'admin.utilisateurs.*', 'users.read|users.write|users.delete'],
         ],
     ];

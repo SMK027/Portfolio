@@ -50,6 +50,8 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Recherche** : bouton loupe, Ctrl+K / ⌘K ou « / » sur le site public ; articles publiés, projets, thèmes, compétences, parcours et certifications, en respectant la visibilité des pages. Page de résultats : `/recherche?q=…`.
 
+**Menus** : le site public regroupe ses pages en sous-menus (*Parcours* : formations, expériences, diplômes, certifications, compétences, loisirs ; *Contact* : contact, rendez-vous ; Projets et Veille en accès direct), à modifier dans `Page::NAV_GROUPS`. Le panel range ses sections en groupes repliables (Parcours, Réalisations, Veille, Échanges, Site, Comptes et sécurité) définis dans `PanelSections::GROUPS` ; le groupe de la page en cours s'ouvre et l'état est mémorisé.
+
 **Mode sombre** : bouton dans l'en-tête du site public (par défaut, le réglage de l'appareil ; choix mémorisé dans le navigateur).
 
 **Articles — relecture et historique** :

@@ -91,6 +91,7 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with([
                 'navPages'      => Page::visibleTo($user)->where('key', '!=', 'home'),
+                'navGroups'     => Page::navigationFor($user),
                 'homePage'      => Page::findByKey('home'),
                 'siteProfile'   => Profile::current(),
                 'isAdmin'       => (bool) $user?->isAdmin(),

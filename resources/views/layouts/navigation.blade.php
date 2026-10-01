@@ -18,11 +18,20 @@
 
     // Réservé aux super-administrateurs
     if ($user->isSuperAdmin()) {
-        $sections['Sécurité'] = [
+        $sections['Comptes et sécurité'] = [
+            ...($sections['Comptes et sécurité'] ?? []),
             ['admin.service-accounts.index', 'Comptes de service et bots', 'cog', 'admin.service-accounts.*'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
         ];
     }
+
+    // Compteurs affichés sur les liens… et sur le titre d'un groupe replié.
+    $badges = array_filter([
+        'admin.articles.index'     => $pendingArticles ? [$pendingArticles, 'bg-amber-400 text-amber-950', 'Articles à valider'] : null,
+        'admin.appointments.index' => $pendingAppointments ? [$pendingAppointments, 'bg-amber-400 text-amber-950', 'Demandes à confirmer'] : null,
+        'admin.messages.index'     => $unread ? [$unread, 'bg-primary-500 text-white', 'Messages non lus'] : null,
+        'admin.maintenance.edit'   => $maintenanceActive ? ['Active', 'bg-amber-400 text-amber-950', 'Maintenance active'] : null,
+    ]);
 @endphp
 
 <div class="flex h-16 flex-none items-center justify-between gap-2 border-b border-white/10 px-5">
@@ -32,13 +41,33 @@
     </button>
 </div>
 
-<nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Administration">
+<nav class="flex-1 space-y-3 overflow-y-auto px-3 py-5" aria-label="Administration">
+    {{-- Groupes thématiques repliables : celui de la page en cours s'ouvre, l'état est mémorisé --}}
     @foreach ($sections as $section => $items)
-        <div>
+        @php
+            $groupActive = collect($items)->contains(fn ($item) => request()->routeIs($item[3]));
+            $groupBadges = collect($items)->map(fn ($item) => $badges[$item[0]] ?? null)->filter();
+            $groupKey = \Illuminate\Support\Str::slug($section ?: 'principal');
+            // Groupe d'un seul lien : affiché directement, sans sous-menu.
+            if (count($items) === 1) {
+                $section = '';
+            }
+        @endphp
+        <div @if ($section) x-data="{
+                 open: @js($groupActive) || (() => { try { return localStorage.getItem('nav.{{ $groupKey }}') === '1' } catch (e) { return false } })(),
+                 remember() { try { localStorage.setItem('nav.{{ $groupKey }}', this.open ? '1' : '0') } catch (e) {} },
+             }" x-effect="remember()" @endif>
             @if ($section)
-                <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $section }}</p>
+                <button type="button" @click="open = ! open" :aria-expanded="open.toString()"
+                        class="mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:bg-white/5 hover:text-slate-300">
+                    <span class="flex-1 text-left">{{ $section }}</span>
+                    @foreach ($groupBadges as [$count, $classes, $title])
+                        <span x-show="! open" class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal {{ $classes }}" title="{{ $title }}">{{ $count }}</span>
+                    @endforeach
+                    <x-icon name="chevron-right" class="h-3.5 w-3.5 transition" ::class="open && 'rotate-90'" />
+                </button>
             @endif
-            <ul class="space-y-0.5">
+            <ul class="space-y-0.5" @if ($section) x-show="open" @unless ($groupActive) x-cloak @endunless @endif>
                 @foreach ($items as [$route, $label, $icon, $pattern])
                     @php $active = request()->routeIs($pattern); @endphp
                     <li>
@@ -46,20 +75,11 @@
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
                             'bg-white/10 text-white' => $active,
                             'hover:bg-white/5 hover:text-white' => ! $active,
-                        ])>
+                        ]) @if ($active) aria-current="page" @endif>
                             <x-icon :name="$icon" class="h-5 w-5 flex-none {{ $active ? 'text-primary-300' : 'text-slate-500' }}" />
                             <span class="flex-1">{{ $label }}</span>
-                            @if ($route === 'admin.articles.index' && $pendingArticles)
-                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950" title="Articles à valider">{{ $pendingArticles }}</span>
-                            @endif
-                            @if ($route === 'admin.maintenance.edit' && $maintenanceActive)
-                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">Active</span>
-                            @endif
-                            @if ($route === 'admin.appointments.index' && $pendingAppointments)
-                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950" title="Demandes à confirmer">{{ $pendingAppointments }}</span>
-                            @endif
-                            @if ($route === 'admin.messages.index' && $unread)
-                                <span class="rounded-full bg-primary-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unread }}</span>
+                            @if ($badge = $badges[$route] ?? null)
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $badge[1] }}" title="{{ $badge[2] }}">{{ $badge[0] }}</span>
                             @endif
                         </a>
                     </li>
