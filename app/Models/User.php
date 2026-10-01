@@ -47,6 +47,12 @@ class User extends Authenticatable
         return $this->hasMany(SecurityKey::class)->orderBy('created_at');
     }
 
+    /** Connexion par clé de sécurité seule : administrateurs et super-administrateurs actifs. */
+    public function canUsePasswordlessLogin(): bool
+    {
+        return $this->isAdmin() && ! $this->isMachine() && $this->is_active !== false;
+    }
+
     public function hasTotp(): bool
     {
         return $this->two_factor_confirmed_at !== null && filled($this->two_factor_secret);

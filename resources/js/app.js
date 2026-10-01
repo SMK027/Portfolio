@@ -7,7 +7,7 @@ import linkList from './components/link-list';
 import richTextEditor from './components/rich-text-editor';
 import tableOfContents from './components/table-of-contents';
 import searchPalette from './components/search-palette';
-import { securityKeyLogin, securityKeyRegister } from './components/webauthn';
+import { securityKeyLogin, securityKeyPasswordless, securityKeyRegister } from './components/webauthn';
 
 window.Alpine = Alpine;
 
@@ -19,6 +19,7 @@ Alpine.data('tableOfContents', tableOfContents);
 Alpine.data('searchPalette', searchPalette);
 Alpine.data('securityKeyRegister', securityKeyRegister);
 Alpine.data('securityKeyLogin', securityKeyLogin);
+Alpine.data('securityKeyPasswordless', securityKeyPasswordless);
 
 Alpine.start();
 

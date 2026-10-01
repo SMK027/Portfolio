@@ -58,6 +58,32 @@ export function securityKeyRegister({ optionsUrl, storeUrl }) {
     };
 }
 
+/** Connexion directe (administrateurs) : clé de sécurité seule, e-mail facultatif. */
+export function securityKeyPasswordless({ optionsUrl, loginUrl }) {
+    return {
+        busy: false, error: '', supported: supported(),
+        async login(form) {
+            if (this.busy) return;
+            this.busy = true; this.error = '';
+            try {
+                const email = form.querySelector('[name=email]')?.value ?? '';
+                const remember = form.querySelector('[name=remember]')?.checked ?? false;
+                const { data } = await window.axios.post(optionsUrl, { email });
+                const credential = await navigator.credentials.get({ publicKey: decodeOptions(data) });
+                const { data: result } = await window.axios.post(loginUrl, { credential: encodeCredential(credential), remember });
+                window.location.assign(result.redirect);
+            } catch (error) {
+                // Clé non résidente : le navigateur ne la trouve pas sans l'e-mail du compte.
+                const noEmail = ! (form.querySelector('[name=email]')?.value ?? '').trim();
+                this.error = error?.name === 'NotAllowedError' && noEmail
+                    ? 'Aucune clé reconnue ou opération annulée. Si votre clé ne mémorise pas votre compte, saisissez votre e-mail puis réessayez.'
+                    : errorMessage(error);
+                this.busy = false;
+            }
+        },
+    };
+}
+
 /** Connexion : vérification avec l'une des clés du compte. */
 export function securityKeyLogin({ optionsUrl, verifyUrl }) {
     return {

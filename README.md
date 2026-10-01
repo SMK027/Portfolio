@@ -100,6 +100,7 @@ Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-compléti
 - à la connexion, le mot de passe est vérifié puis le second facteur demandé, **avant** l'ouverture de la session ; 5 erreurs bloquent l'étape 5 minutes ; tout est journalisé ;
 - désactiver un facteur ou régénérer les codes demande le mot de passe actuel ; un super-administrateur peut réinitialiser la double authentification d'un compte (*Comptes → Modifier*) ;
 - les clés de sécurité exigent le HTTPS (ou `localhost` en développement) et sont liées au nom de domaine du site.
+- **connexion directe par clé** (administrateurs et super-administrateurs) : bouton « Se connecter avec une clé de sécurité » sur la page de connexion, sans mot de passe. La clé doit vérifier l'utilisateur (PIN, empreinte ou visage) : cela vaut double authentification. Les clés « résidentes » (passkeys) proposent le compte d'elles-mêmes ; sinon, saisir l'e-mail avant de cliquer. Les contributeurs utilisent toujours mot de passe + second facteur.
 
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;

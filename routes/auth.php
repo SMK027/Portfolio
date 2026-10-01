@@ -21,6 +21,10 @@ Route::middleware('guest')->group(function () {
     // L'inscription publique est désactivée : les comptes sont créés depuis l'administration.
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    // Administrateurs : connexion directe par clé de sécurité (sans mot de passe)
+    Route::post('login/cle/options', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'options'])->middleware('throttle:20,1')->name('login.key.options');
+    Route::post('login/cle', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'store'])->middleware('throttle:20,1')->name('login.key');
+
     // Second facteur (mot de passe déjà vérifié, session pas encore ouverte)
     Route::controller(\App\Http\Controllers\Auth\TwoFactorChallengeController::class)->prefix('double-authentification')->group(function () {
         Route::get('/', 'create')->name('two-factor.challenge');

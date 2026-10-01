@@ -58,6 +58,7 @@ class AuditLog extends Model
         'auth.lockout'      => 'Connexions bloquées (trop de tentatives)',
         'auth.password_reset' => 'Mot de passe réinitialisé',
         'auth.session_revoked' => 'Session coupée (code désactivé ou supprimé)',
+        'auth.security_key_login' => 'Connexion par clé de sécurité',
         'auth.two_factor'   => 'Second facteur validé',
         'auth.two_factor_failed' => 'Second facteur refusé',
         'two_factor.enabled'  => 'Application d\'authentification activée',

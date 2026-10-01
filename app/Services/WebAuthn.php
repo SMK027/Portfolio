@@ -29,8 +29,9 @@ class WebAuthn
     {
         $library = $this->library();
         $options = $library->getCreateArgs(
+            // Clé résidente si possible : permet la connexion sans saisir d'e-mail.
             (string) $user->id, $user->email, $user->name, self::TIMEOUT,
-            false, 'preferred', null,
+            'preferred', 'preferred', null,
             $user->securityKeys()->pluck('credential_id')->map(fn ($id) => self::decode($id))->all(),
         );
         $this->remember($library);
@@ -105,6 +106,56 @@ class WebAuthn
         $key->forceFill(['sign_count' => (int) $library->getSignatureCounter(), 'last_used_at' => now()])->saveQuietly();
 
         return true;
+    }
+
+    /**
+     * Connexion sans mot de passe : options pour navigator.credentials.get().
+     * Sans compte connu, liste vide → le navigateur propose les clés résidentes.
+     * La vérification de l'utilisateur (PIN, biométrie) est exigée.
+     */
+    public function loginOptions(?User $user): object
+    {
+        $library = $this->library();
+        $ids = $user && $user->canUsePasswordlessLogin()
+            ? $user->securityKeys()->pluck('credential_id')->map(fn ($id) => self::decode($id))->all()
+            : [];
+        $options = $library->getGetArgs($ids, self::TIMEOUT, true, true, true, true, true, 'required');
+        $this->remember($library);
+
+        return $options;
+    }
+
+    /** Compte authentifié par la clé (administrateurs uniquement, vérification de l'utilisateur exigée), ou null. */
+    public function verifyLogin(array $credential): ?User
+    {
+        $challenge = $this->pullChallenge();
+        $key = SecurityKey::with('user')->where('credential_id', (string) ($credential['id'] ?? ''))->first();
+        $user = $key?->user;
+        if (! $challenge || ! $user || ! $user->canUsePasswordlessLogin()) {
+            return null;
+        }
+
+        // Clé résidente : l'identifiant de compte stocké dans la clé doit être celui de son propriétaire.
+        $handle = $credential['response']['userHandle'] ?? null;
+        if ($handle !== null && $handle !== '' && self::decode($handle) !== (string) $user->id) {
+            return null;
+        }
+
+        try {
+            $library = $this->library();
+            $library->processGet(
+                self::decode($credential['response']['clientDataJSON'] ?? ''),
+                self::decode($credential['response']['authenticatorData'] ?? ''),
+                self::decode($credential['response']['signature'] ?? ''),
+                $key->public_key, $challenge, $key->sign_count ?: null, true, true,
+            );
+        } catch (WebAuthnException) {
+            return null;
+        }
+
+        $key->forceFill(['sign_count' => (int) $library->getSignatureCounter(), 'last_used_at' => now()])->saveQuietly();
+
+        return $user;
     }
 
     protected function library(): Library
