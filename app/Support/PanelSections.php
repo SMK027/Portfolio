@@ -28,6 +28,7 @@ final class PanelSections
             ['admin.statistics', 'Statistiques', 'squares', 'admin.statistics', 'stats.read'],
             ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*', 'messages.read'],
+            ['admin.appointments.index', 'Rendez-vous', 'calendar', 'admin.appointments.*', 'appointments.read|appointments.write|appointments.delete'],
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*', 'pages.read|pages.write'],
             ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*', 'content.export|content.import'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*', 'seo.read|seo.write'],

@@ -43,6 +43,11 @@ final class ServicePermissions
             'messages.read'   => 'Lire les messages de contact (données personnelles)',
             'messages.delete' => 'Supprimer des messages de contact',
         ],
+        'Rendez-vous' => [
+            'appointments.read'   => 'Consulter les rendez-vous (données personnelles) et les disponibilités',
+            'appointments.write'  => 'Confirmer ou refuser les rendez-vous, modifier les disponibilités',
+            'appointments.delete' => 'Supprimer des rendez-vous',
+        ],
         'Pages & visibilité' => [
             'pages.read'  => 'Consulter les pages et leur visibilité',
             'pages.write' => 'Modifier les pages (titres, introductions, public / privé)',

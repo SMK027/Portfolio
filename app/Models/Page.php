@@ -27,6 +27,7 @@ class Page extends Model
         'veille'         => 'articles.index',
         'loisirs'        => 'loisirs',
         'contact'        => 'contact.show',
+        'rendez-vous'    => 'appointments.show',
     ];
 
     /** Cache des pages pour la durée de la requête. */

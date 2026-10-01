@@ -4,6 +4,8 @@
     $maintenanceActive = $user->can('panel', 'maintenance.read|maintenance.manage') && app(\App\Services\Maintenance::class)->isActive();
 
     $pendingArticles = $user->isAdmin() ? \App\Models\Article::pendingReview()->count() : 0;
+    $pendingAppointments = $user->can('panel', 'appointments.read|appointments.write')
+        ? \App\Models\Appointment::where('status', 'pending')->where('starts_at', '>=', now())->count() : 0;
 
     // Administrateurs : tout ; bots : sections couvertes par leurs autorisations ;
     // contributeurs : rédaction d'articles.
@@ -52,6 +54,9 @@
                             @endif
                             @if ($route === 'admin.maintenance.edit' && $maintenanceActive)
                                 <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">Active</span>
+                            @endif
+                            @if ($route === 'admin.appointments.index' && $pendingAppointments)
+                                <span class="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950" title="Demandes à confirmer">{{ $pendingAppointments }}</span>
                             @endif
                             @if ($route === 'admin.messages.index' && $unread)
                                 <span class="rounded-full bg-primary-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unread }}</span>

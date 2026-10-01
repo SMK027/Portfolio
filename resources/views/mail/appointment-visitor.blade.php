@@ -1,0 +1,43 @@
+<x-mail::message>
+@if ($event === 'confirmed')
+# Votre rendez-vous est confirmé
+
+Bonjour {{ $appointment->name }}, notre échange est confirmé.
+@elseif ($event === 'declined')
+# Demande de rendez-vous
+
+Bonjour {{ $appointment->name }}, je ne peux malheureusement pas vous recevoir sur ce créneau.
+@else
+# Demande reçue
+
+Bonjour {{ $appointment->name }}, votre demande de rendez-vous est bien enregistrée. Vous recevrez un e-mail dès qu'elle sera confirmée.
+@endif
+
+<x-mail::panel>
+**{{ ucfirst($appointment->starts_at->translatedFormat('l j F Y')) }}**, de {{ $appointment->starts_at->format('H:i') }} à {{ $appointment->ends_at->format('H:i') }}
+**Sujet :** {{ $appointment->topic }}
+@if ($event !== 'declined')
+**Lieu :** {{ $settings['location'] }}
+@endif
+</x-mail::panel>
+
+@if ($appointment->admin_note)
+**Message de {{ $owner }} :**
+
+{{ $appointment->admin_note }}
+@endif
+
+@if ($event === 'confirmed')
+L'invitation est jointe (fichier .ics) pour l'ajouter à votre agenda.
+@endif
+
+@if ($event === 'declined')
+<x-mail::button :url="route('appointments.show')">
+Choisir un autre créneau
+</x-mail::button>
+@elseif ($appointment->canBeCancelled())
+Un empêchement ? [Annulez le rendez-vous]({{ $appointment->cancelUrl() }}) pour libérer le créneau.
+@endif
+
+{{ $owner }}
+</x-mail::message>

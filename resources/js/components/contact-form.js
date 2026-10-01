@@ -2,7 +2,7 @@
  * Formulaire de contact protégé par Google reCAPTCHA v3 :
  * un jeton est demandé au moment de l'envoi puis transmis au serveur.
  */
-export default ({ siteKey = null } = {}) => ({
+export default ({ siteKey = null, action = 'contact' } = {}) => ({
     sending: false,
     captchaError: false,
 
@@ -24,7 +24,7 @@ export default ({ siteKey = null } = {}) => ({
                     return;
                 }
                 window.grecaptcha.ready(() => {
-                    window.grecaptcha.execute(siteKey, { action: 'contact' }).then(resolve, reject);
+                    window.grecaptcha.execute(siteKey, { action }).then(resolve, reject);
                 });
             });
             form.querySelector('input[name="recaptcha_token"]').value = token;

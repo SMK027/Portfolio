@@ -59,6 +59,16 @@ Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class
 
 Route::get('/recherche', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
 
+Route::middleware('page:rendez-vous')->prefix('rendez-vous')->name('appointments.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\AppointmentController::class, 'show'])->name('show');
+    Route::post('/', [\App\Http\Controllers\AppointmentController::class, 'store'])->middleware('throttle:5,10')->name('store');
+});
+// Annulation par le visiteur : lien personnel reçu par e-mail (indépendant de la visibilité de la page)
+Route::get('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentController::class, 'cancelForm'])
+    ->where('token', '[A-Za-z0-9]{48}')->name('appointments.cancel');
+Route::post('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentController::class, 'cancel'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1');
+
 Route::middleware('page:contact')->group(function () {
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
     Route::post('/contact', [ContactController::class, 'store'])
@@ -174,6 +184,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->middleware($panel('messages.read'))->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->middleware($panel('messages.delete'))->name('messages.destroy');
+
+    Route::get('/rendez-vous', [Admin\AppointmentController::class, 'index'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.index');
+    Route::put('/rendez-vous/{appointment}/decision', [Admin\AppointmentController::class, 'decide'])->middleware($panel('appointments.write'))->name('appointments.decide');
+    Route::delete('/rendez-vous/{appointment}', [Admin\AppointmentController::class, 'destroy'])->middleware($panel('appointments.delete'))->name('appointments.destroy');
+    Route::get('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'editAvailability'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.availability');
+    Route::put('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'updateAvailability'])->middleware($panel('appointments.write'))->name('appointments.availability.update');
 
     Route::get('/pages', [Admin\PageController::class, 'index'])->middleware($panel('pages.read|pages.write'))->name('pages.index');
     Route::put('/pages', [Admin\PageController::class, 'update'])->middleware($panel('pages.write'))->name('pages.update');

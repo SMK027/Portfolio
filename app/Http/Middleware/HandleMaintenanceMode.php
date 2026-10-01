@@ -17,7 +17,7 @@ class HandleMaintenanceMode
     /** Toujours accessibles : connexion des administrateurs et fichiers techniques. */
     protected const ALLOWED_PATHS = [
         'login', 'login/bot', 'double-authentification', 'double-authentification/*', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
-        'admin', 'admin/*', 'robots.txt', 'sitemap.xml', 'veille/apercu/*',
+        'admin', 'admin/*', 'robots.txt', 'sitemap.xml', 'veille/apercu/*', 'rendez-vous/annuler/*',
     ];
 
     /**
