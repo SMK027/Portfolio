@@ -1,8 +1,36 @@
-// Sommaire d'article : surligne la section en cours de lecture.
-export default function tableOfContents(ids) {
+// Sommaire d'article : section en cours surlignée, branches repliables.
+// parents : { id du titre: [ids de ses ancêtres, du plus haut au plus proche] }
+export default function tableOfContents(parents) {
+    const ids = Object.keys(parents);
+    const branches = [...new Set(Object.values(parents).flat())]; // titres ayant des sous-titres
+
     return {
         active: ids[0] ?? null,
+        collapsed: {},
         wide: false,
+
+        isOpen(id) {
+            return ! this.collapsed[id];
+        },
+        toggle(id) {
+            this.collapsed = { ...this.collapsed, [id]: ! this.collapsed[id] };
+        },
+        get allCollapsed() {
+            return branches.length > 0 && branches.every((id) => this.collapsed[id]);
+        },
+        toggleAll() {
+            const collapse = ! this.allCollapsed;
+            this.collapsed = Object.fromEntries(branches.map((id) => [id, collapse]));
+        },
+        // Élément surligné : la section lue, ou son ancêtre visible le plus haut si elle est repliée.
+        get shown() {
+            return (parents[this.active] ?? []).find((id) => this.collapsed[id]) ?? this.active;
+        },
+        go(id, link) {
+            this.active = id;
+            if (! this.wide) link.closest('details').open = false;
+        },
+
         init() {
             const headings = ids.map((id) => document.getElementById(id)).filter(Boolean);
             if (! headings.length) return;

@@ -64,22 +64,33 @@
         <div @class(['mx-auto px-4 py-12 sm:px-6', 'max-w-3xl' => ! $toc, 'max-w-6xl lg:grid lg:grid-cols-[minmax(0,48rem)_15rem] lg:justify-center lg:gap-12' => $toc])>
         @if ($toc)
             {{-- Sommaire : colonne fixe sur grand écran, bloc repliable sur mobile --}}
-            <aside class="mb-10 lg:order-2 lg:mb-0" x-data="tableOfContents(@js(array_column($toc, 'id')))">
-                <nav aria-label="Sommaire" class="lg:sticky lg:top-24">
+            @php
+                // Ancêtres de chaque titre (pour surligner le parent d'une section repliée)
+                $parents = [];
+                $walk = function (array $items, array $ancestors) use (&$walk, &$parents) {
+                    foreach ($items as $item) {
+                        $parents[$item['id']] = $ancestors;
+                        $walk($item['children'], [...$ancestors, $item['id']]);
+                    }
+                };
+                $tree = $article->tableOfContentsTree();
+                $walk($tree, []);
+                $hasNested = collect($tree)->contains(fn ($item) => $item['children']);
+            @endphp
+            <aside class="mb-10 lg:order-2 lg:mb-0" x-data="tableOfContents(@js($parents))">
+                <nav aria-label="Sommaire" class="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
                     <details class="group rounded-xl border border-slate-200 bg-white p-4 lg:border-0 lg:bg-transparent lg:p-0" :open="wide" x-init="wide = window.matchMedia('(min-width: 1024px)').matches">
                         <summary class="flex cursor-pointer list-none items-center justify-between font-display text-sm font-semibold uppercase tracking-wide text-slate-900 lg:pointer-events-none">
                             Sommaire
                             <x-icon name="chevron-right" class="h-4 w-4 text-slate-400 transition group-open:rotate-90 lg:hidden" />
                         </summary>
-                        <ol class="mt-3 space-y-1 border-l border-slate-200 text-sm">
-                            @foreach ($toc as $heading)
-                                <li>
-                                    <a href="#{{ $heading['id'] }}" @click="active = @js($heading['id']); if (! wide) $el.closest('details').open = false"
-                                       :class="active === @js($heading['id']) ? 'border-primary-500 text-primary-700 font-medium' : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'"
-                                       class="-ml-px block border-l-2 py-1 pr-2 transition {{ ['', '', 'pl-3', 'pl-6', 'pl-9'][$heading['level']] ?? 'pl-9' }}">{{ $heading['text'] }}</a>
-                                </li>
-                            @endforeach
-                        </ol>
+                        @if ($hasNested)
+                            <button type="button" @click="toggleAll()" class="mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700"
+                                    x-text="allCollapsed ? 'Tout déplier' : 'Tout replier'">Tout replier</button>
+                        @endif
+                        <div class="mt-3 text-sm">
+                            @include('public.articles.partials.toc-items', ['items' => $tree, 'depth' => 0, 'parentId' => null])
+                        </div>
                     </details>
                 </nav>
             </aside>

@@ -55,4 +55,23 @@ class ArticleTableOfContentsTest extends TestCase
         $article->update(['content' => $this->content([[2, 'Seul titre']])]);
         $this->get(route('articles.show', $article))->assertOk()->assertDontSee('aria-label="Sommaire"', false);
     }
+
+    public function test_tree_nests_subheadings_and_page_offers_folding(): void
+    {
+        $author = User::factory()->admin()->create();
+        $article = Article::create(['title' => 'Guide', 'author_id' => $author->id, 'published_at' => now()->subDay(),
+            'content' => $this->content([[2, 'A'], [3, 'A1'], [4, 'A1a'], [3, 'A2'], [2, 'B'], [4, 'B-saut'], [2, 'C']])]);
+
+        $tree = $article->tableOfContentsTree();
+        $this->assertSame(['a', 'b', 'c'], array_column($tree, 'id'));
+        $this->assertSame(['a1', 'a2'], array_column($tree[0]['children'], 'id'));
+        $this->assertSame(['a1a'], array_column($tree[0]['children'][0]['children'], 'id'));
+        $this->assertSame(['b-saut'], array_column($tree[1]['children'], 'id')); // niveau sauté rattaché à B
+        $this->assertSame([], $tree[2]['children']);
+
+        $this->get(route('articles.show', $article))->assertOk()
+            ->assertSee('Tout replier')
+            ->assertSee("toggle('a')", false)
+            ->assertDontSee("toggle('c')", false);
+    }
 }

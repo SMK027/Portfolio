@@ -149,6 +149,30 @@ class Article extends Model
         return count($headings) >= 2 ? $headings : [];
     }
 
+    /**
+     * Table des matières en arborescence : chaque titre contient ses sous-titres
+     * (un niveau sauté, h2 → h4, est rattaché au titre précédent le plus proche).
+     *
+     * @return list<array{level: int, text: string, id: string, children: list<array>}>
+     */
+    public function tableOfContentsTree(): array
+    {
+        $root = ['level' => 1, 'children' => []];
+        $stack = [&$root];
+
+        foreach ($this->tableOfContents() as $heading) {
+            while (count($stack) > 1 && $stack[count($stack) - 1]['level'] >= $heading['level']) {
+                array_pop($stack);
+            }
+            $parent = &$stack[count($stack) - 1];
+            $parent['children'][] = $heading + ['children' => []];
+            $stack[] = &$parent['children'][count($parent['children']) - 1];
+            unset($parent);
+        }
+
+        return $root['children'];
+    }
+
     public function readingTime(): int
     {
         $text = collect($this->content['blocks'] ?? [])
