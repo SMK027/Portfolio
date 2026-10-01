@@ -9,6 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['label', 'url', 'position'])]
 class ProjectLink extends Model
 {
+    protected static function booted(): void
+    {
+        // Lien GitHub enregistré : cache vidé, la prochaine visite récupère des données à jour.
+        static::saved(fn (ProjectLink $link) => \App\Services\GithubRepositories::forget($link->url));
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

@@ -46,4 +46,9 @@ return [
         'recipient' => env('CONTACT_RECIPIENT'),
     ],
 
+    // Dépôts GitHub des projets (facultatif : relève la limite de 60 à 5 000 requêtes/heure)
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+    ],
+
 ];

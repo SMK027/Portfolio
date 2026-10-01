@@ -55,6 +55,34 @@
                     </section>
                 @endif
 
+                {{-- Dépôts GitHub : étoiles, langage, dernière activité (données en cache) --}}
+                @foreach ($project->links->filter->isGithub() as $link)
+                    @php $repo = app(\App\Services\GithubRepositories::class)->find($link->url); @endphp
+                    @if ($repo)
+                        <section class="card p-5">
+                            <a href="{{ $repo['url'] }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 font-semibold text-slate-900 hover:text-primary-700">
+                                <x-icon name="github" class="h-5 w-5 flex-none" /> <span class="min-w-0 truncate">{{ $repo['name'] }}</span>
+                            </a>
+                            @if ($repo['archived'])<span class="badge-amber mt-2">Archivé</span>@endif
+                            @if ($repo['description'])<p class="mt-2 text-sm text-slate-600">{{ $repo['description'] }}</p>@endif
+                            <dl class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                                <div class="flex items-center gap-1" title="Étoiles"><dt class="sr-only">Étoiles</dt><span aria-hidden="true">★</span><dd>{{ number_format($repo['stars'], 0, ',', ' ') }}</dd></div>
+                                <div class="flex items-center gap-1" title="Forks"><dt class="sr-only">Forks</dt><span aria-hidden="true">⑂</span><dd>{{ number_format($repo['forks'], 0, ',', ' ') }}</dd></div>
+                                @if ($repo['language'])<div class="flex items-center gap-1.5"><dt class="sr-only">Langage</dt><span class="h-2.5 w-2.5 rounded-full bg-primary-500" aria-hidden="true"></span><dd>{{ $repo['language'] }}</dd></div>@endif
+                                @if ($repo['license'] && $repo['license'] !== 'NOASSERTION')<div><dt class="sr-only">Licence</dt><dd>{{ $repo['license'] }}</dd></div>@endif
+                            </dl>
+                            @if ($pushed = \App\Services\GithubRepositories::pushedAt($repo))
+                                <p class="mt-2 text-xs text-slate-500">Dernière activité <time datetime="{{ $pushed->toIso8601String() }}">{{ $pushed->diffForHumans() }}</time></p>
+                            @endif
+                            @if ($repo['topics'])
+                                <div class="mt-3 flex flex-wrap gap-1.5">
+                                    @foreach ($repo['topics'] as $topic)<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{{ $topic }}</span>@endforeach
+                                </div>
+                            @endif
+                        </section>
+                    @endif
+                @endforeach
+
                 @if ($project->skills->isNotEmpty())
                     <section class="card p-5">
                         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Compétences mobilisées</h2>
