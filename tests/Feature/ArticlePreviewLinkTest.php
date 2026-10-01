@@ -46,12 +46,20 @@ class ArticlePreviewLinkTest extends TestCase
         $this->assertStringNotContainsString($this->draft->fresh()->preview_token, AuditLog::all()->toJson());
     }
 
-    public function test_link_works_even_if_the_veille_page_is_private(): void
+    public function test_private_veille_page_blocks_preview_links_and_their_files(): void
     {
+        Storage::fake('local');
+        $path = UploadedFile::fake()->image('schema.png')->store('article-files', 'local');
+        $file = $this->draft->files()->create(['path' => $path, 'original_name' => 'schema.png', 'mime_type' => 'image/png', 'size' => 100]);
+        $url = $this->share();
+        $this->get($url)->assertOk(); // session autorisée tant que la page est publique
+
         Page::where('key', 'veille')->update(['is_public' => false]);
         Page::flushCache();
 
-        $this->get($this->share())->assertOk()->assertSee('Contenu à relire');
+        $this->get($url)->assertNotFound();
+        $this->get($file->url())->assertNotFound();
+        $this->actingAs($this->admin)->get(route('admin.articles.show', $this->draft))->assertSee('les liens de relecture ne fonctionnent pas');
     }
 
     public function test_link_expires_and_can_be_revoked_or_replaced(): void

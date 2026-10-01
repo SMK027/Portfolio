@@ -38,6 +38,7 @@ class ArticleFileController extends Controller
     {
         $token = $request->session()->get('article_preview.'.$article->id);
 
-        return $token && Article::findByPreviewToken($token)?->is($article);
+        return $token && Article::findByPreviewToken($token)?->is($article)
+            && Page::isKeyAccessibleBy('veille', $request->user());
     }
 }

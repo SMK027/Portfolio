@@ -2,6 +2,9 @@
 @if (! $article->isPublished())
     @can('update', $article)
         <x-admin.section id="relecture" title="Lien de relecture" description="Un lien secret pour faire relire ce brouillon à quelqu'un qui n'a pas de compte. Il expire automatiquement et peut être révoqué à tout moment.">
+            @unless (\App\Models\Page::findByKey('veille')?->is_public)
+                <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">La page Veille est privée : les liens de relecture ne fonctionnent pas tant qu'elle n'est pas publique.</p>
+            @endunless
             @if ($article->hasPreviewLink())
                 <div x-data="{ copied: false }" class="flex flex-col gap-2 sm:flex-row">
                     <input type="text" readonly value="{{ $article->previewUrl() }}" x-ref="link" @focus="$event.target.select()" class="form-input flex-1 font-mono text-sm">

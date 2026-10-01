@@ -29,10 +29,12 @@ class ArticleController extends Controller
         ]);
     }
 
-    /** Brouillon partagé par lien secret : lisible sans compte jusqu'à expiration. */
+    /** Brouillon partagé par lien secret : lisible sans compte jusqu'à expiration (si la page Veille est publique). */
     public function preview(Request $request, string $token): View
     {
         $article = Article::findByPreviewToken($token) ?? abort(404);
+        // Page Veille privée : aucun article n'est lisible hors administration, liens de relecture compris.
+        abort_unless(\App\Models\Page::isKeyAccessibleBy('veille', $request->user()), 404);
         // Autorise aussi ses pièces jointes pour cette session (voir ArticleFileController).
         $request->session()->put('article_preview.'.$article->id, $token);
         $article->load('author', 'coauthors', 'themes', 'files');
