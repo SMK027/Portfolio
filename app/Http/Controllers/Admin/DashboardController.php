@@ -32,6 +32,7 @@ class DashboardController extends Controller
                 ['label' => 'Diplômes',       'count' => Diploma::count(),       'route' => 'admin.diplomes.index'],
                 ['label' => 'Certifications', 'count' => Certification::count(), 'route' => 'admin.certifications.index'],
             ],
+            'visits'         => app(\App\Services\SiteStatistics::class)->summary(7),
             'unreadCount'    => ContactMessage::whereNull('read_at')->count(),
             'latestMessages' => ContactMessage::latest()->limit(5)->get(),
             'privatePages'   => Page::allOrdered()->where('is_public', false),

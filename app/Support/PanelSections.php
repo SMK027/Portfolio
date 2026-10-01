@@ -25,6 +25,7 @@ final class PanelSections
             ['admin.articles.index', 'Veille', 'newspaper', 'admin.articles.*', 'articles.read|articles.write'],
         ],
         'Site' => [
+            ['admin.statistics', 'Statistiques', 'squares', 'admin.statistics', 'stats.read'],
             ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*', 'messages.read'],
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*', 'pages.read|pages.write'],

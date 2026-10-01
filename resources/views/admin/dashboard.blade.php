@@ -58,6 +58,20 @@
         </x-admin.section>
     @endif
 
+    <a href="{{ route('admin.statistics', ['periode' => 7]) }}" class="card flex flex-wrap items-center justify-between gap-4 p-5 transition hover:border-primary-200 hover:shadow-md">
+        <div>
+            <p class="text-sm text-slate-500">Visites des 7 derniers jours</p>
+            <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $visits['views'] }} pages vues · {{ $visits['visitors'] }} visiteurs</p>
+        </div>
+        <div class="flex h-12 items-end gap-1" aria-hidden="true">
+            @php $peak = max(1, $visits['series']->max('views')); @endphp
+            @foreach ($visits['series'] as $day)
+                <div class="w-3 rounded-t bg-primary-400" style="height: {{ max(2, $day['views'] / $peak * 100) }}%"></div>
+            @endforeach
+        </div>
+        <span class="text-sm font-semibold text-primary-600">Statistiques détaillées →</span>
+    </a>
+
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         @foreach ($stats as $stat)
             <a href="{{ route($stat['route']) }}" class="card p-5 transition hover:border-primary-200 hover:shadow-md">

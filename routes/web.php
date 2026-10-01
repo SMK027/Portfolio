@@ -175,6 +175,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/referencement', [Admin\SeoController::class, 'edit'])->middleware($panel('seo.read|seo.write'))->name('seo.edit');
     Route::put('/referencement', [Admin\SeoController::class, 'update'])->middleware($panel('seo.write'))->name('seo.update');
 
+    Route::get('/statistiques', Admin\StatisticsController::class)->middleware($panel('stats.read'))->name('statistics');
+
     Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->middleware($panel('maintenance.read|maintenance.manage'))->name('maintenance.edit');
     Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->middleware($panel('maintenance.manage'))->name('maintenance.update');
 

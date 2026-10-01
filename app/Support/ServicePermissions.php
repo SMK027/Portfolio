@@ -31,6 +31,9 @@ final class ServicePermissions
             'articles.publish' => 'Publier, programmer, dépublier et épingler des articles',
             'articles.delete'  => 'Supprimer des articles',
         ],
+        'Statistiques' => [
+            'stats.read' => 'Consulter les statistiques de visite',
+        ],
         'Annonces' => [
             'announcements.read'   => 'Lire les annonces',
             'announcements.write'  => 'Créer et modifier des annonces',

@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\EnsureBotTokenIsValid::class,
             \App\Http\Middleware\HandleMaintenanceMode::class,
+            \App\Http\Middleware\RecordPageView::class,
         ]);
 
         // Traefik termine le HTTPS : on fait confiance à ses en-têtes X-Forwarded-*
