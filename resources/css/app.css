@@ -142,3 +142,19 @@ html.dark .editor-content mark:not([style]) { @apply bg-yellow-500/30 text-inher
 
 /* Vignettes sans image (cartes de projets et d'articles) */
 html.dark .from-primary-100, html.dark .from-slate-200 { background-image: linear-gradient(to bottom right, rgb(30 27 75), rgb(15 23 42)); }
+
+/* ---------- Calendrier des disponibilités (FullCalendar, panel) ---------- */
+.availability-calendar { --fc-border-color: theme('colors.slate.200'); --fc-today-bg-color: theme('colors.primary.50 / 50%'); --fc-button-bg-color: theme('colors.white'); --fc-button-text-color: theme('colors.slate.700'); --fc-button-border-color: theme('colors.slate.300'); --fc-button-hover-bg-color: theme('colors.slate.50'); --fc-button-hover-border-color: theme('colors.slate.300'); --fc-button-active-bg-color: theme('colors.primary.50'); --fc-button-active-border-color: theme('colors.primary.300'); --fc-now-indicator-color: theme('colors.red.500'); @apply text-sm; }
+.availability-calendar .fc-button { @apply rounded-lg text-sm font-semibold shadow-sm; }
+.availability-calendar .fc-button-active { @apply text-primary-700; }
+.availability-calendar .fc-toolbar-title { @apply font-display text-lg font-semibold text-slate-900; }
+.availability-calendar .fc-col-header-cell-cushion { @apply py-2 font-semibold capitalize text-slate-700; }
+.availability-calendar a.fc-col-header-cell-cushion:hover { @apply text-primary-700 underline; }
+.availability-calendar .availability { @apply cursor-pointer border-0; }
+.availability-calendar .availability-weekly { background-color: theme('colors.primary.500 / 85%'); }
+.availability-calendar .availability-date { background-color: theme('colors.accent.500 / 90%'); }
+.availability-calendar .appointment { @apply cursor-default; }
+.availability-calendar .availability-closed, .availability-closed-swatch { background: repeating-linear-gradient(45deg, theme('colors.red.100'), theme('colors.red.100') 6px, theme('colors.red.50') 6px, theme('colors.red.50') 12px); opacity: 1; }
+.availability-calendar .fc-closed-label { @apply block p-1 text-xs font-semibold text-red-700; }
+.availability-calendar .fc-event-time { @apply text-[11px] font-semibold; }
+.availability-calendar .fc-event-title { @apply text-[11px]; }

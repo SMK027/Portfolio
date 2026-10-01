@@ -8,10 +8,13 @@ use App\Models\Appointment;
 use App\Models\AppointmentSettings;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
+use App\Models\AvailabilitySlot;
 use App\Services\SafeMailer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /** Rendez-vous : demandes, décisions et disponibilités. */
@@ -61,56 +64,146 @@ class AppointmentController extends Controller
         return back()->with('success', 'Rendez-vous supprimé.');
     }
 
+    /** Calendrier des disponibilités (FullCalendar) et réglages. */
     public function editAvailability(): View
     {
-        return view('admin.appointments.availability', [
-            'rules'    => AvailabilityRule::orderBy('weekday')->orderBy('start_time')->get(),
-            'closures' => AvailabilityClosure::where('date', '>=', today())->orderBy('date')->get(),
-            'settings' => AppointmentSettings::current(),
+        return view('admin.appointments.availability', ['settings' => AppointmentSettings::current()]);
+    }
+
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'duration'     => ['required', 'integer', 'in:15,20,30,45,60,90'],
+            'notice_hours' => ['required', 'integer', 'min:0', 'max:336'],
+            'horizon_days' => ['required', 'integer', 'min:1', 'max:180'],
+            'location'     => ['required', 'string', 'max:255'],
+            'topics'       => ['required', 'string', 'max:500'],
+        ], [], ['duration' => 'durée', 'notice_hours' => 'délai de prévenance', 'horizon_days' => 'horizon', 'location' => 'lieu', 'topics' => 'sujets']);
+
+        AppointmentSettings::save([
+            'duration'     => (int) $data['duration'],
+            'notice_hours' => (int) $data['notice_hours'],
+            'horizon_days' => (int) $data['horizon_days'],
+            'location'     => $data['location'],
+            'topics'       => collect(explode(',', $data['topics']))->map(fn ($t) => trim($t))->filter()->unique()->values()->all() ?: AppointmentSettings::DEFAULTS['topics'],
+        ]);
+
+        return redirect()->route('admin.appointments.availability')->with('success', 'Réglages enregistrés.');
+    }
+
+    /**
+     * Événements affichés par FullCalendar sur la période demandée :
+     * plages hebdomadaires (récurrentes), plages ponctuelles, jours fermés, rendez-vous.
+     */
+    public function events(Request $request): JsonResponse
+    {
+        $request->validate(['start' => ['required', 'date'], 'end' => ['required', 'date']]);
+        $start = Carbon::parse($request->query('start'));
+        $end = Carbon::parse($request->query('end'));
+        $status = ['pending' => ['#f59e0b', 'En attente'], 'confirmed' => ['#10b981', 'Confirmé']];
+
+        return response()->json([
+            ...AvailabilityRule::all()->map(fn (AvailabilityRule $rule) => [
+                'id'         => 'weekly-'.$rule->id,
+                'title'      => 'Chaque semaine',
+                'daysOfWeek' => [$rule->weekday % 7],
+                'startTime'  => substr($rule->start_time, 0, 5),
+                'endTime'    => substr($rule->end_time, 0, 5),
+                'classNames' => ['availability', 'availability-weekly'],
+                'extendedProps' => ['kind' => 'weekly', 'key' => $rule->id],
+            ]),
+            ...AvailabilitySlot::where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (AvailabilitySlot $slot) => [
+                'id'         => 'date-'.$slot->id,
+                'title'      => 'Ce jour uniquement',
+                'start'      => $slot->starts_at->format('Y-m-d\TH:i:s'),
+                'end'        => $slot->ends_at->format('Y-m-d\TH:i:s'),
+                'classNames' => ['availability', 'availability-date'],
+                'extendedProps' => ['kind' => 'date', 'key' => $slot->id],
+            ]),
+            ...AvailabilityClosure::whereBetween('date', [$start->toDateString(), $end->toDateString()])->get()->map(fn (AvailabilityClosure $closure) => [
+                'id'         => 'closed-'.$closure->id,
+                'title'      => 'Fermé'.($closure->reason ? ' — '.$closure->reason : ''),
+                'start'      => $closure->date->toDateString(),
+                'allDay'     => true,
+                'display'    => 'background',
+                'classNames' => ['availability-closed'],
+                'extendedProps' => ['kind' => 'closure', 'key' => $closure->id],
+            ]),
+            ...Appointment::holding()->where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (Appointment $appointment) => [
+                'id'         => 'appointment-'.$appointment->id,
+                'title'      => $appointment->name.' — '.$appointment->topic,
+                'start'      => $appointment->starts_at->format('Y-m-d\TH:i:s'),
+                'end'        => $appointment->ends_at->format('Y-m-d\TH:i:s'),
+                'color'      => $status[$appointment->status][0],
+                'editable'   => false,
+                'classNames' => ['appointment'],
+                'extendedProps' => ['kind' => 'appointment', 'status' => $status[$appointment->status][1]],
+            ]),
         ]);
     }
 
-    public function updateAvailability(Request $request): RedirectResponse
+    /** Nouvelle plage : chaque semaine (même jour) ou uniquement à cette date. */
+    public function storeRange(Request $request): JsonResponse
+    {
+        [$kind, $start, $end] = $this->validatedRange($request);
+
+        $kind === 'weekly'
+            ? AvailabilityRule::create(['weekday' => $start->isoWeekday(), 'start_time' => $start->format('H:i'), 'end_time' => $end->format('H:i')])
+            : AvailabilitySlot::create(['starts_at' => $start, 'ends_at' => $end]);
+
+        return response()->json(['ok' => true], 201);
+    }
+
+    /** Plage déplacée ou redimensionnée dans le calendrier. */
+    public function updateRange(Request $request, string $kind, int $id): JsonResponse
+    {
+        abort_unless(in_array($kind, ['weekly', 'date'], true), 404);
+        [, $start, $end] = $this->validatedRange($request->merge(['kind' => $kind]));
+
+        $kind === 'weekly'
+            ? AvailabilityRule::findOrFail($id)->update(['weekday' => $start->isoWeekday(), 'start_time' => $start->format('H:i'), 'end_time' => $end->format('H:i')])
+            : AvailabilitySlot::findOrFail($id)->update(['starts_at' => $start, 'ends_at' => $end]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function destroyRange(string $kind, int $id): JsonResponse
+    {
+        abort_unless(in_array($kind, ['weekly', 'date'], true), 404);
+        ($kind === 'weekly' ? AvailabilityRule::findOrFail($id) : AvailabilitySlot::findOrFail($id))->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Ferme ou rouvre une journée (clic sur l'en-tête du jour). */
+    public function toggleClosure(Request $request): JsonResponse
+    {
+        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'], 'reason' => ['nullable', 'string', 'max:150']]);
+        $closure = AvailabilityClosure::whereDate('date', $data['date'])->first();
+
+        $closure ? $closure->delete() : AvailabilityClosure::create($data);
+
+        return response()->json(['closed' => ! $closure]);
+    }
+
+    /** @return array{0: string, 1: Carbon, 2: Carbon} */
+    protected function validatedRange(Request $request): array
     {
         $data = $request->validate([
-            'duration'           => ['required', 'integer', 'in:15,20,30,45,60,90'],
-            'notice_hours'       => ['required', 'integer', 'min:0', 'max:336'],
-            'horizon_days'       => ['required', 'integer', 'min:1', 'max:180'],
-            'location'           => ['required', 'string', 'max:255'],
-            'topics'             => ['required', 'string', 'max:500'],
-            'rules'              => ['nullable', 'array', 'max:50'],
-            'rules.*.weekday'    => ['required', 'integer', 'between:1,7'],
-            'rules.*.start_time' => ['required', 'date_format:H:i'],
-            'rules.*.end_time'   => ['required', 'date_format:H:i', 'after:rules.*.start_time'],
-            'closures'           => ['nullable', 'array', 'max:100'],
-            'closures.*.date'    => ['required', 'date', 'after_or_equal:today', 'distinct'],
-            'closures.*.reason'  => ['nullable', 'string', 'max:150'],
-        ], [
-            'rules.*.end_time.after' => 'Chaque plage doit finir après son début.',
-        ], [
-            'duration' => 'durée', 'notice_hours' => 'délai de prévenance', 'horizon_days' => 'horizon', 'location' => 'lieu', 'topics' => 'sujets',
-        ]);
+            'kind'  => ['required', 'in:weekly,date'],
+            'start' => ['required', 'date'],
+            'end'   => ['required', 'date', 'after:start'],
+        ], ['end.after' => 'La plage doit finir après son début.']);
 
-        DB::transaction(function () use ($data) {
-            AppointmentSettings::save([
-                'duration'     => (int) $data['duration'],
-                'notice_hours' => (int) $data['notice_hours'],
-                'horizon_days' => (int) $data['horizon_days'],
-                'location'     => $data['location'],
-                'topics'       => collect(explode(',', $data['topics']))->map(fn ($t) => trim($t))->filter()->unique()->values()->all() ?: AppointmentSettings::DEFAULTS['topics'],
-            ]);
+        $start = Carbon::parse($data['start'])->setTimezone(config('app.timezone'))->seconds(0);
+        $end = Carbon::parse($data['end'])->setTimezone(config('app.timezone'))->seconds(0);
+        if (! $start->isSameDay($end) && ! ($end->isStartOfDay() && $end->copy()->subDay()->isSameDay($start))) {
+            throw ValidationException::withMessages(['end' => 'Une plage doit tenir dans une seule journée.']);
+        }
+        if ($end->isStartOfDay()) {
+            $end = $start->copy()->setTime(23, 59);
+        }
 
-            AvailabilityRule::query()->get()->each->delete();
-            foreach ($data['rules'] ?? [] as $rule) {
-                AvailabilityRule::create($rule);
-            }
-
-            AvailabilityClosure::where('date', '>=', today())->get()->each->delete();
-            foreach ($data['closures'] ?? [] as $closure) {
-                AvailabilityClosure::create($closure);
-            }
-        });
-
-        return redirect()->route('admin.appointments.availability')->with('success', 'Disponibilités enregistrées.');
+        return [$data['kind'], $start, $end];
     }
 }

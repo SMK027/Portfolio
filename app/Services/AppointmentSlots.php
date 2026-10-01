@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\AppointmentSettings;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
+use App\Models\AvailabilitySlot;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -25,6 +26,8 @@ class AppointmentSlots
         $last = CarbonImmutable::today()->addDays((int) $settings['horizon_days']);
 
         $rules = AvailabilityRule::orderBy('start_time')->get()->groupBy('weekday');
+        $oneOffs = AvailabilitySlot::where('ends_at', '>', $earliest)->where('starts_at', '<', $last->addDay())->get()
+            ->groupBy(fn ($slot) => $slot->starts_at->toDateString());
         $closed = AvailabilityClosure::where('date', '>=', today())->pluck('date')->map->toDateString()->flip();
         $taken = Appointment::holding()->where('ends_at', '>', $earliest)->get(['starts_at', 'ends_at']);
 
@@ -34,10 +37,14 @@ class AppointmentSlots
                 continue;
             }
 
+            // Plages du jour : hebdomadaires + ponctuelles.
+            $ranges = collect($rules->get($day->isoWeekday(), []))
+                ->map(fn ($rule) => [$day->setTimeFromTimeString($rule->start_time), $day->setTimeFromTimeString($rule->end_time)])
+                ->merge(collect($oneOffs->get($day->toDateString(), []))->map(fn ($slot) => [$slot->starts_at->toImmutable(), $slot->ends_at->toImmutable()]));
+
             $slots = collect();
-            foreach ($rules->get($day->isoWeekday(), []) as $rule) {
-                $end = $day->setTimeFromTimeString($rule->end_time);
-                for ($start = $day->setTimeFromTimeString($rule->start_time); $start->addMinutes($duration)->lte($end); $start = $start->addMinutes($duration)) {
+            foreach ($ranges as [$rangeStart, $end]) {
+                for ($start = $rangeStart; $start->addMinutes($duration)->lte($end); $start = $start->addMinutes($duration)) {
                     $slotEnd = $start->addMinutes($duration);
                     if ($start->lt($earliest) || $taken->contains(fn ($a) => $a->starts_at->lt($slotEnd) && $a->ends_at->gt($start))) {
                         continue;

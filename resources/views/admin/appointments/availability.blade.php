@@ -1,17 +1,70 @@
 @php
-    $oldRules = old('rules', $rules->map(fn ($r) => ['weekday' => $r->weekday, 'start_time' => substr($r->start_time, 0, 5), 'end_time' => substr($r->end_time, 0, 5)])->all());
-    $oldClosures = old('closures', $closures->map(fn ($c) => ['date' => $c->date->toDateString(), 'reason' => $c->reason])->all());
+    $editable = auth()->user()->can('panel', 'appointments.write');
+    $calendarUrls = [
+        'events'  => route('admin.appointments.availability.events'),
+        'store'   => route('admin.appointments.availability.ranges.store'),
+        'range'   => str_replace('/__KIND__/0', '/__KIND__/__ID__', route('admin.appointments.availability.ranges.update', ['kind' => '__KIND__', 'id' => 0])),
+        'closure' => route('admin.appointments.availability.closures.toggle'),
+    ];
 @endphp
 <x-app-layout>
     <x-slot name="title">Disponibilités</x-slot>
     <x-slot name="header">Disponibilités pour les rendez-vous</x-slot>
     <x-slot name="actions"><a href="{{ route('admin.appointments.index') }}" class="btn-secondary"><x-icon name="arrow-left" class="h-4 w-4" /> Rendez-vous</a></x-slot>
 
-    <form method="POST" action="{{ route('admin.appointments.availability.update') }}" class="space-y-6"
-          x-data="{ rules: @js(array_values($oldRules)), closures: @js(array_values($oldClosures)) }">
-        @csrf @method('PUT')
+    {{-- Calendrier --}}
+    <section class="card space-y-4 p-4 sm:p-6"
+             x-data="{ choice: null, notice: null, timer: null }"
+             @availability-choose.window="choice = $event.detail"
+             @availability-notice.window="notice = $event.detail; clearTimeout(timer); timer = setTimeout(() => notice = null, 3500)">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-2xl text-sm text-slate-600">
+                @if ($editable)
+                    <p><strong>Glissez sur la grille</strong> pour ajouter une plage, puis choisissez « chaque semaine » ou « ce jour uniquement ».
+                        <strong>Déplacez ou étirez</strong> une plage pour la modifier, <strong>cliquez</strong> dessus pour la supprimer.
+                        <strong>Cliquez sur la date</strong> en haut d'une colonne pour fermer ou rouvrir la journée (congés…).</p>
+                @else
+                    <p>Consultation seule : ce compte n'est pas autorisé à modifier les disponibilités.</p>
+                @endif
+            </div>
+            <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-primary-500"></span> Chaque semaine</li>
+                <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-accent-500"></span> Ce jour uniquement</li>
+                <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-amber-500"></span> RDV en attente</li>
+                <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-emerald-500"></span> RDV confirmé</li>
+                <li class="flex items-center gap-1.5"><span class="availability-closed-swatch h-3 w-3 rounded"></span> Jour fermé</li>
+            </ul>
+        </div>
 
-        <x-admin.section title="Créneaux" description="Les visiteurs voient les créneaux libres découpés dans vos plages hebdomadaires.">
+        <div data-availability-calendar data-editable="{{ $editable ? '1' : '0' }}" class="availability-calendar"
+             data-urls="{{ json_encode($calendarUrls) }}"></div>
+
+        {{-- Nouvelle plage : récurrente ou ponctuelle --}}
+        <div x-show="choice" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="choice = null">
+            <div @click.outside="choice = null" class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="choice-title">
+                <h2 id="choice-title" class="font-display text-lg font-semibold text-slate-900">Nouvelle disponibilité</h2>
+                <p class="text-sm text-slate-600 first-letter:uppercase" x-text="choice?.label"></p>
+                <div class="grid gap-2">
+                    <button type="button" class="btn-primary justify-start" @click="$dispatch('availability-create', { kind: 'weekly', start: choice.start, end: choice.end }); choice = null">
+                        <x-icon name="arrows-updown" class="h-4 w-4" /> <span>Chaque <span x-text="choice?.weekday"></span></span>
+                    </button>
+                    <button type="button" class="btn-secondary justify-start" @click="$dispatch('availability-create', { kind: 'date', start: choice.start, end: choice.end }); choice = null">
+                        <x-icon name="calendar" class="h-4 w-4" /> Ce jour uniquement
+                    </button>
+                    <button type="button" class="btn-ghost" @click="choice = null">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="notice" x-cloak x-transition role="status"
+             :class="notice?.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white'"
+             class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl px-4 py-2.5 text-sm shadow-lg" x-text="notice?.message"></div>
+    </section>
+
+    {{-- Réglages --}}
+    <form method="POST" action="{{ route('admin.appointments.availability.update') }}" class="space-y-6">
+        @csrf @method('PUT')
+        <x-admin.section title="Réglages des créneaux" description="Les visiteurs voient les créneaux libres découpés dans vos plages, selon ces réglages.">
             <div class="grid gap-5 sm:grid-cols-3">
                 <x-form.select name="duration" label="Durée d'un rendez-vous" :value="$settings['duration']" :options="[15 => '15 min', 20 => '20 min', 30 => '30 min', 45 => '45 min', 60 => '1 h', 90 => '1 h 30']" required />
                 <x-form.input name="notice_hours" type="number" min="0" max="336" label="Délai de prévenance (heures)" :value="$settings['notice_hours']" required help="Pas de réservation moins de X heures à l'avance." />
@@ -20,37 +73,6 @@
             <x-form.input name="location" label="Lieu ou modalité" :value="$settings['location']" required maxlength="255" help="Affiché aux visiteurs et dans l'invitation d'agenda." />
             <x-form.input name="topics" label="Sujets proposés" :value="implode(', ', $settings['topics'])" required maxlength="500" help="Séparés par des virgules." />
         </x-admin.section>
-
-        <x-admin.section title="Plages hebdomadaires">
-            <template x-for="(rule, i) in rules" :key="i">
-                <div class="flex flex-wrap items-end gap-2">
-                    <label class="flex-1"><span class="form-label">Jour</span>
-                        <select :name="`rules[${i}][weekday]`" x-model="rule.weekday" class="form-select">
-                            @foreach (\App\Models\AvailabilityRule::WEEKDAYS as $value => $day)<option value="{{ $value }}">{{ $day }}</option>@endforeach
-                        </select>
-                    </label>
-                    <label><span class="form-label">De</span><input type="time" :name="`rules[${i}][start_time]`" x-model="rule.start_time" required class="form-input"></label>
-                    <label><span class="form-label">À</span><input type="time" :name="`rules[${i}][end_time]`" x-model="rule.end_time" required class="form-input"></label>
-                    <button type="button" @click="rules.splice(i, 1)" class="btn-ghost text-red-600" aria-label="Retirer la plage"><x-icon name="trash" class="h-4 w-4" /></button>
-                </div>
-            </template>
-            <p x-show="! rules.length" class="text-sm text-amber-700">Aucune plage : aucun créneau n'est proposé.</p>
-            <button type="button" @click="rules.push({ weekday: 2, start_time: '14:00', end_time: '17:00' })" class="btn-secondary btn-sm"><x-icon name="plus" class="h-4 w-4" /> Ajouter une plage</button>
-            @foreach ($errors->get('rules.*') as $messages)@foreach ($messages as $m)<p class="form-error">{{ $m }}</p>@endforeach @endforeach
-        </x-admin.section>
-
-        <x-admin.section title="Jours fermés" description="Congés, examens… aucun créneau ces jours-là.">
-            <template x-for="(closure, i) in closures" :key="i">
-                <div class="flex flex-wrap items-end gap-2">
-                    <label><span class="form-label">Date</span><input type="date" :name="`closures[${i}][date]`" x-model="closure.date" required min="{{ today()->toDateString() }}" class="form-input"></label>
-                    <label class="flex-1"><span class="form-label">Motif (privé)</span><input type="text" :name="`closures[${i}][reason]`" x-model="closure.reason" maxlength="150" class="form-input"></label>
-                    <button type="button" @click="closures.splice(i, 1)" class="btn-ghost text-red-600" aria-label="Retirer le jour"><x-icon name="trash" class="h-4 w-4" /></button>
-                </div>
-            </template>
-            <button type="button" @click="closures.push({ date: '', reason: '' })" class="btn-secondary btn-sm"><x-icon name="plus" class="h-4 w-4" /> Ajouter un jour</button>
-            @foreach ($errors->get('closures.*') as $messages)@foreach ($messages as $m)<p class="form-error">{{ $m }}</p>@endforeach @endforeach
-        </x-admin.section>
-
         <x-admin.form-actions can="appointments.write" :cancel="route('admin.appointments.index')" />
     </form>
 </x-app-layout>

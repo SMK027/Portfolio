@@ -189,7 +189,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::put('/rendez-vous/{appointment}/decision', [Admin\AppointmentController::class, 'decide'])->middleware($panel('appointments.write'))->name('appointments.decide');
     Route::delete('/rendez-vous/{appointment}', [Admin\AppointmentController::class, 'destroy'])->middleware($panel('appointments.delete'))->name('appointments.destroy');
     Route::get('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'editAvailability'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.availability');
-    Route::put('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'updateAvailability'])->middleware($panel('appointments.write'))->name('appointments.availability.update');
+    Route::put('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'updateSettings'])->middleware($panel('appointments.write'))->name('appointments.availability.update');
+    Route::get('/rendez-vous/disponibilites/evenements', [Admin\AppointmentController::class, 'events'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.availability.events');
+    Route::post('/rendez-vous/disponibilites/plages', [Admin\AppointmentController::class, 'storeRange'])->middleware($panel('appointments.write'))->name('appointments.availability.ranges.store');
+    Route::put('/rendez-vous/disponibilites/plages/{kind}/{id}', [Admin\AppointmentController::class, 'updateRange'])->whereNumber('id')->middleware($panel('appointments.write'))->name('appointments.availability.ranges.update');
+    Route::delete('/rendez-vous/disponibilites/plages/{kind}/{id}', [Admin\AppointmentController::class, 'destroyRange'])->whereNumber('id')->middleware($panel('appointments.write'))->name('appointments.availability.ranges.destroy');
+    Route::post('/rendez-vous/disponibilites/fermetures', [Admin\AppointmentController::class, 'toggleClosure'])->middleware($panel('appointments.write'))->name('appointments.availability.closures.toggle');
 
     Route::get('/pages', [Admin\PageController::class, 'index'])->middleware($panel('pages.read|pages.write'))->name('pages.index');
     Route::put('/pages', [Admin\PageController::class, 'update'])->middleware($panel('pages.write'))->name('pages.update');

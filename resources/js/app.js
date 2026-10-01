@@ -22,6 +22,12 @@ Alpine.data('securityKeyLogin', securityKeyLogin);
 
 Alpine.start();
 
+// FullCalendar n'est chargé que sur la page des disponibilités.
+const availability = document.querySelector('[data-availability-calendar]');
+if (availability) {
+    import('./availability-calendar').then(({ mountAvailabilityCalendar }) => mountAvailabilityCalendar(availability));
+}
+
 // Editor.js n'est chargé que sur les pages qui contiennent un éditeur.
 if (document.querySelector('[data-editorjs]')) {
     import('./editor').then(({ mountEditors }) => mountEditors());

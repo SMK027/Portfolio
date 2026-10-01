@@ -59,7 +59,7 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 **Projets — dépôts GitHub** : chaque lien `github.com/propriétaire/dépôt` affiche description, étoiles, forks, langage, licence et dernière activité (API GitHub, cache 12 h rafraîchi toutes les 6 h). `GITHUB_TOKEN` (facultatif) relève la limite de 60 requêtes par heure.
 
 **Rendez-vous** (*Site → Rendez-vous*, page publique `/rendez-vous`, privée par défaut) :
-- disponibilités : plages hebdomadaires, jours fermés, durée, délai de prévenance, horizon, lieu et sujets ;
+- disponibilités dans un calendrier (FullCalendar) : glisser sur la grille pour ajouter une plage « chaque semaine » ou « ce jour uniquement », déplacer / étirer pour modifier, cliquer pour supprimer, cliquer sur une date pour fermer la journée ; réglages : durée, délai de prévenance, horizon, lieu et sujets ;
 - le visiteur choisit un créneau libre et reçoit un accusé avec lien d'annulation ; vous êtes notifié ;
 - vous confirmez (avec un message, ex. lien de visio — invitation `.ics` jointe) ou refusez ; double réservation impossible ;
 - autorisations bot : `appointments.read`, `appointments.write`, `appointments.delete`.

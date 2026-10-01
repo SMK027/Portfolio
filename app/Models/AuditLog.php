@@ -34,6 +34,7 @@ class AuditLog extends Model
         'Appointment'    => 'Rendez-vous',
         'AvailabilityRule' => 'Disponibilité',
         'AvailabilityClosure' => 'Jour fermé',
+        'AvailabilitySlot' => 'Disponibilité ponctuelle',
         'Project'        => 'Projet',
         'SecurityKey'    => 'Clé de sécurité',
         'ProjectFile'    => 'Fichier de projet',
