@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['username', 'name', 'email', 'password', 'global_role', 'permissions', 'description', 'is_active', 'avatar', 'bio'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
     use Auditable;
@@ -34,7 +34,84 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'permissions'       => 'array',
             'is_active'         => 'boolean',
+            'two_factor_secret'         => 'encrypted',
+            'two_factor_confirmed_at'   => 'datetime',
+            'two_factor_recovery_codes' => 'array',
         ];
+    }
+
+    /* ---------- Authentification à deux facteurs (comptes humains) ---------- */
+
+    public function securityKeys(): HasMany
+    {
+        return $this->hasMany(SecurityKey::class)->orderBy('created_at');
+    }
+
+    public function hasTotp(): bool
+    {
+        return $this->two_factor_confirmed_at !== null && filled($this->two_factor_secret);
+    }
+
+    public function hasTwoFactor(): bool
+    {
+        return ! $this->isMachine() && ($this->hasTotp() || $this->securityKeys()->exists());
+    }
+
+    /** Vérifie un code d'application (usage unique : le pas de temps est mémorisé). */
+    public function verifyTotp(string $code): bool
+    {
+        if (! $this->hasTotp()) {
+            return false;
+        }
+
+        $step = \App\Support\Totp::verify($this->two_factor_secret, $code, $this->two_factor_last_step);
+        if ($step === null) {
+            return false;
+        }
+
+        $this->forceFill(['two_factor_last_step' => $step])->saveQuietly();
+
+        return true;
+    }
+
+    /** Génère 8 codes de secours ; seules leurs empreintes sont conservées. @return list<string> */
+    public function generateRecoveryCodes(): array
+    {
+        $codes = collect(range(1, 8))->map(fn () => strtolower(\Illuminate\Support\Str::random(5).'-'.\Illuminate\Support\Str::random(5)))->all();
+        $this->forceFill(['two_factor_recovery_codes' => array_map(fn ($c) => hash('sha256', $c), $codes)])->saveQuietly();
+
+        return $codes;
+    }
+
+    public function recoveryCodesLeft(): int
+    {
+        return count($this->two_factor_recovery_codes ?? []);
+    }
+
+    /** Utilise un code de secours (supprimé ensuite). */
+    public function useRecoveryCode(string $code): bool
+    {
+        $hash = hash('sha256', strtolower(trim($code)));
+        $codes = $this->two_factor_recovery_codes ?? [];
+        $index = array_search($hash, $codes, true);
+        if ($index === false) {
+            return false;
+        }
+
+        unset($codes[$index]);
+        $this->forceFill(['two_factor_recovery_codes' => array_values($codes)])->saveQuietly();
+
+        return true;
+    }
+
+    /** Retire tous les facteurs (désactivation complète ou réinitialisation par un super-admin). */
+    public function resetTwoFactor(): void
+    {
+        $this->securityKeys()->get()->each->delete();
+        $this->forceFill([
+            'two_factor_secret' => null, 'two_factor_confirmed_at' => null,
+            'two_factor_last_step' => null, 'two_factor_recovery_codes' => null,
+        ])->saveQuietly();
     }
 
     /** Rôles attribuables depuis l'administration. */

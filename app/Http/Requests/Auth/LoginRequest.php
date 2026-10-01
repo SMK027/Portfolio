@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,12 +40,19 @@ class LoginRequest extends FormRequest
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): User
     {
         $this->ensureIsNotRateLimited();
 
+        // Vérification du mot de passe sans ouvrir de session : la connexion est
+        // finalisée par le contrôleur, après le second facteur s'il est activé.
+        $credentials = $this->only('email', 'password');
+        $provider = Auth::guard('web')->getProvider();
+        $user = $provider->retrieveByCredentials($credentials);
+
         // Comptes techniques : jamais de mot de passe (API pour les services, code pour les bots).
-        if (! Auth::attemptWhen($this->only('email', 'password'), fn ($user) => ! $user->isMachine(), $this->boolean('remember'))) {
+        if (! $user instanceof User || $user->isMachine() || ! $provider->validateCredentials($user, $credentials)) {
+            event(new Failed('web', $user, $credentials));
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -51,7 +60,10 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $provider->rehashPasswordIfRequired($user, $credentials);
         RateLimiter::clear($this->throttleKey());
+
+        return $user;
     }
 
     /**

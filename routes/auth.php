@@ -21,6 +21,14 @@ Route::middleware('guest')->group(function () {
     // L'inscription publique est désactivée : les comptes sont créés depuis l'administration.
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    // Second facteur (mot de passe déjà vérifié, session pas encore ouverte)
+    Route::controller(\App\Http\Controllers\Auth\TwoFactorChallengeController::class)->prefix('double-authentification')->group(function () {
+        Route::get('/', 'create')->name('two-factor.challenge');
+        Route::post('/', 'store')->middleware('throttle:10,1');
+        Route::post('/cle/options', 'keyOptions')->middleware('throttle:10,1')->name('two-factor.key-options');
+        Route::post('/cle', 'verifyKey')->middleware('throttle:10,1')->name('two-factor.key');
+    });
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 

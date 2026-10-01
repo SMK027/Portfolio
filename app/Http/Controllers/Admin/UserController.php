@@ -90,6 +90,18 @@ class UserController extends Controller
         return back()->with('success', 'Compte supprimé.');
     }
 
+    /** Retire tous les seconds facteurs d'un compte (perte des clés et codes de secours). */
+    public function resetTwoFactor(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user()->isSuperAdmin(), 403);
+        abort_if($user->isMachine(), 404);
+
+        $user->resetTwoFactor();
+        app(\App\Services\AuditTrail::class)->record('two_factor.reset', $user, force: true);
+
+        return back()->with('success', 'Double authentification réinitialisée pour « '.$user->name.' ».');
+    }
+
     /** @return array<string, mixed> */
     protected function validated(Request $request, User $user): array
     {

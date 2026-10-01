@@ -74,6 +74,13 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-complétion (nom, identifiant ou e-mail).
 
+**Double authentification** (*Mon compte → Double authentification*, comptes humains uniquement — jamais les bots ni les comptes de service) :
+- **clés de sécurité** (WebAuthn / FIDO2 : YubiKey, Titan, empreinte ou visage de l'appareil…) et/ou **application d'authentification** (codes TOTP à 6 chiffres : Google Authenticator, Authy, 1Password…) ;
+- à l'activation du premier facteur, 8 **codes de secours** à usage unique sont affichés une seule fois (seules leurs empreintes sont conservées) ; ils peuvent être régénérés ;
+- à la connexion, le mot de passe est vérifié puis le second facteur demandé, **avant** l'ouverture de la session ; 5 erreurs bloquent l'étape 5 minutes ; tout est journalisé ;
+- désactiver un facteur ou régénérer les codes demande le mot de passe actuel ; un super-administrateur peut réinitialiser la double authentification d'un compte (*Comptes → Modifier*) ;
+- les clés de sécurité exigent le HTTPS (ou `localhost` en développement) et sont liées au nom de domaine du site.
+
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;
 - un **bot** se connecte au panel sur `/login/bot` avec un code d'application (jamais par mot de passe). Il ne voit que les sections couvertes par ses autorisations (menu « Sections autorisées »), n'a pas de page « Mon compte » et n'utilise pas l'API. Il garde l'accès au panel pendant une maintenance ; avec l'autorisation « Accéder aux pages publiques pendant une maintenance » (`maintenance.bypass`), il voit aussi le site public (hors pages privées) ;

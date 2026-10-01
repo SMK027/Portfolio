@@ -16,7 +16,7 @@ class HandleMaintenanceMode
 {
     /** Toujours accessibles : connexion des administrateurs et fichiers techniques. */
     protected const ALLOWED_PATHS = [
-        'login', 'login/bot', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
+        'login', 'login/bot', 'double-authentification', 'double-authentification/*', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
         'admin', 'admin/*', 'robots.txt', 'sitemap.xml',
     ];
 
@@ -26,7 +26,7 @@ class HandleMaintenanceMode
      */
     protected const WRITER_PATHS = [
         'dashboard',              // redirection après connexion
-        'profile',                // « Mon compte »
+        'profile', 'profile/*',   // « Mon compte » (double authentification comprise)
         'veille/*/fichiers/*',    // pièces jointes affichées dans l'éditeur et la consultation
     ];
 

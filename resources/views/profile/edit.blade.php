@@ -16,6 +16,12 @@
 
     <div class="card p-4 sm:p-8">
         <div class="max-w-xl">
+            @include('profile.partials.two-factor-form')
+        </div>
+    </div>
+
+    <div class="card p-4 sm:p-8">
+        <div class="max-w-xl">
             @include('profile.partials.delete-user-form')
         </div>
     </div>

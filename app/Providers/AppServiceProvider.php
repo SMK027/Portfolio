@@ -73,6 +73,8 @@ class AppServiceProvider extends ServiceProvider
         // Outils de l'éditeur (images, conversions) : rédacteurs d'articles ou de projets
         Gate::define('use-editor', fn (User $user) => $user->canWriteArticles()
             || $user->canUsePanel('projects.write|experiences.write|profile.write'));
+        // Double authentification : comptes humains uniquement (jamais bots ni services)
+        Gate::define('use-two-factor', fn (User $user) => ! $user->isMachine());
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
 

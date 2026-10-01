@@ -87,6 +87,19 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Double authentification du compte : personnes uniquement
+Route::middleware(['auth', 'can:use-two-factor'])->prefix('profile/double-authentification')->name('two-factor.')
+    ->controller(\App\Http\Controllers\TwoFactorController::class)->group(function () {
+        Route::post('/application', 'startTotp')->name('totp.start');
+        Route::put('/application', 'confirmTotp')->middleware('throttle:10,1')->name('totp.confirm');
+        Route::delete('/application/annuler', 'cancelTotp')->name('totp.cancel');
+        Route::delete('/application', 'disableTotp')->name('totp.disable');
+        Route::post('/cles/options', 'keyOptions')->name('keys.options');
+        Route::post('/cles', 'storeKey')->middleware('throttle:10,1')->name('keys.store');
+        Route::delete('/cles/{key}', 'destroyKey')->name('keys.destroy');
+        Route::post('/codes-de-secours', 'regenerateRecoveryCodes')->name('recovery-codes');
+    });
+
 /*
 |--------------------------------------------------------------------------
 | Administration
@@ -172,6 +185,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->middlewareFor('index', $panel('users.read|users.write|users.delete'))
         ->middlewareFor(['create', 'store', 'edit', 'update'], $panel('users.write'))
         ->middlewareFor('destroy', $panel('users.delete'));
+    Route::delete('/utilisateurs/{user}/double-authentification', [Admin\UserController::class, 'resetTwoFactor'])->name('utilisateurs.two-factor.reset');
 
     Route::prefix('import-export')->name('transfer.')->controller(Admin\TransferController::class)->group(function () use ($panel) {
         Route::get('/', 'index')->middleware($panel('content.export|content.import'))->name('index');

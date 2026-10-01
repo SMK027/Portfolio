@@ -17,7 +17,7 @@
             <tbody class="divide-y divide-slate-100">
                 @foreach ($users as $user)
                     <tr>
-                        <td><p class="font-medium text-slate-900">{{ $user->name }}</p><p class="text-xs text-slate-500">{{ '@'.$user->username }}</p></td>
+                        <td><p class="font-medium text-slate-900">{{ $user->name }}@if ($user->hasTwoFactor()) <span class="badge-green ml-1" title="Double authentification activée">2FA</span>@endif</p><p class="text-xs text-slate-500">{{ '@'.$user->username }}</p></td>
                         <td class="hidden md:table-cell">{{ $user->email }}</td>
                         <td><span @class(['badge-primary' => $user->isAdmin(), 'badge-slate' => ! $user->isAdmin()])>{{ \Illuminate\Support\Str::before($user->roleLabel(), ' (') }}</span></td>
                         <td class="hidden sm:table-cell">{{ $user->articles_count }}</td>

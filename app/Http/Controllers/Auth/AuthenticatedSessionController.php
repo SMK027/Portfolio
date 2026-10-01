@@ -24,8 +24,21 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $user = $request->authenticate();
 
+        // Double authentification : connexion suspendue jusqu'au second facteur.
+        if ($user->hasTwoFactor()) {
+            $request->session()->regenerate();
+            $request->session()->put(TwoFactorChallengeController::SESSION_KEY, [
+                'id'       => $user->id,
+                'remember' => $request->boolean('remember'),
+                'expires'  => now()->addMinutes(10)->getTimestamp(),
+            ]);
+
+            return redirect()->route('two-factor.challenge');
+        }
+
+        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));

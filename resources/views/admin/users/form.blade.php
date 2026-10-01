@@ -25,4 +25,14 @@
 
         <x-admin.form-actions :cancel="route('admin.utilisateurs.index')" />
     </form>
+
+    {{-- Perte de la clé / du téléphone et des codes de secours : super-administrateurs --}}
+    @if ($editing && auth()->user()->isSuperAdmin() && $user->hasTwoFactor())
+        <x-admin.section title="Double authentification" description="Activée sur ce compte. En cas de perte de tous ses facteurs et codes de secours, réinitialisez-la : la personne se connectera avec son seul mot de passe et pourra la reconfigurer.">
+            <form method="POST" action="{{ route('admin.utilisateurs.two-factor.reset', $user) }}" onsubmit="return confirm('Réinitialiser la double authentification de ce compte ?')">
+                @csrf @method('DELETE')
+                <button class="btn-secondary text-red-600"><x-icon name="lock" class="h-4 w-4" /> Réinitialiser la double authentification</button>
+            </form>
+        </x-admin.section>
+    @endif
 </x-app-layout>
