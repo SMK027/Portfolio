@@ -39,6 +39,15 @@ class Article extends Model
     {
         // Les pièces jointes physiques sont supprimées avec l'article.
         static::deleting(fn (Article $article) => $article->files()->each(fn (ArticleFile $file) => $file->delete()));
+
+        // Historique : une version à la création et à chaque changement du texte.
+        // (wasRecentlyCreated reste vrai sur l'instance : création et mise à jour sont distinguées.)
+        $record = function (Article $article) {
+            $article->recordRevision($article->pendingRevisionNote);
+            $article->pendingRevisionNote = null;
+        };
+        static::created($record);
+        static::updated(fn (Article $article) => $article->wasChanged(['title', 'excerpt', 'content']) && $record($article));
     }
 
     public function files(): HasMany
@@ -173,6 +182,35 @@ class Article extends Model
         }
 
         return $root['children'];
+    }
+
+    /* ---------- Historique des versions ---------- */
+
+    /** Note jointe à la prochaine version (ex. « Restauration de la version du … »). */
+    public ?string $pendingRevisionNote = null;
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(ArticleRevision::class)->orderByDesc('id');
+    }
+
+    public function recordRevision(?string $note = null): ArticleRevision
+    {
+        $user = auth()->user();
+        $revision = $this->revisions()->create([
+            'user_id'   => $user?->id,
+            'user_name' => $user?->name ?? 'Système',
+            'title'     => $this->title,
+            'excerpt'   => $this->excerpt,
+            'content'   => $this->content,
+            'note'      => $note,
+        ]);
+
+        // Rotation : seules les dernières versions sont conservées.
+        $keep = $this->revisions()->limit(ArticleRevision::KEEP)->pluck('id');
+        $this->revisions()->whereNotIn('id', $keep)->delete();
+
+        return $revision;
     }
 
     /* ---------- Lien de relecture (brouillon partagé sans compte) ---------- */

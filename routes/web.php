@@ -216,6 +216,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['auth', 'can:write-articles'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('articles', Admin\ArticleController::class);
     Route::post('/articles/{article}/valider', [Admin\ArticleController::class, 'approve'])->name('articles.approve');
+    Route::get('/articles/{article}/versions', [Admin\ArticleRevisionController::class, 'index'])->name('articles.revisions.index');
+    Route::get('/articles/{article}/versions/{revision}', [Admin\ArticleRevisionController::class, 'show'])->name('articles.revisions.show');
+    Route::post('/articles/{article}/versions/{revision}/restaurer', [Admin\ArticleRevisionController::class, 'restore'])->name('articles.revisions.restore');
     Route::post('/articles/{article}/apercu', [Admin\ArticleController::class, 'sharePreview'])->name('articles.preview.store');
     Route::delete('/articles/{article}/apercu', [Admin\ArticleController::class, 'revokePreview'])->name('articles.preview.destroy');
     Route::post('/articles/{article}/renvoyer', [Admin\ArticleController::class, 'requestChanges'])->name('articles.request-changes');

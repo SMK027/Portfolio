@@ -3,6 +3,7 @@
     <x-slot name="header">{{ $article->title }}</x-slot>
     <x-slot name="actions">
         <a href="{{ route('admin.articles.index') }}" class="btn-secondary hidden sm:inline-flex"><x-icon name="arrow-left" class="h-4 w-4" /> Retour</a>
+        <a href="{{ route('admin.articles.revisions.index', $article) }}" class="btn-secondary"><x-icon name="clock" class="h-4 w-4" /> Historique</a>
         @can('update', $article)
             <a href="{{ route('admin.articles.edit', $article) }}" class="btn-primary"><x-icon name="pencil" class="h-4 w-4" /> Modifier</a>
         @endcan

@@ -10,6 +10,7 @@
     @if ($editing)
         <x-slot name="actions">
             <a href="{{ route('admin.articles.show', $article) }}" class="btn-secondary"><x-icon name="eye" class="h-4 w-4" /> Consulter</a>
+            <a href="{{ route('admin.articles.revisions.index', $article) }}" class="btn-secondary hidden sm:inline-flex"><x-icon name="clock" class="h-4 w-4" /> Historique</a>
             @unless ($article->isPublished())
                 <a href="{{ route('admin.articles.show', $article) }}#relecture" class="btn-secondary hidden sm:inline-flex"><x-icon name="link" class="h-4 w-4" /> Faire relire</a>
             @endunless
