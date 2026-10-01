@@ -47,6 +47,10 @@ Route::middleware('page:veille')->prefix('veille')->name('articles.')->group(fun
     Route::get('/{article}', [ArticleController::class, 'show'])->name('show');
 });
 
+// Brouillon partagé (lien secret et temporaire), indépendant de la visibilité de la page Veille
+Route::get('/veille/apercu/{token}', [ArticleController::class, 'preview'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('articles.preview');
+
 // Pièces jointes d'articles : accessibles au public selon la page Veille et la
 // publication, et aux rédacteurs (y compris brouillons) — voir ArticleFileController.
 Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class, 'show'])
@@ -212,6 +216,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['auth', 'can:write-articles'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('articles', Admin\ArticleController::class);
     Route::post('/articles/{article}/valider', [Admin\ArticleController::class, 'approve'])->name('articles.approve');
+    Route::post('/articles/{article}/apercu', [Admin\ArticleController::class, 'sharePreview'])->name('articles.preview.store');
+    Route::delete('/articles/{article}/apercu', [Admin\ArticleController::class, 'revokePreview'])->name('articles.preview.destroy');
     Route::post('/articles/{article}/renvoyer', [Admin\ArticleController::class, 'requestChanges'])->name('articles.request-changes');
 });
 

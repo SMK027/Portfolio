@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'title', 'excerpt', 'content', 'content_editor', 'content_markdown', 'thumbnail_path', 'author_id', 'is_pinned', 'published_at',
@@ -28,6 +29,7 @@ class Article extends Model
             'content'      => 'array',
             'is_pinned'    => 'boolean',
             'published_at' => 'datetime',
+            'preview_expires_at' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at'  => 'datetime',
         ];
@@ -171,6 +173,36 @@ class Article extends Model
         }
 
         return $root['children'];
+    }
+
+    /* ---------- Lien de relecture (brouillon partagé sans compte) ---------- */
+
+    public const PREVIEW_DURATIONS = [1 => '24 heures', 7 => '7 jours', 30 => '30 jours'];
+
+    public function hasPreviewLink(): bool
+    {
+        return $this->preview_token !== null && $this->preview_expires_at?->isFuture();
+    }
+
+    public function previewUrl(): ?string
+    {
+        return $this->hasPreviewLink() ? route('articles.preview', $this->preview_token) : null;
+    }
+
+    /** Nouveau lien (l'ancien cesse de fonctionner). */
+    public function sharePreview(int $days): void
+    {
+        $this->forceFill(['preview_token' => Str::random(48), 'preview_expires_at' => now()->addDays($days)])->saveQuietly();
+    }
+
+    public function revokePreview(): void
+    {
+        $this->forceFill(['preview_token' => null, 'preview_expires_at' => null])->saveQuietly();
+    }
+
+    public static function findByPreviewToken(string $token): ?self
+    {
+        return static::where('preview_token', $token)->where('preview_expires_at', '>', now())->first();
     }
 
     public function readingTime(): int

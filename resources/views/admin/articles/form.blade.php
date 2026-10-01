@@ -10,6 +10,9 @@
     @if ($editing)
         <x-slot name="actions">
             <a href="{{ route('admin.articles.show', $article) }}" class="btn-secondary"><x-icon name="eye" class="h-4 w-4" /> Consulter</a>
+            @unless ($article->isPublished())
+                <a href="{{ route('admin.articles.show', $article) }}#relecture" class="btn-secondary hidden sm:inline-flex"><x-icon name="link" class="h-4 w-4" /> Faire relire</a>
+            @endunless
             @if ($article->isPublished())
                 <a href="{{ route('articles.show', $article) }}" target="_blank" class="btn-secondary hidden sm:inline-flex"><x-icon name="external" class="h-4 w-4" /> Sur le site</a>
             @endif

@@ -15,6 +15,14 @@
             'mainEntityOfPage' => route('articles.show', $article),
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
     @endpush
+    @php $preview = $preview ?? false; @endphp
+    @if ($preview)
+        @push('head')<meta name="robots" content="noindex, nofollow">@endpush
+        <div class="bg-amber-400 px-4 py-2 text-center text-sm font-medium text-amber-950">
+            Aperçu d'un brouillon partagé pour relecture — non publié, ne pas diffuser.
+            Lien valable jusqu'au {{ $article->preview_expires_at->translatedFormat('j F Y à H:i') }}.
+        </div>
+    @endif
     <article>
         <header class="relative overflow-hidden bg-slate-900">
             @if ($article->thumbnailUrl())
@@ -24,11 +32,13 @@
                 <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-primary-900"></div>
             @endif
             <div class="relative mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20">
+                @unless ($preview)
                 <a href="{{ route('articles.index') }}" class="inline-flex items-center gap-1 text-sm font-medium text-slate-300 hover:text-white">
                     <x-icon name="arrow-left" class="h-4 w-4" /> {{ $page->title }}
                 </a>
+                @endunless
 
-                @unless ($article->isPublished())
+                @unless ($article->isPublished() || $preview)
                     <p class="mt-4"><span class="badge-amber">{{ $article->status() }} — aperçu administrateur</span></p>
                 @endunless
 

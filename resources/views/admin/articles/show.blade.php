@@ -10,6 +10,7 @@
 
     @include('admin.articles.partials.review')
     @include('admin.articles.partials.review-note')
+    @include('admin.articles.partials.preview-link')
 
     <article class="card overflow-hidden">
         @if ($article->thumbnailUrl())

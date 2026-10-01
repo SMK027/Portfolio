@@ -147,6 +147,27 @@ class ArticleController extends Controller
     }
 
     /** @return array<string, mixed> */
+    /** Lien de relecture pour une personne sans compte. */
+    public function sharePreview(Request $request, Article $article): RedirectResponse
+    {
+        Gate::authorize('update', $article);
+        $days = (int) $request->validate(['days' => ['required', Rule::in(array_keys(Article::PREVIEW_DURATIONS))]])['days'];
+
+        $article->sharePreview($days);
+        $this->audit->record('article.preview_shared', $article, meta: ['durée' => Article::PREVIEW_DURATIONS[$days]]);
+
+        return back()->with('success', 'Lien de relecture créé, valable '.Article::PREVIEW_DURATIONS[$days].'.');
+    }
+
+    public function revokePreview(Article $article): RedirectResponse
+    {
+        Gate::authorize('update', $article);
+        $article->revokePreview();
+        $this->audit->record('article.preview_revoked', $article);
+
+        return back()->with('success', 'Lien de relecture révoqué : il ne fonctionne plus.');
+    }
+
     protected function formData(Article $article): array
     {
         return [

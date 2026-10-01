@@ -25,10 +25,19 @@ class ArticleFileController extends Controller
         // Public : article publié et page Veille accessible.
         abort_unless(
             $user?->canWriteArticles()
-                || ($article->isPublished() && Page::isKeyAccessibleBy('veille', $user)),
+                || ($article->isPublished() && Page::isKeyAccessibleBy('veille', $user))
+                || $this->viaPreviewLink($request, $article),
             404
         );
 
         return $this->attachmentResponse($request, $file);
+    }
+
+    /** Lecteur d'un brouillon partagé : le lien ouvert dans cette session est toujours valide. */
+    protected function viaPreviewLink(Request $request, Article $article): bool
+    {
+        $token = $request->session()->get('article_preview.'.$article->id);
+
+        return $token && Article::findByPreviewToken($token)?->is($article);
     }
 }

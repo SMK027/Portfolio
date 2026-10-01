@@ -29,6 +29,22 @@ class ArticleController extends Controller
         ]);
     }
 
+    /** Brouillon partagé par lien secret : lisible sans compte jusqu'à expiration. */
+    public function preview(Request $request, string $token): View
+    {
+        $article = Article::findByPreviewToken($token) ?? abort(404);
+        // Autorise aussi ses pièces jointes pour cette session (voir ArticleFileController).
+        $request->session()->put('article_preview.'.$article->id, $token);
+        $article->load('author', 'coauthors', 'themes', 'files');
+
+        return view('public.articles.show', [
+            'page'    => \App\Models\Page::findByKey('veille'),
+            'article' => $article,
+            'related' => collect(),
+            'preview' => true,
+        ]);
+    }
+
     public function show(Request $request, Article $article): View
     {
         // Brouillons et articles programmés : aperçu réservé aux administrateurs.

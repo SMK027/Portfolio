@@ -65,6 +65,8 @@ class AuditLog extends Model
         'api.messages_read' => 'Messages lus via l\'API',
         'article.submitted' => 'Article soumis à validation',
         'article.approved'  => 'Article validé',
+        'article.preview_shared'  => 'Lien de relecture créé',
+        'article.preview_revoked' => 'Lien de relecture révoqué',
         'article.changes_requested' => 'Article renvoyé en brouillon',
         'content.exported'  => 'Export du contenu',
         'content.imported'  => 'Import du contenu',
