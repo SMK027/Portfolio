@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'first_name', 'last_name', 'headline', 'location', 'email', 'phone',
-    'photo_path', 'cv_path', 'about', 'social_links',
+    'photo_path', 'cv_path', 'cv_downloadable', 'about', 'social_links',
 ])]
 class Profile extends Model
 {
@@ -20,6 +20,7 @@ class Profile extends Model
     {
         return [
             'about'        => 'array',
+            'cv_downloadable' => 'boolean',
             'social_links' => 'array',
         ];
     }
@@ -80,8 +81,20 @@ class Profile extends Model
         return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
     }
 
+    /** Lien public du CV, ou null s'il n'y en a pas ou si son téléchargement est bloqué. */
     public function cvUrl(): ?string
     {
-        return $this->cv_path ? Storage::disk('public')->url($this->cv_path) : null;
+        return $this->cvAvailable() ? route('cv.download') : null;
+    }
+
+    public function cvAvailable(): bool
+    {
+        return $this->cv_path && $this->cv_downloadable && Storage::disk('local')->exists($this->cv_path);
+    }
+
+    /** Nom du fichier proposé au téléchargement. */
+    public function cvFilename(): string
+    {
+        return 'CV - '.$this->fullName().'.pdf';
     }
 }

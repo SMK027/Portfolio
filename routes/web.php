@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/cv', \App\Http\Controllers\CvController::class)->middleware('throttle:30,1')->name('cv.download');
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 
@@ -163,6 +164,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
             ->middlewareFor('destroy', $panel("{$permission}.delete"));
     };
 
+    Route::get('/presentation/cv', [\App\Http\Controllers\CvController::class, 'preview'])->middleware($panel('profile.read|profile.write'))->name('profile.cv');
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->middleware($panel('profile.read|profile.write'))->name('profile.edit');
     Route::put('/presentation', [Admin\ProfileController::class, 'update'])->middleware($panel('profile.write'))->name('profile.update');
 

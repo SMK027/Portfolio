@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Profile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -38,6 +39,7 @@ class ProfileController extends Controller
             'about'        => ['nullable', 'string', 'max:500000'],
             'photo'        => $this->imageRules(),
             'cv'           => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+            'cv_downloadable' => ['nullable', 'boolean'],
         ]);
 
         $data['about'] = $this->editorContent($request, 'about');
@@ -48,11 +50,26 @@ class ProfileController extends Controller
             ->values()
             ->all();
         $data['photo_path'] = $this->syncPublicFile($request, 'photo', $profile->photo_path, 'profile');
-        $data['cv_path'] = $this->syncPublicFile($request, 'cv', $profile->cv_path, 'profile');
+        $data['cv_path'] = $this->syncCv($request, $profile->cv_path);
+        $data['cv_downloadable'] = $request->boolean('cv_downloadable');
         unset($data['photo'], $data['cv']);
 
         $profile->update($data);
 
         return back()->with('success', 'Présentation mise à jour.');
+    }
+
+    /** CV hors du dossier public : servi par /cv selon le réglage de téléchargement. */
+    protected function syncCv(Request $request, ?string $current): ?string
+    {
+        if ($request->hasFile('cv') || $request->boolean('remove_cv')) {
+            if ($current) {
+                Storage::disk('local')->delete($current);
+            }
+
+            return $request->hasFile('cv') ? $request->file('cv')->store('cv', 'local') : null;
+        }
+
+        return $current;
     }
 }

@@ -30,9 +30,12 @@
             </div>
             <div>
                 <x-form.input name="cv" type="file" label="CV (PDF)" accept="application/pdf" help="10 Mo max." />
-                @if ($profile->cvUrl())
+                <x-form.checkbox name="cv_downloadable" label="Autoriser le téléchargement du CV" :checked="$profile->cv_downloadable ?? true" class="mt-3"
+                                 help="Décoché : le bouton « Mon CV » disparaît du site et le lien /cv ne répond plus, même pour qui l'a déjà." />
+                @if ($profile->cv_path)
                     <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                        <a href="{{ $profile->cvUrl() }}" target="_blank" class="inline-flex items-center gap-1 font-medium text-primary-600"><x-icon name="document" class="h-4 w-4" /> CV actuel</a>
+                        @unless ($profile->cv_downloadable)<span class="badge-amber">Téléchargement bloqué</span>@endunless
+                        <a href="{{ route('admin.profile.cv') }}" target="_blank" class="inline-flex items-center gap-1 font-medium text-primary-600"><x-icon name="document" class="h-4 w-4" /> CV actuel</a>
                         <label class="inline-flex items-center gap-2 text-slate-600">
                             <input type="checkbox" name="remove_cv" value="1" class="rounded border-slate-300 text-red-600 focus:ring-red-500"> Supprimer le CV
                         </label>

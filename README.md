@@ -48,7 +48,9 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Statistiques de visite** (*Site → Statistiques*) : pages vues, visiteurs uniques par jour, tendance, pages les plus vues et sites d'origine, sur 7 jours à 12 mois. Sans cookie ni bandeau : aucune IP conservée (empreinte renouvelée chaque jour), robots, personnes connectées et navigateurs DNT / GPC ignorés ; données supprimées après 13 mois. Autorisation bot : `stats.read`.
 
-**Recherche** : bouton loupe, Ctrl+K / ⌘K ou « / » sur le site public ; articles publiés, projets, thèmes, compétences, parcours et certifications, en respectant la visibilité des pages. Page de résultats : `/recherche?q=…`.
+**Recherche** : bouton loupe, Ctrl+K / ⌘K ou « / » sur le site public ; articles publiés, projets, thèmes, compétences, parcours et certifications. Seules les pages publiques sont fouillées, pour tout le monde (administrateurs compris).
+
+**CV** (*Présentation*) : le fichier PDF est stocké hors du dossier public et servi par `/cv`. La case « Autoriser le téléchargement du CV » permet de le bloquer : le bouton disparaît et le lien ne répond plus ; l'aperçu reste disponible dans le panel. Page de résultats : `/recherche?q=…`.
 
 **Menus** : le site public regroupe ses pages en sous-menus (*Parcours* : formations, expériences, diplômes, certifications, compétences, loisirs ; *Contact* : contact, rendez-vous ; Projets et Veille en accès direct), à modifier dans `Page::NAV_GROUPS`. Le panel range ses sections en groupes repliables (Parcours, Réalisations, Veille, Échanges, Site, Comptes et sécurité) définis dans `PanelSections::GROUPS` ; le groupe de la page en cours s'ouvre et l'état est mémorisé.
 

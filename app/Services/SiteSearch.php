@@ -17,8 +17,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Recherche dans le contenu public du portfolio, en respectant la visibilité
- * des pages (une page privée n'est jamais fouillée pour un visiteur).
+ * Recherche dans le contenu public du portfolio : seules les pages publiques
+ * sont fouillées (une page privée n'apparaît jamais, même pour un administrateur).
  */
 class SiteSearch
 {
@@ -34,7 +34,9 @@ class SiteSearch
             return collect();
         }
 
-        $can = fn (string $key) => Page::isKeyAccessibleBy($key, $user);
+        // Recherche publique : une page privée n'est fouillée pour personne,
+        // administrateurs compris (ils consultent les pages privées par le menu).
+        $can = fn (string $key) => (bool) Page::findByKey($key)?->is_public;
         $results = collect();
 
         if ($can('veille')) {

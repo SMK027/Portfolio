@@ -19,7 +19,7 @@
                                     @if ($skill->description)
                                         <p class="text-sm text-slate-500">{{ $skill->description }}</p>
                                     @endif
-                                    @if ($skill->projects_count)
+                                    @if ($skill->projects_count && \App\Models\Page::findByKey('projets')?->is_public)
                                         <p class="text-xs text-slate-400">Mise en œuvre dans {{ $skill->projects_count }} {{ \Illuminate\Support\Str::plural('projet', $skill->projects_count) }}</p>
                                     @endif
                                 </li>

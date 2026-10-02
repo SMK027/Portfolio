@@ -46,7 +46,8 @@ class SearchTest extends TestCase
         Page::flushCache();
 
         $this->get(route('search', ['q' => 'kubernetes']))->assertDontSee('Kubernetes en pratique');
-        $this->actingAs(User::factory()->admin()->create())->get(route('search', ['q' => 'kubernetes']))->assertSee('Kubernetes en pratique');
+        // Administrateur : la recherche reste publique, la page privée n'est pas fouillée.
+        $this->actingAs(User::factory()->admin()->create())->get(route('search', ['q' => 'kubernetes']))->assertDontSee('Kubernetes en pratique');
     }
 
     public function test_json_endpoint_for_the_palette(): void
@@ -58,5 +59,23 @@ class SearchTest extends TestCase
             ->assertJsonPath('results.0.url', route('articles.show', $article));
         $this->getJson(route('search', ['q' => 'w']))->assertJsonCount(0, 'results');
         $this->get('/')->assertSee('searchPalette', false);
+    }
+
+    public function test_private_projects_page_hides_projects_and_themes_from_search(): void
+    {
+        $project = \App\Models\Project::create(['title' => 'Supervision Zabbix', 'published_on' => now(), 'description' => ['blocks' => []]]);
+        \App\Models\Theme::create(['name' => 'Zabbix et supervision']);
+        $this->get(route('search', ['q' => 'zabbix']))->assertSee('Supervision Zabbix')->assertSee('Zabbix et supervision');
+
+        Page::where('key', 'projets')->update(['is_public' => false]);
+        Page::flushCache();
+
+        foreach ([null, User::factory()->admin()->create()] as $user) {
+            if ($user) {
+                $this->actingAs($user);
+            }
+            $this->get(route('search', ['q' => 'zabbix']))->assertDontSee('Supervision Zabbix')->assertDontSee('Zabbix et supervision');
+            $this->getJson(route('search', ['q' => 'zabbix']))->assertJsonCount(0, 'results');
+        }
     }
 }
