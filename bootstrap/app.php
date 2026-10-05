@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\AddRobotsHeader::class);
 
         // Après la session et l'authentification, pour laisser passer les administrateurs.
+        // Durée de lecture envoyée par navigator.sendBeacon (sans jeton CSRF ; donnée sans effet de bord).
+        $middleware->validateCsrfTokens(except: ['stats/duree']);
+
         $middleware->web(append: [
             \App\Http\Middleware\EnsureBotTokenIsValid::class,
             \App\Http\Middleware\HandleMaintenanceMode::class,

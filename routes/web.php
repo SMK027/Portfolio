@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::post('/stats/duree', \App\Http\Controllers\PageViewDurationController::class)->middleware('throttle:120,1')->name('stats.duration');
 Route::get('/cv', \App\Http\Controllers\CvController::class)->middleware('throttle:30,1')->name('cv.download');
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');

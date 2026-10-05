@@ -23,6 +23,9 @@ Alpine.data('securityKeyPasswordless', securityKeyPasswordless);
 
 Alpine.start();
 
+// Mesure d'audience : durée de lecture des pages publiques.
+import('./components/page-timer').then(({ default: start }) => start());
+
 // FullCalendar n'est chargé que sur la page des disponibilités.
 const availability = document.querySelector('[data-availability-calendar]');
 if (availability) {
