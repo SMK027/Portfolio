@@ -63,7 +63,7 @@ class ProjectTest extends TestCase
         $this->assertTrue($project->links->first()->isGithub());
         $this->assertCount(4, $project->files);
         $this->assertCount(1, $project->images());
-        $this->assertSame('capture.png', $project->thumbnail->original_name);
+        $this->assertSame('capture.webp', $project->thumbnail->original_name); // converti en WebP à l'envoi
         $this->assertTrue($project->skills->contains($skill));
         $this->assertTrue($project->themes->contains($theme));
 

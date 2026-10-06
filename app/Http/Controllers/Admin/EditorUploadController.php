@@ -23,7 +23,7 @@ class EditorUploadController extends Controller
             return response()->json(['success' => 0, 'message' => $validator->errors()->first('image')], 422);
         }
 
-        $path = $request->file('image')->store('editor/'.now()->format('Y/m'), 'public');
+        $path = app(\App\Services\ImageOptimizer::class)->store($request->file('image'), 'editor/'.now()->format('Y/m'))['path'];
         app(\App\Services\AuditTrail::class)->record('editor.image_uploaded', meta: ['fichier' => '/storage/'.$path, 'nom' => $request->file('image')->getClientOriginalName()]);
 
         return response()->json([

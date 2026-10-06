@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Concerns;
 
+use App\Services\ImageOptimizer;
 use Closure;
 use finfo;
 use Illuminate\Database\Eloquent\Model;
@@ -50,12 +51,19 @@ trait StoresAttachments
 
         foreach ($request->file('files', []) as $index => $upload) {
             $isImage = in_array(strtolower($upload->getClientOriginalExtension()), $fileClass::IMAGE_EXTENSIONS, true);
+            $name = mb_substr(basename($upload->getClientOriginalName()), 0, 255);
+
+            // Images : redimensionnées et converties en WebP (le nom suit le nouveau format).
+            $stored = $isImage ? app(ImageOptimizer::class)->store($upload, $directory, $fileClass::DISK) : null;
+            if ($stored['optimized'] ?? false) {
+                $name = mb_substr(pathinfo($name, PATHINFO_FILENAME), 0, 240).'.'.pathinfo($stored['path'], PATHINFO_EXTENSION);
+            }
 
             $created[$index] = $files->create([
-                'path'          => $upload->store($directory, $fileClass::DISK),
-                'original_name' => mb_substr(basename($upload->getClientOriginalName()), 0, 255),
-                'mime_type'     => $this->detectMime($upload),
-                'size'          => $upload->getSize(),
+                'path'          => $stored['path'] ?? $upload->store($directory, $fileClass::DISK),
+                'original_name' => $name,
+                'mime_type'     => $stored['mime'] ?? $this->detectMime($upload),
+                'size'          => $stored['size'] ?? $upload->getSize(),
                 'is_image'      => $isImage,
                 'position'      => ++$position,
             ]);

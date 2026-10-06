@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Concerns;
 
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ trait HandlesUploads
 
     /**
      * Remplace (ou supprime) un fichier stocké sur le disque public.
+     * Les images sont redimensionnées et converties en WebP (App\Services\ImageOptimizer).
      * Retourne le nouveau chemin, l'ancien s'il est conservé, ou null.
      */
     protected function syncPublicFile(Request $request, string $field, ?string $currentPath, string $directory): ?string
@@ -23,7 +25,7 @@ trait HandlesUploads
         if ($request->hasFile($field)) {
             $this->deletePublicFile($currentPath);
 
-            return $request->file($field)->store($directory, 'public');
+            return app(ImageOptimizer::class)->store($request->file($field), $directory)['path'];
         }
 
         if ($request->boolean('remove_'.$field)) {

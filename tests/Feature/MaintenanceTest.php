@@ -109,7 +109,7 @@ class MaintenanceTest extends TestCase
 
         // Pièces jointes visibles dans l'éditeur…
         $file = \App\Models\Article::sole()->files->first();
-        $this->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get($file->url())->assertOk()->assertHeader('Content-Type', 'image/webp'); // converti à l'envoi
 
         // …mais toujours pas le reste de l'administration.
         $this->get(route('admin.dashboard'))->assertForbidden();

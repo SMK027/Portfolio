@@ -79,6 +79,7 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 **SEO et performances** :
 - `sitemap.xml` liste les pages publiques, les projets, les thèmes et les articles publiés (vide quand le site est désindexé) ; le `robots.txt` y renvoie ;
 - chaque page publique porte une URL canonique, les balises Open Graph et Twitter, et des données structurées JSON-LD (`Person` sur l'accueil, `BlogPosting` sur les articles) ;
+- les images envoyées (photo, badges, couvertures, images des projets et articles, images de l'éditeur, y compris ajoutées par URL) sont **redimensionnées** (1920 px maximum sur le côté le plus long), **orientées** selon leurs données EXIF et **converties en WebP** ; les GIF (animations) et les images que la conversion n'allégerait pas sont conservés tels quels. Les images déjà en ligne ne sont pas modifiées ;
 - les images hors écran et les vidéos intégrées sont chargées à la demande (`loading="lazy"`), l'image principale de chaque page est prioritaire (`fetchpriority="high"`) ; les polices ne bloquent plus l'affichage ; les scripts sont des modules (différés) et Editor.js n'est chargé que dans l'éditeur ;
 - Apache compresse les réponses texte et met en cache les assets versionnés (`/build/assets/`, 1 an) et les fichiers publics (`/storage/`, 7 jours).
 

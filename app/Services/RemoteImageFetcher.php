@@ -48,6 +48,11 @@ class RemoteImageFetcher
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: '';
         $extension = self::MIME_EXTENSIONS[$mime] ?? throw new RuntimeException("Type de fichier non accepté ({$mime}).");
 
+        // Redimensionnée et convertie en WebP lorsque c'est possible et utile.
+        if ($optimized = app(ImageOptimizer::class)->optimize($binary)) {
+            [$binary, $extension] = [$optimized['binary'], $optimized['extension']];
+        }
+
         $path = trim($directory, '/').'/'.Str::random(40).'.'.$extension;
         Storage::disk('public')->put($path, $binary);
 

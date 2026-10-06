@@ -58,7 +58,7 @@ class ArticleFileTest extends TestCase
             ->assertSee('notes.pdf');
 
         $image = $article->images()->first();
-        $this->get($image->url())->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->get($image->url())->assertOk()->assertHeader('Content-Type', 'image/webp'); // converti à l'envoi
         $this->get($article->documents()->first()->downloadUrl())->assertOk()->assertDownload('slides.pptx');
     }
 
