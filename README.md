@@ -115,6 +115,7 @@ Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-compléti
 - connexion par mot de passe, double authentification (application ou clé) et connexion directe par clé de sécurité ; page « Mon compte » ;
 - le compte ne voit dans le panel que les sections cochées dans ses autorisations (mêmes autorisations que les bots : consulter, modifier, supprimer…) ; sans autorisation, il arrive sur une page d'information ;
 - **désactivation programmée** (facultative) : à la date et l'heure choisies, la connexion est refusée et toute session ouverte est coupée à la requête suivante ; une tâche planifiée (chaque minute) marque ensuite le compte « désactivé » dans le journal d'activité. Sans date, le compte n'est jamais désactivé automatiquement. La case « Compte actif » permet aussi de le désactiver ou de le réactiver à tout moment ;
+- **avertissements** : la personne est prévenue par e-mail quelques jours avant la désactivation (`STAFF_DEACTIVATION_WARNING_DAYS`, 3 par défaut, 0 pour ne jamais prévenir ; renvoyé si la date change), et les super-administrateurs reçoivent un e-mail le jour où le compte est désactivé ;
 - un membre du personnel autorisé sur les comptes ne gère que des contributeurs, comme un bot.
 
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :

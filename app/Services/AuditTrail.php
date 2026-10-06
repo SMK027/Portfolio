@@ -21,7 +21,7 @@ class AuditTrail
     public const SECRET = ['password', 'token_hash', 'two_factor_secret', 'two_factor_recovery_codes', 'public_key', 'credential_id', 'preview_token'];
 
     /** Attributs ignorés dans les différences (techniques, renouvelés automatiquement). */
-    public const IGNORED = ['created_at', 'updated_at', 'last_used_at', 'last_used_ip', 'remember_token', 'recaptcha_score', 'two_factor_last_step', 'sign_count'];
+    public const IGNORED = ['created_at', 'updated_at', 'last_used_at', 'last_used_ip', 'remember_token', 'recaptcha_score', 'two_factor_last_step', 'sign_count', 'deactivation_warned_at'];
 
     /** Au-delà, une valeur est résumée (contenus Editor.js, Markdown…). */
     protected const MAX_LENGTH = 300;

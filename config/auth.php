@@ -125,6 +125,9 @@ return [
     |
     */
 
+    // Personnel : avertissement par e-mail N jours avant la désactivation programmée (0 : jamais)
+    'staff_warning_days' => (int) env('STAFF_DEACTIVATION_WARNING_DAYS', 3),
+
     'login_ban' => [
         'enabled'      => (bool) env('LOGIN_BAN_ENABLED', true),
         'max_attempts' => (int) env('LOGIN_BAN_MAX_ATTEMPTS', 3),

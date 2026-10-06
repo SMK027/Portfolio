@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Mail\StaffDeactivationMail;
 use App\Models\AuditLog;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\WebAuthn;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class StaffAccountTest extends TestCase
@@ -151,5 +153,51 @@ class StaffAccountTest extends TestCase
         $this->assertTrue($later->fresh()->is_active);
         $this->assertTrue($never->fresh()->is_active);
         $this->assertSame(1, AuditLog::where('action', 'user.deactivated')->where('subject_id', $expired->id)->count());
+    }
+
+    public function test_staff_is_warned_a_few_days_before_deactivation(): void
+    {
+        Mail::fake();
+        $soon = $this->staff(['deactivates_at' => now()->addDays(2)]);
+        $later = $this->staff(['deactivates_at' => now()->addDays(10)]);
+        $never = $this->staff();
+
+        $this->assertSame(1, User::warnUpcomingDeactivations());
+        $this->assertSame(0, User::warnUpcomingDeactivations()); // une seule fois
+
+        Mail::assertSent(StaffDeactivationMail::class, 1);
+        Mail::assertSent(StaffDeactivationMail::class, fn ($mail) => $mail->hasTo($soon->email) && $mail->event === StaffDeactivationMail::WARNING);
+        $this->assertStringContainsString('désactivé le', (new StaffDeactivationMail($soon, StaffDeactivationMail::WARNING))->render());
+
+        // Date repoussée puis de nouveau proche : nouvel avertissement
+        $soon->refresh()->update(['deactivates_at' => now()->addDays(20)]);
+        $this->assertNull($soon->fresh()->deactivation_warned_at);
+        $this->travel(18)->days();
+        $this->assertSame(1, User::warnUpcomingDeactivations()); // $soon (à J-2) ; la date de $later est déjà passée
+        Mail::assertSent(StaffDeactivationMail::class, 2);
+    }
+
+    public function test_super_admins_are_notified_on_deactivation_day(): void
+    {
+        Mail::fake();
+        $super = User::factory()->superAdmin()->create();
+        User::factory()->admin()->create();
+        $expired = $this->staff(['deactivates_at' => now()->subMinute()]);
+
+        User::deactivateExpired();
+
+        Mail::assertSent(StaffDeactivationMail::class, 1);
+        Mail::assertSent(StaffDeactivationMail::class, fn ($mail) => $mail->hasTo($super->email) && $mail->event === StaffDeactivationMail::DEACTIVATED && $mail->account->is($expired));
+        $this->assertStringContainsString(route('admin.utilisateurs.edit', $expired), (new StaffDeactivationMail($expired, StaffDeactivationMail::DEACTIVATED))->render());
+    }
+
+    public function test_warning_can_be_disabled(): void
+    {
+        Mail::fake();
+        config(['auth.staff_warning_days' => 0]);
+        $this->staff(['deactivates_at' => now()->addDay()]);
+
+        $this->assertSame(0, User::warnUpcomingDeactivations());
+        Mail::assertNothingSent();
     }
 }

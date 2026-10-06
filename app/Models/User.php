@@ -35,6 +35,7 @@ class User extends Authenticatable
             'permissions'       => 'array',
             'is_active'         => 'boolean',
             'deactivates_at'    => 'datetime',
+            'deactivation_warned_at' => 'datetime',
             'two_factor_secret'         => 'encrypted',
             'two_factor_confirmed_at'   => 'datetime',
             'two_factor_recovery_codes' => 'array',
@@ -250,18 +251,54 @@ class User extends Authenticatable
         return $this->isAdmin() || $this->isContributor() || $this->hasPanelPermission('articles.read|articles.write');
     }
 
+    protected static function booted(): void
+    {
+        // Nouvelle date de désactivation : un nouvel avertissement sera envoyé.
+        static::saving(function (User $user) {
+            if ($user->isDirty('deactivates_at')) {
+                $user->deactivation_warned_at = null;
+            }
+        });
+    }
+
     /**
      * Marque désactivés les comptes arrivés à leur date de désactivation programmée
-     * (tâche planifiée ; l'accès est déjà refusé dès l'échéance, voir isActive()).
+     * (tâche planifiée ; l'accès est déjà refusé dès l'échéance, voir isActive())
+     * et prévient les super-administrateurs par e-mail.
      */
     public static function deactivateExpired(): int
     {
         $audit = app(\App\Services\AuditTrail::class);
+        $mailer = app(\App\Services\SafeMailer::class);
+        $superAdmins = static::where('global_role', 'superadmin')->pluck('email');
 
         return static::query()->where('is_active', true)->where('deactivates_at', '<=', now())->get()
-            ->each(function (User $user) use ($audit) {
+            ->each(function (User $user) use ($audit, $mailer, $superAdmins) {
                 $audit->withoutRecording(fn () => $user->forceFill(['is_active' => false])->save());
                 $audit->record('user.deactivated', $user, meta: ['date' => $user->deactivates_at->format('d/m/Y H:i')], force: true);
+                $superAdmins->each(fn ($email) => $mailer->queue($email, new \App\Mail\StaffDeactivationMail($user, \App\Mail\StaffDeactivationMail::DEACTIVATED), 'compte désactivé'));
+            })
+            ->count();
+    }
+
+    /**
+     * Avertit par e-mail les comptes dont la désactivation programmée approche
+     * (config auth.staff_warning_days jours avant ; une seule fois par date).
+     */
+    public static function warnUpcomingDeactivations(): int
+    {
+        $days = (int) config('auth.staff_warning_days');
+        if ($days <= 0) {
+            return 0;
+        }
+        $mailer = app(\App\Services\SafeMailer::class);
+
+        return static::query()->where('is_active', true)->whereNull('deactivation_warned_at')
+            ->where('deactivates_at', '>', now())->where('deactivates_at', '<=', now()->addDays($days))
+            ->get()
+            ->each(function (User $user) use ($mailer) {
+                $user->forceFill(['deactivation_warned_at' => now()])->saveQuietly();
+                $mailer->queue($user->email, new \App\Mail\StaffDeactivationMail($user, \App\Mail\StaffDeactivationMail::WARNING), 'avertissement de désactivation');
             })
             ->count();
     }

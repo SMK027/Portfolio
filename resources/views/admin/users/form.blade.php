@@ -28,7 +28,7 @@
                     <x-form.checkbox name="is_active" label="Compte actif" :checked="$user->is_active ?? true" help="Un compte désactivé ne peut plus se connecter ; une session ouverte est coupée immédiatement." />
                     <x-form.input name="deactivates_at" type="datetime-local" label="Désactivation programmée" class="sm:w-72"
                                   :value="$user->deactivates_at?->format('Y-m-d\TH:i')"
-                                  help="Le compte est désactivé automatiquement à cette date et heure (heure de Paris). Vide : jamais." />
+                                  :help="'Le compte est désactivé automatiquement à cette date et heure (heure de Paris). Vide : jamais.'.(config('auth.staff_warning_days') > 0 ? ' La personne est prévenue par e-mail '.config('auth.staff_warning_days').' jours avant ; les super-administrateurs le jour même.' : '')" />
                     @if ($user->deactivates_at)
                         <p @class(['rounded-lg px-3 py-2 text-sm', 'bg-red-50 text-red-800' => $user->deactivates_at->isPast(), 'bg-amber-50 text-amber-900' => $user->deactivates_at->isFuture()])>
                             {{ $user->deactivates_at->isPast() ? 'Désactivé depuis le' : 'Sera désactivé le' }}

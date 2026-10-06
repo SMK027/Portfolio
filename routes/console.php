@@ -12,6 +12,8 @@ Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())-
 
 // Comptes du personnel arrivés à leur date de désactivation programmée.
 Schedule::call(fn () => \App\Models\User::deactivateExpired())->everyMinute()->name('comptes:desactivation');
+// … et avertis quelques jours avant (STAFF_DEACTIVATION_WARNING_DAYS).
+Schedule::call(fn () => \App\Models\User::warnUpcomingDeactivations())->hourly()->name('comptes:avertissement');
 
 // Bannissements d'adresses IP terminés depuis plus de 3 mois : supprimés chaque nuit.
 Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('03:40')->name('ip-bannies:purge');
