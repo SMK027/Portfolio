@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -237,33 +238,52 @@ class AppointmentController extends Controller
         $conflicts = Appointment::holding()->overlapping($start, $end)->where('starts_at', '>', now())->orderBy('starts_at')->get();
 
         if ($conflicts->isNotEmpty() && ! $request->boolean('confirm')) {
-            return response()->json([
-                'message'   => 'Des rendez-vous sont prévus sur cet horaire.',
-                'conflicts' => $conflicts->map(fn (Appointment $a) => [
-                    'when'   => ucfirst($a->starts_at->translatedFormat('l j F')).', '.$a->starts_at->format('H:i').'–'.$a->ends_at->format('H:i'),
-                    'name'   => $a->name,
-                    'email'  => $a->email,
-                    'status' => $a->statusLabel(),
-                ])->values(),
-            ], 409);
+            return $this->conflictsResponse($conflicts, 'Des rendez-vous sont prévus sur cet horaire.');
         }
 
-        DB::transaction(function () use ($data, $start, $end, $conflicts) {
-            AvailabilityBlock::create([
-                'starts_at' => $start,
-                'ends_at'   => $end,
-                'type'      => $data['type'],
-                'channel'   => $data['type'] === 'appointment' ? $data['channel'] : null,
-                'note'      => $data['note'] ?? null,
-            ]);
-            $conflicts->each(fn (Appointment $a) => $a->update(['status' => 'cancelled', 'admin_note' => $data['message'] ?? null]));
+        $result = $this->cancelConflicts($conflicts, $data['message'] ?? null, $mailer, fn () => AvailabilityBlock::create([
+            'starts_at' => $start,
+            'ends_at'   => $end,
+            'type'      => $data['type'],
+            'channel'   => $data['type'] === 'appointment' ? $data['channel'] : null,
+            'note'      => $data['note'] ?? null,
+        ]));
+
+        return response()->json(['message' => 'Horaire bloqué.'.$result['message'], 'failed' => $result['failed']], 201);
+    }
+
+    /** Rendez-vous menacés par un blocage ou une fermeture : confirmation demandée (409). */
+    protected function conflictsResponse(Collection $conflicts, string $message): JsonResponse
+    {
+        return response()->json([
+            'message'   => $message,
+            'conflicts' => $conflicts->map(fn (Appointment $a) => [
+                'when'   => ucfirst($a->starts_at->translatedFormat('l j F')).', '.$a->starts_at->format('H:i').'–'.$a->ends_at->format('H:i'),
+                'name'   => $a->name,
+                'email'  => $a->email,
+                'status' => $a->statusLabel(),
+            ])->values(),
+        ], 409);
+    }
+
+    /**
+     * Enregistre le blocage ou la fermeture ($create), annule les rendez-vous concernés
+     * puis invite chaque visiteur par e-mail à réserver un nouveau créneau.
+     *
+     * @return array{message: string, failed: Collection<int, string>}
+     */
+    protected function cancelConflicts(Collection $conflicts, ?string $note, SafeMailer $mailer, callable $create): array
+    {
+        DB::transaction(function () use ($conflicts, $note, $create) {
+            $create();
+            $conflicts->each(fn (Appointment $a) => $a->update(['status' => 'cancelled', 'admin_note' => $note]));
         });
 
-        // Après l'enregistrement : une panne d'e-mail n'annule pas le blocage.
+        // Après l'enregistrement : une panne d'e-mail n'annule rien.
         $failed = $conflicts->reject(fn (Appointment $a) => $mailer->queue($a->email, new AppointmentVisitorMail($a, AppointmentVisitorMail::RESCHEDULE), 'rendez-vous à déplacer'))
             ->map(fn (Appointment $a) => $a->email)->values();
 
-        $message = 'Horaire bloqué.';
+        $message = '';
         if ($conflicts->isNotEmpty()) {
             $count = $conflicts->count();
             $notified = $count - $failed->count();
@@ -274,7 +294,7 @@ class AppointmentController extends Controller
             $message .= ' E-mail impossible à envoyer : prévenez '.$failed->implode(', ').'.';
         }
 
-        return response()->json(['message' => $message, 'failed' => $failed], 201);
+        return ['message' => $message, 'failed' => $failed];
     }
 
     public function destroyBlock(AvailabilityBlock $block): JsonResponse
@@ -284,15 +304,43 @@ class AppointmentController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Ferme ou rouvre une journée (clic sur l'en-tête du jour). */
-    public function toggleClosure(Request $request): JsonResponse
+    /**
+     * Ferme ou rouvre une journée (clic sur l'en-tête du jour). Si des rendez-vous sont prévus
+     * ce jour-là, la fermeture demande confirmation (409) ; une fois confirmée, ils sont annulés
+     * et les visiteurs invités par e-mail à réserver un nouveau créneau.
+     */
+    public function toggleClosure(Request $request, SafeMailer $mailer): JsonResponse
     {
-        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'], 'reason' => ['nullable', 'string', 'max:150']]);
+        $data = $request->validate([
+            'date'    => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'reason'  => ['nullable', 'string', 'max:150'],
+            'confirm' => ['boolean'],
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
         $closure = AvailabilityClosure::whereDate('date', $data['date'])->first();
 
-        $closure ? $closure->delete() : AvailabilityClosure::create($data);
+        if ($closure) {
+            $closure->delete();
 
-        return response()->json(['closed' => ! $closure]);
+            return response()->json(['closed' => false, 'message' => 'Journée rouverte.']);
+        }
+
+        $day = Carbon::parse($data['date']);
+        $conflicts = Appointment::holding()->overlapping($day->copy()->startOfDay(), $day->copy()->endOfDay())
+            ->where('starts_at', '>', now())->orderBy('starts_at')->get();
+
+        if ($conflicts->isNotEmpty() && ! $request->boolean('confirm')) {
+            return $this->conflictsResponse($conflicts, 'Des rendez-vous sont prévus ce jour-là.');
+        }
+
+        $result = $this->cancelConflicts($conflicts, $data['message'] ?? null, $mailer,
+            fn () => AvailabilityClosure::create(['date' => $data['date'], 'reason' => $data['reason'] ?? null]));
+
+        return response()->json([
+            'closed'  => true,
+            'message' => 'Journée fermée : aucun créneau ce jour-là.'.$result['message'],
+            'failed'  => $result['failed'],
+        ]);
     }
 
     /** @return array{0: string, 1: Carbon, 2: Carbon} */

@@ -23,7 +23,7 @@
                 @if ($editable)
                     <p><strong>Glissez sur la grille</strong> pour ajouter une plage, puis choisissez « chaque semaine » ou « ce jour uniquement ».
                         <strong>Déplacez ou étirez</strong> une plage pour la modifier, <strong>cliquez</strong> dessus pour la supprimer.
-                        <strong>Cliquez sur la date</strong> en haut d'une colonne pour fermer ou rouvrir la journée (congés…).</p>
+                        <strong>Cliquez sur la date</strong> en haut d'une colonne pour fermer ou rouvrir la journée (congés…) ; si des rendez-vous sont prévus ce jour-là, ils sont listés avant confirmation.</p>
                     <p class="mt-1"><strong>Bloquer un horaire</strong> (rendez-vous pris par e-mail ou téléphone, imprévu) : glissez sur la grille puis choisissez « Bloquer ce créneau ».
                         Les rendez-vous déjà prévus sur l'horaire sont listés avant confirmation ; ils sont alors annulés et les visiteurs invités par e-mail à en réserver un autre.</p>
                 @else
@@ -103,8 +103,39 @@
         </div>
 
         {{-- Horaires bloqués : création (avec confirmation si des rendez-vous sont prévus) et détails --}}
-        <div x-data="availabilityBlocks({ storeUrl: @js(route('admin.appointments.availability.blocks.store')) })"
-             @availability-block.window="open($event.detail)" @block-open.window="info = $event.detail">
+        <div x-data="availabilityBlocks({ storeUrl: @js(route('admin.appointments.availability.blocks.store')), closureUrl: @js(route('admin.appointments.availability.closures.toggle')) })"
+             @availability-block.window="open($event.detail)" @block-open.window="info = $event.detail" @closure-conflicts.window="openClosure($event.detail)">
+            {{-- Fermeture d'une journée où des rendez-vous sont prévus : confirmation --}}
+            <div x-show="closing" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="busy || (closing = null)">
+                <template x-if="closing">
+                <form @submit.prevent="confirmClosure()" @click.outside="busy || (closing = null)" class="max-h-full w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="closure-title">
+                    <h2 id="closure-title" class="font-display text-lg font-semibold text-slate-900 first-letter:uppercase" x-text="'Fermer le ' + (closing?.label ?? '')"></h2>
+                    <div class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                        <p class="font-medium" x-text="closing?.conflicts.length > 1 ? closing.conflicts.length + ' rendez-vous sont prévus ce jour-là :' : 'Un rendez-vous est prévu ce jour-là :'"></p>
+                        <ul class="mt-2 space-y-1">
+                            <template x-for="conflict in closing?.conflicts ?? []" :key="conflict.email + conflict.when">
+                                <li>
+                                    <span class="font-medium" x-text="conflict.when"></span> —
+                                    <span x-text="conflict.name"></span> (<span x-text="conflict.email"></span>)
+                                    <span class="text-amber-700" x-text="'· ' + conflict.status"></span>
+                                </li>
+                            </template>
+                        </ul>
+                        <p class="mt-2">En confirmant, ces rendez-vous seront <strong>annulés</strong> et chaque personne recevra un e-mail l'invitant à réserver un nouveau créneau.</p>
+                    </div>
+                    <div>
+                        <label for="closure-message" class="form-label">Message ajouté à l'e-mail (facultatif)</label>
+                        <textarea id="closure-message" x-model="closing.message" rows="3" maxlength="2000" class="form-input" placeholder="Ex. : Toutes mes excuses pour ce contretemps."></textarea>
+                    </div>
+                    <p x-show="closing?.error" class="form-error" x-text="closing?.error"></p>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" class="btn-ghost" @click="closing = null">Annuler</button>
+                        <button class="btn-primary bg-red-600 hover:bg-red-700" :disabled="busy">Fermer, annuler et prévenir</button>
+                    </div>
+                </form>
+                </template>
+            </div>
+
             <div x-show="form" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="form = null">
                 <div @click.outside="busy || (form = null)" class="max-h-full w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="block-title">
                     <h2 id="block-title" class="font-display text-lg font-semibold text-slate-900">Bloquer un horaire</h2>

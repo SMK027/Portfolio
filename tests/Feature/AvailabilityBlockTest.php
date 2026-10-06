@@ -124,6 +124,37 @@ class AvailabilityBlockTest extends TestCase
         $this->assertCount(4, app(AppointmentSlots::class)->available()['2026-10-06']);
     }
 
+    public function test_closing_a_day_with_appointments_requires_confirmation_then_notifies(): void
+    {
+        $appointment = $this->appointment('2026-10-06 14:30');
+        $other = $this->appointment('2026-10-07 10:00', 'confirmed', 'autre@example.com');
+        $url = route('admin.appointments.availability.closures.toggle');
+
+        $this->postJson($url, ['date' => '2026-10-06'])->assertStatus(409)
+            ->assertJsonCount(1, 'conflicts')->assertJsonPath('conflicts.0.email', 'camille@example.com');
+        $this->assertDatabaseCount('availability_closures', 0);
+        Mail::assertNothingSent();
+
+        $this->postJson($url, ['date' => '2026-10-06', 'confirm' => true, 'message' => 'Congés imprévus.'])->assertOk()
+            ->assertJsonPath('closed', true)
+            ->assertJsonPath('message', 'Journée fermée : aucun créneau ce jour-là. 1 rendez-vous annulé, 1 visiteur prévenu par e-mail.');
+
+        $this->assertDatabaseCount('availability_closures', 1);
+        $this->assertSame('cancelled', $appointment->fresh()->status);
+        $this->assertSame('Congés imprévus.', $appointment->fresh()->admin_note);
+        $this->assertSame('confirmed', $other->fresh()->status);
+        Mail::assertSent(AppointmentVisitorMail::class, fn ($mail) => $mail->hasTo('camille@example.com') && $mail->event === AppointmentVisitorMail::RESCHEDULE);
+
+        // Réouverture : aucune confirmation nécessaire
+        $this->postJson($url, ['date' => '2026-10-06'])->assertOk()->assertJsonPath('closed', false);
+    }
+
+    public function test_closing_a_day_without_appointments_is_immediate(): void
+    {
+        $this->postJson(route('admin.appointments.availability.closures.toggle'), ['date' => '2026-10-08'])->assertOk()->assertJsonPath('closed', true);
+        Mail::assertNothingSent();
+    }
+
     public function test_writing_permission_is_required(): void
     {
         $this->actingAs(User::factory()->create(['global_role' => 'user']));

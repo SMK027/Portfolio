@@ -70,13 +70,21 @@ export function mountAvailabilityCalendar(element) {
                 .catch((e) => notify(errorOf(e)));
         },
 
-        // Clic sur l'en-tête d'un jour : fermer / rouvrir la journée.
+        // Clic sur l'en-tête d'un jour : fermer / rouvrir la journée. Des rendez-vous prévus ce
+        // jour-là ouvrent une confirmation (annulation et e-mail aux visiteurs).
         navLinks: editable,
         navLinkDayClick: (date) => {
             if (date < new Date(new Date().setHours(0, 0, 0, 0))) return notify('Impossible de fermer un jour passé.');
             window.axios.post(urls.closure, { date: dateOnly(date) })
-                .then(({ data }) => { calendar.refetchEvents(); notify(data.closed ? 'Journée fermée : aucun créneau ce jour-là.' : 'Journée rouverte.', 'success'); })
-                .catch((e) => notify(errorOf(e)));
+                .then(({ data }) => { calendar.refetchEvents(); notify(data.message, data.failed?.length ? 'error' : 'success'); })
+                .catch((e) => {
+                    if (e?.response?.status !== 409) return notify(errorOf(e));
+                    window.dispatchEvent(new CustomEvent('closure-conflicts', { detail: {
+                        date: dateOnly(date),
+                        label: date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+                        conflicts: e.response.data.conflicts,
+                    } }));
+                });
         },
         eventContent: (arg) => {
             if (arg.event.display === 'background') return { html: `<span class="fc-closed-label">${arg.event.title}</span>` };

@@ -1,9 +1,28 @@
-// Horaires bloqués (panel → Rendez-vous → Disponibilités) : création avec confirmation
-// quand des rendez-vous sont déjà prévus, consultation et suppression.
-export default ({ storeUrl }) => ({
-    form: null,   // blocage en cours de création
-    info: null,   // blocage cliqué dans le calendrier
+// Horaires bloqués et jours fermés (panel → Rendez-vous → Disponibilités) : confirmation
+// quand des rendez-vous sont déjà prévus, consultation et suppression des blocages.
+export default ({ storeUrl, closureUrl }) => ({
+    form: null,    // blocage en cours de création
+    info: null,    // blocage cliqué dans le calendrier
+    closing: null, // fermeture d'une journée où des rendez-vous sont prévus
     busy: false,
+
+    // Fermeture demandée sur une journée avec rendez-vous : confirmation.
+    openClosure(detail) {
+        this.closing = { ...detail, message: '', error: null };
+    },
+
+    async confirmClosure() {
+        this.busy = true;
+        try {
+            const { data } = await window.axios.post(closureUrl, { date: this.closing.date, message: this.closing.message, confirm: true });
+            this.closing = null;
+            this.done(data.message, data.failed?.length ? 'error' : 'success');
+        } catch (error) {
+            this.closing.error = error?.response?.data?.message ?? 'Fermeture impossible.';
+        } finally {
+            this.busy = false;
+        }
+    },
 
     // Sélection faite sur la grille, choix « Bloquer ce créneau ».
     open(detail) {
