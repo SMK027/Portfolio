@@ -140,6 +140,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::delete('/comptes-service/{serviceAccount}/codes/{token}', [Admin\ServiceAccountController::class, 'destroyToken'])->name('service-accounts.tokens.destroy');
     });
 
+    // Adresse de la page de connexion : super-administrateurs uniquement
+    Route::middleware('can:manage-login-path')->group(function () {
+        Route::get('/adresse-connexion', [Admin\LoginPathController::class, 'edit'])->name('login-path.edit');
+        Route::put('/adresse-connexion', [Admin\LoginPathController::class, 'update'])->middleware('throttle:10,1')->name('login-path.update');
+    });
+
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 });

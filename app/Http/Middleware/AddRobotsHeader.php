@@ -16,13 +16,14 @@ use Throwable;
  */
 class AddRobotsHeader
 {
-    protected const PRIVATE_PATHS = ['admin', 'admin/*', 'login', 'forgot-password', 'reset-password/*', 'profile', 'dashboard', 'verify-email*', 'confirm-password'];
+    /** Les pages de connexion (adresse modifiable) sont reconnues par leur nom de route. */
+    protected const PRIVATE_PATHS = ['admin', 'admin/*', 'forgot-password', 'reset-password/*', 'profile', 'dashboard', 'verify-email*', 'confirm-password'];
 
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
 
-        if ($request->is(...self::PRIVATE_PATHS) || ! $this->siteIsIndexable()) {
+        if ($request->is(...self::PRIVATE_PATHS) || $request->routeIs('login', 'login.*') || ! $this->siteIsIndexable()) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }
 

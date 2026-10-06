@@ -8,22 +8,26 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Services\LoginPath;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    // Adresse de connexion (« login » par défaut) modifiable depuis le panel : voir App\Services\LoginPath
+    Route::prefix(LoginPath::configured())->group(function () {
+        Route::get('/', [AuthenticatedSessionController::class, 'create'])
+            ->name('login');
 
-    // Bots : connexion par code d'application
-    Route::get('login/bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'create'])->name('login.bot');
-    Route::post('login/bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'store']);
+        // Bots : connexion par code d'application
+        Route::get('bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'create'])->name('login.bot');
+        Route::post('bot', [\App\Http\Controllers\Auth\BotLoginController::class, 'store'])->name('login.bot.store');
 
-    // L'inscription publique est désactivée : les comptes sont créés depuis l'administration.
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+        // L'inscription publique est désactivée : les comptes sont créés depuis l'administration.
+        Route::post('/', [AuthenticatedSessionController::class, 'store'])->name('login.store');
 
-    // Administrateurs : connexion directe par clé de sécurité (sans mot de passe)
-    Route::post('login/cle/options', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'options'])->middleware('throttle:20,1')->name('login.key.options');
-    Route::post('login/cle', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'store'])->middleware('throttle:20,1')->name('login.key');
+        // Administrateurs : connexion directe par clé de sécurité (sans mot de passe)
+        Route::post('cle/options', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'options'])->middleware('throttle:20,1')->name('login.key.options');
+        Route::post('cle', [\App\Http\Controllers\Auth\SecurityKeyLoginController::class, 'store'])->middleware('throttle:20,1')->name('login.key');
+    });
 
     // Second facteur (mot de passe déjà vérifié, session pas encore ouverte)
     Route::controller(\App\Http\Controllers\Auth\TwoFactorChallengeController::class)->prefix('double-authentification')->group(function () {

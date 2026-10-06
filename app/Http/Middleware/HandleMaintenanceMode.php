@@ -14,9 +14,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class HandleMaintenanceMode
 {
-    /** Toujours accessibles : connexion des administrateurs et fichiers techniques. */
+    /**
+     * Toujours accessibles : connexion des administrateurs et fichiers techniques.
+     * Les pages de connexion (adresse modifiable) sont reconnues par leur nom de route.
+     */
     protected const ALLOWED_PATHS = [
-        'login', 'login/bot', 'login/cle', 'login/cle/*', 'double-authentification', 'double-authentification/*', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
+        'double-authentification', 'double-authentification/*', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
         'admin', 'admin/*', 'robots.txt', 'sitemap.xml', 'veille/apercu/*', 'rendez-vous/annuler/*',
     ];
 
@@ -40,6 +43,7 @@ class HandleMaintenanceMode
 
         if ($user?->isAdmin()
             || $request->is(...self::ALLOWED_PATHS)
+            || $request->routeIs('login', 'login.*')
             || (($user?->canWriteArticles() || $user?->isBot()) && $request->is(...self::WRITER_PATHS))
             // Bot autorisé : site public comme hors maintenance (les pages privées restent privées)
             || $user?->hasBotPermission('maintenance.bypass')

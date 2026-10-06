@@ -110,12 +110,19 @@ Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-compléti
 
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;
-- un **bot** se connecte au panel sur `/login/bot` avec un code d'application (jamais par mot de passe). Il ne voit que les sections couvertes par ses autorisations (menu « Sections autorisées »), n'a pas de page « Mon compte » et n'utilise pas l'API. Il garde l'accès au panel pendant une maintenance ; avec l'autorisation « Accéder aux pages publiques pendant une maintenance » (`maintenance.bypass`), il voit aussi le site public (hors pages privées) ;
+- un **bot** se connecte au panel sur `/login/bot` (ou `…/bot` sous l'adresse de connexion personnalisée) avec un code d'application (jamais par mot de passe). Il ne voit que les sections couvertes par ses autorisations (menu « Sections autorisées »), n'a pas de page « Mon compte » et n'utilise pas l'API. Il garde l'accès au panel pendant une maintenance ; avec l'autorisation « Accéder aux pages publiques pendant une maintenance » (`maintenance.bypass`), il voit aussi le site public (hors pages privées) ;
 - chaque code a un intitulé ; il n'est affiché qu'une fois, et seule son empreinte SHA-256 est conservée. Un code peut être **désactivé / réactivé**, ou **supprimé définitivement** en cas de compromission. L'effet est immédiat : l'API le refuse et toute session de bot ouverte avec ce code est coupée dès la requête suivante (de même si le compte est désactivé) ;
 - chaque compte reçoit des autorisations précises, section par section du menu : **consulter**, **modifier** et **supprimer** pour la présentation, les formations, expériences, diplômes, certifications, compétences, loisirs, thèmes, projets, articles (plus « publier »), annonces, messages, pages, référencement, maintenance et comptes, ainsi que l'export et l'import. Toute requête hors autorisation est refusée et journalisée ;
 - avec la seule consultation, les formulaires s'affichent en lecture seule et les boutons de création et de suppression sont masqués. Un bot autorisé sur les comptes ne gère que des **contributeurs** : il ne peut ni créer, ni modifier, ni supprimer un administrateur ;
 - les autorisations marquées « bots uniquement » (sections sans route d'API) sont sans effet pour un compte de service ;
 - l'API est limitée à 120 requêtes par minute et par code. La documentation des routes se trouve dans la page des comptes de service.
+
+**Adresse de connexion** (*Sécurité → Adresse de connexion*, super-administrateurs, mot de passe actuel exigé) : remplace `/login` par une adresse choisie (ex. `/acces-prive`). Elle s'applique à toutes les connexions au panel : mot de passe, clé de sécurité (`…/cle`) et bots (`…/bot`) ; l'API `/api/v1` n'est pas concernée. Une fois l'adresse personnalisée, l'ancienne répond 404, le lien « Espace administrateur » disparaît du site et de la page de maintenance, et les pages du panel répondent 404 aux visiteurs non connectés au lieu de rediriger vers la connexion. Les adresses déjà utilisées par le site sont refusées. Le changement est journalisé et, en production, le cache des routes est reconstruit automatiquement. Adresse oubliée :
+
+```bash
+docker compose exec app php artisan portfolio:login-path           # affiche l'adresse
+docker compose exec app php artisan portfolio:login-path --reset   # rétablit /login
+```
 
 **Journal d'activité** (*Sécurité → Journal d'activité*, super-administrateurs) : toutes les opérations d'administration faites depuis le panel, l'API ou la console sont enregistrées :
 - connexions, déconnexions, échecs et blocages ;

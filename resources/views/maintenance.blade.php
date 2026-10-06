@@ -50,7 +50,9 @@
             @endif
         </div>
 
-        <a href="{{ route('login') }}" class="absolute bottom-4 right-4 text-xs text-slate-500 hover:text-slate-300">Espace administrateur</a>
+        @unless (\App\Services\LoginPath::isCustom())
+            <a href="{{ route('login') }}" class="absolute bottom-4 right-4 text-xs text-slate-500 hover:text-slate-300">Espace administrateur</a>
+        @endunless
     </main>
 </body>
 </html>

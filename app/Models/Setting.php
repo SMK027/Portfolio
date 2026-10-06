@@ -42,6 +42,7 @@ class Setting extends Model
     {
         return [
             self::INDEXABLE             => 'Indexation du site',
+            'auth.login_path'           => 'Adresse de la page de connexion',
             'maintenance.enabled'       => 'Maintenance : activation',
             'maintenance.ends_at'       => 'Maintenance : date de fin',
             'maintenance.reason'        => 'Maintenance : motif',

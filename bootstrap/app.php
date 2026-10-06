@@ -53,6 +53,10 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->redirectUsersTo(fn () => route('dashboard'));
+
+        // Adresse de connexion personnalisée : une page protégée répond 404 aux invités
+        // plutôt que de rediriger vers la connexion, ce qui révélerait son adresse.
+        $middleware->redirectGuestsTo(fn () => \App\Services\LoginPath::isCustom() ? abort(404) : route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // L'API répond toujours en JSON (erreurs de validation, 404, 403…).
