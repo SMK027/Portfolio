@@ -35,6 +35,7 @@ class AuditLog extends Model
         'AvailabilityRule' => 'Disponibilité',
         'AvailabilityClosure' => 'Jour fermé',
         'AvailabilitySlot' => 'Disponibilité ponctuelle',
+        'AvailabilityBlock' => 'Horaire bloqué',
         'Project'        => 'Projet',
         'SecurityKey'    => 'Clé de sécurité',
         'ProjectFile'    => 'Fichier de projet',

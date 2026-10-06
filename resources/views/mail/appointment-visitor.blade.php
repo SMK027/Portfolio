@@ -3,6 +3,10 @@
 # Votre rendez-vous est confirmé
 
 Bonjour {{ $appointment->name }}, notre échange est confirmé.
+@elseif ($event === 'reschedule')
+# Votre rendez-vous doit être déplacé
+
+Bonjour {{ $appointment->name }}, un imprévu m'empêche malheureusement de maintenir notre rendez-vous. Toutes mes excuses : merci d'en réserver un nouveau sur un autre créneau.
 @elseif ($event === 'declined')
 # Demande de rendez-vous
 
@@ -16,7 +20,7 @@ Bonjour {{ $appointment->name }}, votre demande de rendez-vous est bien enregist
 <x-mail::panel>
 **{{ ucfirst($appointment->starts_at->translatedFormat('l j F Y')) }}**, de {{ $appointment->starts_at->format('H:i') }} à {{ $appointment->ends_at->format('H:i') }}
 **Sujet :** {{ $appointment->topic }}
-@if ($event !== 'declined')
+@if (! in_array($event, ['declined', 'reschedule'], true))
 **Lieu :** {{ $settings['location'] }}
 @endif
 </x-mail::panel>
@@ -31,9 +35,9 @@ Bonjour {{ $appointment->name }}, votre demande de rendez-vous est bien enregist
 L'invitation est jointe (fichier .ics) pour l'ajouter à votre agenda.
 @endif
 
-@if ($event === 'declined')
+@if (in_array($event, ['declined', 'reschedule'], true))
 <x-mail::button :url="route('appointments.show')">
-Choisir un autre créneau
+{{ $event === 'reschedule' ? 'Réserver un nouveau créneau' : 'Choisir un autre créneau' }}
 </x-mail::button>
 @elseif ($appointment->canBeCancelled())
 Un empêchement ? [Annulez le rendez-vous]({{ $appointment->cancelUrl() }}) pour libérer le créneau.

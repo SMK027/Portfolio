@@ -17,13 +17,15 @@
              x-data="{ choice: null, notice: null, timer: null, appointment: null, deciding: null }"
              @availability-choose.window="choice = $event.detail"
              @appointment-open.window="appointment = $event.detail; deciding = null"
-             @availability-notice.window="notice = $event.detail; clearTimeout(timer); timer = setTimeout(() => notice = null, 3500)">
+             @availability-notice.window="notice = $event.detail; clearTimeout(timer); timer = setTimeout(() => notice = null, $event.detail.type === 'error' ? 10000 : 3500)">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="max-w-2xl text-sm text-slate-600">
                 @if ($editable)
                     <p><strong>Glissez sur la grille</strong> pour ajouter une plage, puis choisissez « chaque semaine » ou « ce jour uniquement ».
                         <strong>Déplacez ou étirez</strong> une plage pour la modifier, <strong>cliquez</strong> dessus pour la supprimer.
                         <strong>Cliquez sur la date</strong> en haut d'une colonne pour fermer ou rouvrir la journée (congés…).</p>
+                    <p class="mt-1"><strong>Bloquer un horaire</strong> (rendez-vous pris par e-mail ou téléphone, imprévu) : glissez sur la grille puis choisissez « Bloquer ce créneau ».
+                        Les rendez-vous déjà prévus sur l'horaire sont listés avant confirmation ; ils sont alors annulés et les visiteurs invités par e-mail à en réserver un autre.</p>
                 @else
                     <p>Consultation seule : ce compte n'est pas autorisé à modifier les disponibilités.</p>
                 @endif
@@ -33,6 +35,7 @@
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-accent-500"></span> Ce jour uniquement</li>
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-amber-500"></span> RDV en attente</li>
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-emerald-500"></span> RDV confirmé</li>
+                <li class="flex items-center gap-1.5"><span class="availability-block-swatch h-3 w-3 rounded"></span> Horaire bloqué</li>
                 <li class="flex items-center gap-1.5"><span class="availability-closed-swatch h-3 w-3 rounded"></span> Jour fermé</li>
             </ul>
         </div>
@@ -51,6 +54,9 @@
                     </button>
                     <button type="button" class="btn-secondary justify-start" @click="$dispatch('availability-create', { kind: 'date', start: choice.start, end: choice.end }); choice = null">
                         <x-icon name="calendar" class="h-4 w-4" /> Ce jour uniquement
+                    </button>
+                    <button type="button" class="btn-secondary justify-start" @click="$dispatch('availability-block', choice); choice = null">
+                        <x-icon name="no-symbol" class="h-4 w-4" /> Bloquer ce créneau
                     </button>
                     <button type="button" class="btn-ghost" @click="choice = null">Annuler</button>
                 </div>
@@ -93,6 +99,95 @@
                     </template>
                 @endif
                 <div class="text-right"><button type="button" @click="appointment = null" class="btn-ghost btn-sm">Fermer</button></div>
+            </div>
+        </div>
+
+        {{-- Horaires bloqués : création (avec confirmation si des rendez-vous sont prévus) et détails --}}
+        <div x-data="availabilityBlocks({ storeUrl: @js(route('admin.appointments.availability.blocks.store')) })"
+             @availability-block.window="open($event.detail)" @block-open.window="info = $event.detail">
+            <div x-show="form" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="form = null">
+                <div @click.outside="busy || (form = null)" class="max-h-full w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="block-title">
+                    <h2 id="block-title" class="font-display text-lg font-semibold text-slate-900">Bloquer un horaire</h2>
+                    <p class="text-sm text-slate-600 first-letter:uppercase" x-text="form?.label"></p>
+
+                    {{-- Étape 1 : nature du blocage --}}
+                    <template x-if="form && ! form.conflicts">
+                        <form class="space-y-4" @submit.prevent="save()">
+                            <fieldset class="space-y-2">
+                                <legend class="form-label">Motif</legend>
+                                @foreach (\App\Models\AvailabilityBlock::TYPES as $value => $label)
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input type="radio" value="{{ $value }}" x-model="form.type" class="border-slate-300 text-primary-600 focus:ring-primary-500"> {{ $label }}
+                                    </label>
+                                @endforeach
+                            </fieldset>
+                            <div x-show="form.type === 'appointment'">
+                                <label for="block-channel" class="form-label">Pris par</label>
+                                <select id="block-channel" x-model="form.channel" class="form-input">
+                                    @foreach (\App\Models\AvailabilityBlock::CHANNELS as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="block-note" class="form-label">Précisions (facultatif)</label>
+                                <input id="block-note" type="text" x-model="form.note" maxlength="255" class="form-input"
+                                       :placeholder="form.type === 'appointment' ? 'Ex. : Mme Durand, entretien' : 'Ex. : réunion imprévue'">
+                                <p class="form-help">Visible uniquement dans ce calendrier.</p>
+                            </div>
+                            <p x-show="form.error" class="form-error" x-text="form.error"></p>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" class="btn-ghost" @click="form = null">Annuler</button>
+                                <button class="btn-primary" :disabled="busy"><x-icon name="no-symbol" class="h-4 w-4" /> Bloquer</button>
+                            </div>
+                        </form>
+                    </template>
+
+                    {{-- Étape 2 : rendez-vous déjà prévus sur l'horaire → confirmation --}}
+                    <template x-if="form?.conflicts">
+                        <form class="space-y-4" @submit.prevent="save(true)">
+                            <div class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                                <p class="font-medium" x-text="form.conflicts.length > 1 ? form.conflicts.length + ' rendez-vous sont prévus sur cet horaire :' : 'Un rendez-vous est prévu sur cet horaire :'"></p>
+                                <ul class="mt-2 space-y-1">
+                                    <template x-for="conflict in form.conflicts" :key="conflict.email + conflict.when">
+                                        <li>
+                                            <span class="font-medium" x-text="conflict.when"></span> —
+                                            <span x-text="conflict.name"></span> (<span x-text="conflict.email"></span>)
+                                            <span class="text-amber-700" x-text="'· ' + conflict.status"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                                <p class="mt-2">En confirmant, ces rendez-vous seront <strong>annulés</strong> et chaque personne recevra un e-mail l'invitant à réserver un nouveau créneau.</p>
+                            </div>
+                            <div>
+                                <label for="block-message" class="form-label">Message ajouté à l'e-mail (facultatif)</label>
+                                <textarea id="block-message" x-model="form.message" rows="3" maxlength="2000" class="form-input" placeholder="Ex. : Toutes mes excuses pour ce contretemps."></textarea>
+                            </div>
+                            <p x-show="form.error" class="form-error" x-text="form.error"></p>
+                            <div class="flex flex-wrap justify-end gap-2">
+                                <button type="button" class="btn-ghost" @click="form.conflicts = null">Retour</button>
+                                <button class="btn-primary bg-red-600 hover:bg-red-700" :disabled="busy">Confirmer, annuler et prévenir</button>
+                            </div>
+                        </form>
+                    </template>
+                </div>
+            </div>
+
+            <div x-show="info" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="info = null">
+                <div @click.outside="info = null" class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="block-info-title">
+                    <h2 id="block-info-title" class="font-display text-lg font-semibold text-slate-900" x-text="info?.when"></h2>
+                    <dl class="space-y-1 text-sm text-slate-700">
+                        <div><dt class="inline font-medium">Motif :</dt> <dd class="inline" x-text="info?.typeLabel"></dd></div>
+                        <div x-show="info?.channel"><dt class="inline font-medium">Pris par :</dt> <dd class="inline" x-text="info?.channel"></dd></div>
+                        <div x-show="info?.note"><dt class="inline font-medium">Précisions :</dt> <dd class="inline" x-text="info?.note"></dd></div>
+                    </dl>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="info = null" class="btn-ghost">Fermer</button>
+                        @if ($editable)
+                            <button type="button" @click="remove()" :disabled="busy" class="btn-secondary text-red-600">Supprimer le blocage</button>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
 

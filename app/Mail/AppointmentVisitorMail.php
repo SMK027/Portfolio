@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
-/** E-mail au visiteur : demande reçue, confirmée ou refusée. */
+/** E-mail au visiteur : demande reçue, confirmée, refusée, ou annulée par un blocage d'horaire. */
 class AppointmentVisitorMail extends Mailable
 {
     public const RECEIVED = 'received';
@@ -18,6 +18,9 @@ class AppointmentVisitorMail extends Mailable
     public const CONFIRMED = 'confirmed';
 
     public const DECLINED = 'declined';
+
+    /** Créneau bloqué après coup : le visiteur est invité à en réserver un autre. */
+    public const RESCHEDULE = 'reschedule';
 
     public function __construct(public Appointment $appointment, public string $event)
     {
@@ -30,6 +33,7 @@ class AppointmentVisitorMail extends Mailable
         return new Envelope(subject: match ($this->event) {
             self::CONFIRMED => 'Rendez-vous confirmé — '.$when,
             self::DECLINED  => 'Demande de rendez-vous du '.$when,
+            self::RESCHEDULE => 'Rendez-vous du '.$when.' annulé — merci d\'en choisir un autre',
             default         => 'Demande de rendez-vous reçue — '.$when,
         });
     }

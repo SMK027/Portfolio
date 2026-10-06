@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\AppointmentVisitorMail;
 use App\Models\Appointment;
 use App\Models\AppointmentSettings;
+use App\Models\AvailabilityBlock;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
 use App\Models\AvailabilitySlot;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -93,7 +95,7 @@ class AppointmentController extends Controller
 
     /**
      * Événements affichés par FullCalendar sur la période demandée :
-     * plages hebdomadaires (récurrentes), plages ponctuelles, jours fermés, rendez-vous.
+     * plages hebdomadaires (récurrentes), plages ponctuelles, jours fermés, horaires bloqués, rendez-vous.
      */
     public function events(Request $request): JsonResponse
     {
@@ -128,6 +130,23 @@ class AppointmentController extends Controller
                 'display'    => 'background',
                 'classNames' => ['availability-closed'],
                 'extendedProps' => ['kind' => 'closure', 'key' => $closure->id],
+            ]),
+            ...AvailabilityBlock::where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (AvailabilityBlock $block) => [
+                'id'         => 'block-'.$block->id,
+                'title'      => $block->title(),
+                'start'      => $block->starts_at->format('Y-m-d\TH:i:s'),
+                'end'        => $block->ends_at->format('Y-m-d\TH:i:s'),
+                'editable'   => false,
+                'classNames' => ['availability-block'],
+                'extendedProps' => [
+                    'kind'      => 'block',
+                    'key'       => $block->id,
+                    'when'      => ucfirst($block->starts_at->translatedFormat('l j F Y')).', '.$block->starts_at->format('H:i').'–'.$block->ends_at->format('H:i'),
+                    'typeLabel' => $block->typeLabel(),
+                    'channel'   => $block->channel ? (AvailabilityBlock::CHANNELS[$block->channel] ?? $block->channel) : null,
+                    'note'      => $block->note,
+                    'deleteUrl' => route('admin.appointments.availability.blocks.destroy', $block),
+                ],
             ]),
             ...Appointment::holding()->where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (Appointment $appointment) => [
                 'id'         => 'appointment-'.$appointment->id,
@@ -188,6 +207,83 @@ class AppointmentController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Bloque un horaire : rendez-vous pris par un autre moyen ou modification de dernière minute.
+     *
+     * Si des rendez-vous à venir chevauchent l'horaire, rien n'est créé tant que l'administrateur
+     * n'a pas confirmé (réponse 409 avec la liste) ; une fois confirmé, ces rendez-vous sont annulés
+     * et les visiteurs reçoivent un e-mail les invitant à réserver un nouveau créneau.
+     */
+    public function storeBlock(Request $request, SafeMailer $mailer): JsonResponse
+    {
+        $data = $request->validate([
+            'start'   => ['required', 'date'],
+            'end'     => ['required', 'date', 'after:start'],
+            'type'    => ['required', 'in:'.implode(',', array_keys(AvailabilityBlock::TYPES))],
+            'channel' => ['nullable', 'required_if:type,appointment', 'in:'.implode(',', array_keys(AvailabilityBlock::CHANNELS))],
+            'note'    => ['nullable', 'string', 'max:255'],
+            'confirm' => ['boolean'],
+            'message' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'end.after'           => 'Le blocage doit finir après son début.',
+            'channel.required_if' => 'Indiquez par quel moyen ce rendez-vous a été pris.',
+        ], ['note' => 'précisions', 'message' => 'message']);
+
+        [$start, $end] = $this->sameDayRange($data['start'], $data['end']);
+        if ($end->isPast()) {
+            throw ValidationException::withMessages(['end' => 'Impossible de bloquer un horaire déjà passé.']);
+        }
+
+        $conflicts = Appointment::holding()->overlapping($start, $end)->where('starts_at', '>', now())->orderBy('starts_at')->get();
+
+        if ($conflicts->isNotEmpty() && ! $request->boolean('confirm')) {
+            return response()->json([
+                'message'   => 'Des rendez-vous sont prévus sur cet horaire.',
+                'conflicts' => $conflicts->map(fn (Appointment $a) => [
+                    'when'   => ucfirst($a->starts_at->translatedFormat('l j F')).', '.$a->starts_at->format('H:i').'–'.$a->ends_at->format('H:i'),
+                    'name'   => $a->name,
+                    'email'  => $a->email,
+                    'status' => $a->statusLabel(),
+                ])->values(),
+            ], 409);
+        }
+
+        DB::transaction(function () use ($data, $start, $end, $conflicts) {
+            AvailabilityBlock::create([
+                'starts_at' => $start,
+                'ends_at'   => $end,
+                'type'      => $data['type'],
+                'channel'   => $data['type'] === 'appointment' ? $data['channel'] : null,
+                'note'      => $data['note'] ?? null,
+            ]);
+            $conflicts->each(fn (Appointment $a) => $a->update(['status' => 'cancelled', 'admin_note' => $data['message'] ?? null]));
+        });
+
+        // Après l'enregistrement : une panne d'e-mail n'annule pas le blocage.
+        $failed = $conflicts->reject(fn (Appointment $a) => $mailer->send($a->email, new AppointmentVisitorMail($a, AppointmentVisitorMail::RESCHEDULE), 'rendez-vous à déplacer'))
+            ->map(fn (Appointment $a) => $a->email)->values();
+
+        $message = 'Horaire bloqué.';
+        if ($conflicts->isNotEmpty()) {
+            $count = $conflicts->count();
+            $notified = $count - $failed->count();
+            $message .= ' '.$count.' rendez-vous annulé'.($count > 1 ? 's' : '')
+                .($notified ? ', '.$notified.' visiteur'.($notified > 1 ? 's' : '').' prévenu'.($notified > 1 ? 's' : '').' par e-mail' : '').'.';
+        }
+        if ($failed->isNotEmpty()) {
+            $message .= ' E-mail impossible à envoyer : prévenez '.$failed->implode(', ').'.';
+        }
+
+        return response()->json(['message' => $message, 'failed' => $failed], 201);
+    }
+
+    public function destroyBlock(AvailabilityBlock $block): JsonResponse
+    {
+        $block->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
     /** Ferme ou rouvre une journée (clic sur l'en-tête du jour). */
     public function toggleClosure(Request $request): JsonResponse
     {
@@ -208,8 +304,19 @@ class AppointmentController extends Controller
             'end'   => ['required', 'date', 'after:start'],
         ], ['end.after' => 'La plage doit finir après son début.']);
 
-        $start = Carbon::parse($data['start'])->setTimezone(config('app.timezone'))->seconds(0);
-        $end = Carbon::parse($data['end'])->setTimezone(config('app.timezone'))->seconds(0);
+        return [$data['kind'], ...$this->sameDayRange($data['start'], $data['end'])];
+    }
+
+    /**
+     * Début et fin dans le fuseau du site ; une plage tient dans une seule journée
+     * (une fin à minuit pile, sélectionnée jusqu'en bas de la grille, devient 23:59).
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    protected function sameDayRange(string $start, string $end): array
+    {
+        $start = Carbon::parse($start)->setTimezone(config('app.timezone'))->seconds(0);
+        $end = Carbon::parse($end)->setTimezone(config('app.timezone'))->seconds(0);
         if (! $start->isSameDay($end) && ! ($end->isStartOfDay() && $end->copy()->subDay()->isSameDay($start))) {
             throw ValidationException::withMessages(['end' => 'Une plage doit tenir dans une seule journée.']);
         }
@@ -217,6 +324,6 @@ class AppointmentController extends Controller
             $end = $start->copy()->setTime(23, 59);
         }
 
-        return [$data['kind'], $start, $end];
+        return [$start, $end];
     }
 }

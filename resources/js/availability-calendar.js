@@ -54,11 +54,12 @@ export function mountAvailabilityCalendar(element) {
         eventDrop: (info) => save(info),
         eventResize: (info) => save(info),
 
-        // Clic sur un rendez-vous : détails et décision ; sur une plage : suppression.
+        // Clic sur un rendez-vous : détails et décision ; sur un horaire bloqué : détails ;
+        // sur une plage : suppression.
         eventClick: (info) => {
             const { kind, key } = info.event.extendedProps;
-            if (kind === 'appointment') {
-                window.dispatchEvent(new CustomEvent('appointment-open', { detail: info.event.extendedProps }));
+            if (kind === 'appointment' || kind === 'block') {
+                window.dispatchEvent(new CustomEvent(`${kind}-open`, { detail: info.event.extendedProps }));
                 return;
             }
             if (! editable || ! ['weekly', 'date'].includes(kind)) return;
@@ -97,6 +98,9 @@ export function mountAvailabilityCalendar(element) {
             .then(() => { calendar.refetchEvents(); notify('Plage ajoutée.', 'success'); })
             .catch((e) => notify(errorOf(e)));
     });
+
+    // Horaire bloqué ou supprimé depuis les fenêtres de la page.
+    window.addEventListener('availability-refresh', () => calendar.refetchEvents());
 
     calendar.render();
     return calendar;

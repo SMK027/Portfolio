@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\AppointmentSettings;
+use App\Models\AvailabilityBlock;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
 use App\Models\AvailabilitySlot;
@@ -29,7 +30,9 @@ class AppointmentSlots
         $oneOffs = AvailabilitySlot::where('ends_at', '>', $earliest)->where('starts_at', '<', $last->addDay())->get()
             ->groupBy(fn ($slot) => $slot->starts_at->toDateString());
         $closed = AvailabilityClosure::where('date', '>=', today())->pluck('date')->map->toDateString()->flip();
-        $taken = Appointment::holding()->where('ends_at', '>', $earliest)->get(['starts_at', 'ends_at']);
+        // Rendez-vous en cours et horaires bloqués (rendez-vous pris autrement, imprévus).
+        $taken = Appointment::holding()->where('ends_at', '>', $earliest)->get(['starts_at', 'ends_at'])
+            ->concat(AvailabilityBlock::where('ends_at', '>', $earliest)->where('starts_at', '<', $last->addDay())->get(['starts_at', 'ends_at']));
 
         $days = collect();
         for ($day = CarbonImmutable::today(); $day->lte($last); $day = $day->addDay()) {
