@@ -12,8 +12,22 @@
     </x-slot>
     @endif
 
+    <form method="GET" role="search" class="card flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
+        <label for="messages-search" class="sr-only">Rechercher dans les messages</label>
+        <input id="messages-search" type="search" name="q" value="{{ $search }}" maxlength="100"
+               placeholder="Rechercher (nom, e-mail, objet, contenu…)" class="form-input flex-1">
+        <div class="flex gap-2">
+            <button class="btn-primary"><x-icon name="search" class="h-4 w-4" /> Rechercher</button>
+            @if ($search !== '')<a href="{{ route('admin.messages.index') }}" class="btn-secondary">Effacer</a>@endif
+        </div>
+    </form>
+
+    @if ($search !== '' && $messages->isNotEmpty())
+        <p class="text-sm text-slate-500">{{ $messages->total() }} {{ $messages->total() > 1 ? 'messages trouvés' : 'message trouvé' }} pour « {{ $search }} ».</p>
+    @endif
+
     @if ($messages->isEmpty())
-        <x-empty-state icon="inbox" message="Aucun message reçu pour le moment." />
+        <x-empty-state icon="inbox" :message="$search !== '' ? 'Aucun message ne correspond à « '.$search.' ».' : 'Aucun message reçu pour le moment.'" />
     @else
         <div class="card divide-y divide-slate-100">
             @foreach ($messages as $message)
