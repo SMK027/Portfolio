@@ -49,4 +49,34 @@ class ContactMessageSearchTest extends TestCase
         $this->get(route('admin.messages.index', ['q' => 'Claire stage']))->assertOk()
             ->assertSee('Aucun message ne correspond');
     }
+
+    public function test_filter_by_read_status(): void
+    {
+        ContactMessage::where('subject', 'Alternance')->update(['read_at' => now()]);
+
+        $this->get(route('admin.messages.index', ['statut' => 'non-lus']))->assertOk()->assertSee('Offre de stage')->assertDontSee('Alternance');
+        $this->get(route('admin.messages.index', ['statut' => 'lus']))->assertOk()->assertSee('Alternance')->assertDontSee('Offre de stage');
+        $this->get(route('admin.messages.index', ['statut' => 'autre']))->assertSessionHasErrors('statut');
+    }
+
+    public function test_filter_by_period(): void
+    {
+        ContactMessage::where('subject', 'Alternance')->update(['created_at' => '2026-01-15 10:00:00']);
+
+        $this->get(route('admin.messages.index', ['du' => '2026-01-01', 'au' => '2026-01-31']))->assertOk()
+            ->assertSee('Alternance')->assertDontSee('Offre de stage')->assertSee('1 message trouvé');
+        $this->get(route('admin.messages.index', ['du' => '2026-01-16']))->assertOk()->assertDontSee('Alternance');
+        $this->get(route('admin.messages.index', ['au' => '2026-01-14']))->assertOk()->assertSee('Aucun message ne correspond à ces filtres');
+    }
+
+    public function test_message_can_be_marked_as_unread(): void
+    {
+        $message = ContactMessage::where('subject', 'Alternance')->sole();
+
+        $this->get(route('admin.messages.show', $message))->assertOk()->assertSee('Marquer comme non lu');
+        $this->assertNotNull($message->fresh()->read_at);
+
+        $this->patch(route('admin.messages.unread', $message))->assertRedirect(route('admin.messages.index'));
+        $this->assertNull($message->fresh()->read_at);
+    }
 }

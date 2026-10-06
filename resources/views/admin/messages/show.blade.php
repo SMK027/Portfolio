@@ -2,6 +2,10 @@
     <x-slot name="title">{{ $message->subject }}</x-slot>
     <x-slot name="header">Message</x-slot>
     <x-slot name="actions">
+        <form method="POST" action="{{ route('admin.messages.unread', $message) }}">
+            @csrf @method('PATCH')
+            <button class="btn-secondary" title="Le message réapparaît comme non lu dans la liste"><x-icon name="mail" class="h-4 w-4" /> <span class="hidden sm:inline">Marquer comme non lu</span></button>
+        </form>
         <a href="{{ route('admin.messages.index') }}" class="btn-secondary"><x-icon name="arrow-left" class="h-4 w-4" /> Retour</a>
     </x-slot>
 

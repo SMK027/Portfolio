@@ -198,6 +198,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->middleware($panel('messages.read'))->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
+    Route::patch('/messages/{message}/non-lu', [Admin\ContactMessageController::class, 'markUnread'])->middleware($panel('messages.read'))->name('messages.unread');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->middleware($panel('messages.delete'))->name('messages.destroy');
 
     Route::get('/rendez-vous', [Admin\AppointmentController::class, 'index'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.index');
