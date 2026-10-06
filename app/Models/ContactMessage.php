@@ -24,6 +24,15 @@ class ContactMessage extends Model
         ];
     }
 
+    /**
+     * Notification encore dans la file d'attente : les e-mails partent en arrière-plan,
+     * avec jusqu'à 3 tentatives sur ~6 minutes (App\Jobs\SendMail).
+     */
+    public function notificationPending(): bool
+    {
+        return ! $this->notified_at && config('queue.default') !== 'sync' && $this->created_at?->gt(now()->subMinutes(15));
+    }
+
     public function fullName(): string
     {
         return $this->first_name.' '.$this->last_name;

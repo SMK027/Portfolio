@@ -40,7 +40,7 @@
                         </div>
                         <p class="flex items-center gap-2 text-sm {{ $message->read_at ? 'text-slate-600' : 'font-medium text-slate-800' }}">
                             <span class="truncate">{{ $message->subject }}</span>
-                            @unless ($message->notified_at)
+                            @unless ($message->notified_at || $message->notificationPending())
                                 <span class="badge-amber flex-none" title="La notification par e-mail n'a pas pu être envoyée">E-mail non envoyé</span>
                             @endunless
                         </p>

@@ -78,4 +78,17 @@ class QueuedMailTest extends TestCase
         Queue::assertPushed(SendMail::class, fn (SendMail $job) => $job->markSent?->is(ContactMessage::sole()));
         $this->assertNull(ContactMessage::sole()->notified_at); // pas encore parti
     }
+
+    public function test_queued_notification_shows_as_pending_then_as_failed(): void
+    {
+        config(['queue.default' => 'database']);
+        $message = $this->message();
+        $this->actingAs(\App\Models\User::factory()->admin()->create());
+
+        $this->get(route('admin.messages.show', $message))->assertSee('envoi en cours')->assertDontSee('non envoyée');
+        $this->get(route('admin.messages.index'))->assertDontSee('E-mail non envoyé');
+
+        $this->travel(20)->minutes(); // toutes les tentatives ont échoué
+        $this->get(route('admin.messages.show', $message))->assertSee('non envoyée');
+    }
 }

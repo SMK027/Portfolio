@@ -17,6 +17,8 @@
                     <dd>
                         @if ($message->notified_at)
                             <span class="text-emerald-700">envoyée par e-mail</span>
+                        @elseif ($message->notificationPending())
+                            <span class="text-slate-600">envoi en cours</span>
                         @else
                             <span class="text-amber-700">non envoyée (problème d'envoi d'e-mails)</span>
                         @endif
