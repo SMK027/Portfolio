@@ -67,6 +67,9 @@ return [
 
     'timezone' => env('APP_TIMEZONE', 'Europe/Paris'),
 
+    // En-têtes de sécurité HTTP (App\Http\Middleware\AddSecurityHeaders) ; false pour les désactiver.
+    'security_headers' => (bool) env('SECURITY_HEADERS', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

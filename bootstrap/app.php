@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Après TrustProxies (pile globale par défaut), pour lire l'IP réelle du visiteur.
         $middleware->append(\App\Http\Middleware\BlockBannedIp::class);
 
+        // En-têtes de sécurité (CSP, HSTS, X-Frame-Options…) sur toutes les réponses.
+        $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
+
         // Global (et non "web") pour couvrir aussi les erreurs 404 hors route.
         $middleware->append(\App\Http\Middleware\AddRobotsHeader::class);
 
