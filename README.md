@@ -202,6 +202,8 @@ docker compose -f docker-compose.yml up -d --build
 
 En développement, `docker-compose.dev.yml` fournit toujours son propre MariaDB, avec phpMyAdmin et Mailpit.
 
+**E-mails en arrière-plan** : les notifications (contact, rendez-vous, validation d'articles) passent par la file d'attente (`QUEUE_CONNECTION=database`), traitée par un processus lancé par le conteneur (journal : `/var/log/laravel-queue.log`). Trois tentatives espacées ; après le dernier échec, l'erreur s'affiche sur le tableau de bord. L'e-mail de test et la réinitialisation de mot de passe restent envoyés immédiatement. Avec `QUEUE_CONNECTION=sync`, tout est envoyé directement.
+
 L'image de production compile elle-même les assets (étape Node du `Dockerfile`) : aucun `npm run build` n'est nécessaire sur le serveur. Laravel fait confiance aux en-têtes `X-Forwarded-*` de Traefik (réseaux Docker privés uniquement), ce qui lui permet de générer des URL en `https://`.
 
 ### Dépannage : accents mal encodés (« Ã© » au lieu de « é »)

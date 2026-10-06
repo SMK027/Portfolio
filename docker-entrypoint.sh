@@ -105,5 +105,20 @@ chmod 0644 /etc/cron.d/laravel-scheduler
 cron
 echo "[entrypoint] Scheduler Laravel démarré."
 
+# File d'attente (e-mails envoyés en arrière-plan) : relancée automatiquement si elle s'arrête.
+# En développement, queue:listen relit le code à chaque tâche ; en production, queue:work
+# est redémarré toutes les heures (--max-time) pour libérer la mémoire.
+if [ "${QUEUE_CONNECTION:-database}" != "sync" ]; then
+    if [ "$APP_ENV" = "production" ]; then
+        queue_cmd="php artisan queue:work --sleep=3 --tries=3 --max-time=3600"
+    else
+        queue_cmd="php artisan queue:listen --sleep=3 --tries=3"
+    fi
+    touch /var/log/laravel-queue.log
+    chown www-data:www-data /var/log/laravel-queue.log
+    (while true; do su -s /bin/sh www-data -c "cd /var/www/html && $queue_cmd" >> /var/log/laravel-queue.log 2>&1; sleep 5; done) &
+    echo "[entrypoint] File d'attente démarrée."
+fi
+
 # Démarrer Apache
 exec apache2-foreground

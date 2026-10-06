@@ -82,8 +82,8 @@ class AppointmentController extends Controller
             ]);
         });
 
-        $this->mailer->send($appointment->email, new AppointmentVisitorMail($appointment, AppointmentVisitorMail::RECEIVED), 'accusé de rendez-vous');
-        $this->mailer->send($this->ownerEmail(), new AppointmentOwnerMail($appointment, AppointmentOwnerMail::REQUESTED), 'notification de rendez-vous');
+        $this->mailer->queue($appointment->email, new AppointmentVisitorMail($appointment, AppointmentVisitorMail::RECEIVED), 'accusé de rendez-vous');
+        $this->mailer->queue($this->ownerEmail(), new AppointmentOwnerMail($appointment, AppointmentOwnerMail::REQUESTED), 'notification de rendez-vous');
 
         return redirect()->route('appointments.show')->with('success',
             'Demande envoyée pour le '.$start->translatedFormat('l j F à H:i').'. Vous recevrez un e-mail de confirmation.');
@@ -100,7 +100,7 @@ class AppointmentController extends Controller
         $appointment = Appointment::where('cancel_token', $token)->firstOrFail();
         if ($appointment->canBeCancelled()) {
             $appointment->update(['status' => 'cancelled']);
-            $this->mailer->send($this->ownerEmail(), new AppointmentOwnerMail($appointment, AppointmentOwnerMail::CANCELLED), 'annulation de rendez-vous');
+            $this->mailer->queue($this->ownerEmail(), new AppointmentOwnerMail($appointment, AppointmentOwnerMail::CANCELLED), 'annulation de rendez-vous');
         }
 
         return redirect()->route('appointments.cancel', $token);

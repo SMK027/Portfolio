@@ -299,14 +299,14 @@ class ArticleController extends Controller
     protected function notifyAdmins(Article $article): void
     {
         User::whereIn('global_role', ['admin', 'superadmin'])->pluck('email')
-            ->each(fn ($email) => $this->mailer->send($email, new ArticleReviewNotification($article->fresh(['author']), ArticleReviewNotification::SUBMITTED), 'article soumis à validation'));
+            ->each(fn ($email) => $this->mailer->queue($email, new ArticleReviewNotification($article->fresh(['author']), ArticleReviewNotification::SUBMITTED), 'article soumis à validation'));
     }
 
     protected function notifyAuthor(Article $article, string $event): void
     {
         $article->load('author', 'reviewer');
         if ($article->author) {
-            $this->mailer->send($article->author->email, new ArticleReviewNotification($article, $event), 'décision de validation d\'article');
+            $this->mailer->queue($article->author->email, new ArticleReviewNotification($article, $event), 'décision de validation d\'article');
         }
     }
 }

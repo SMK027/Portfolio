@@ -45,9 +45,8 @@ class ContactController extends Controller
 
         // Le message est déjà enregistré : un échec d'envoi (panne SMTP, configuration
         // invalide…) ne doit ni le perdre ni gêner le visiteur. Il reste lisible dans l'admin.
-        if ($mailer->send($recipient, new ContactMessageReceived($message), 'notification de contact')) {
-            $message->update(['notified_at' => now()]);
-        }
+        // La date d'envoi (notified_at) est enregistrée une fois l'e-mail réellement parti.
+        $mailer->queue($recipient, new ContactMessageReceived($message), 'notification de contact', markSent: $message);
 
         return redirect()->route('contact.show')
             ->with('success', 'Merci ! Votre message a bien été envoyé, je vous répondrai rapidement.');

@@ -173,7 +173,7 @@ class ArticleController extends Controller
 
         if ($submitted) {
             $this->audit->record('article.submitted', $article);
-            User::whereIn('global_role', ['admin', 'superadmin'])->pluck('email')->each(fn ($email) => $this->mailer->send(
+            User::whereIn('global_role', ['admin', 'superadmin'])->pluck('email')->each(fn ($email) => $this->mailer->queue(
                 $email, new ArticleReviewNotification($article->fresh(['author']), ArticleReviewNotification::SUBMITTED), 'article soumis à validation'
             ));
         }

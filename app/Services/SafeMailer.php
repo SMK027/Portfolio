@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Jobs\SendMail;
 use App\Models\Setting;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -35,6 +37,49 @@ class SafeMailer
 
             return true;
         }, $context);
+    }
+
+    /**
+     * Envoie un Mailable en arrière-plan (file d'attente) : la page n'attend pas le serveur SMTP.
+     * Retourne false si l'envoi est d'emblée impossible (destinataire ou configuration invalide).
+     * Sans file d'attente (QUEUE_CONNECTION=sync), l'envoi est direct, comme send().
+     *
+     * @param  Model|null  $markSent  élément dont la colonne $column reçoit la date d'envoi effectif
+     */
+    public function queue(?string $to, Mailable $mailable, string $context = 'e-mail', ?Model $markSent = null, string $column = 'notified_at'): bool
+    {
+        if (config('queue.default') === 'sync') {
+            $sent = $this->send($to, $mailable, $context);
+            if ($sent) {
+                $markSent?->forceFill([$column => now()])->saveQuietly();
+            }
+
+            return $sent;
+        }
+
+        if (blank($to) || Validator::make(['to' => $to], ['to' => 'email'])->fails()) {
+            return $this->fail($context, 'destinataire absent ou invalide ('.($to ?: 'vide').')');
+        }
+        if ($problem = $this->configurationProblem()) {
+            return $this->fail($context, $problem);
+        }
+
+        try {
+            SendMail::dispatch($to, $mailable, $context, $markSent, $column);
+        } catch (Throwable $e) {
+            // File indisponible : on tente l'envoi direct plutôt que de perdre l'e-mail.
+            report($e);
+
+            return $this->send($to, $mailable, $context);
+        }
+
+        return true;
+    }
+
+    /** Échec signalé par un envoi en arrière-plan (App\Jobs\SendMail). */
+    public function reportFailure(string $context, string $reason): void
+    {
+        $this->fail($context, $reason);
     }
 
     /**

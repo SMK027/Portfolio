@@ -53,7 +53,7 @@ class AppointmentController extends Controller
 
         $appointment->update(['status' => $data['decision'], 'admin_note' => $data['admin_note'] ?? null]);
         $event = $data['decision'] === 'confirmed' ? AppointmentVisitorMail::CONFIRMED : AppointmentVisitorMail::DECLINED;
-        $sent = $mailer->send($appointment->email, new AppointmentVisitorMail($appointment, $event), 'décision de rendez-vous');
+        $sent = $mailer->queue($appointment->email, new AppointmentVisitorMail($appointment, $event), 'décision de rendez-vous');
 
         return back()->with($sent ? 'success' : 'error', ($data['decision'] === 'confirmed' ? 'Rendez-vous confirmé' : 'Rendez-vous refusé')
             .($sent ? ' ; le visiteur a été prévenu par e-mail.' : ', mais l\'e-mail n\'a pas pu être envoyé : prévenez le visiteur ('.$appointment->email.').'));
@@ -260,7 +260,7 @@ class AppointmentController extends Controller
         });
 
         // Après l'enregistrement : une panne d'e-mail n'annule pas le blocage.
-        $failed = $conflicts->reject(fn (Appointment $a) => $mailer->send($a->email, new AppointmentVisitorMail($a, AppointmentVisitorMail::RESCHEDULE), 'rendez-vous à déplacer'))
+        $failed = $conflicts->reject(fn (Appointment $a) => $mailer->queue($a->email, new AppointmentVisitorMail($a, AppointmentVisitorMail::RESCHEDULE), 'rendez-vous à déplacer'))
             ->map(fn (Appointment $a) => $a->email)->values();
 
         $message = 'Horaire bloqué.';
