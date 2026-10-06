@@ -3,6 +3,7 @@
     $unread = $user->can('panel', 'messages.read') ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
     $maintenanceActive = $user->can('panel', 'maintenance.read|maintenance.manage') && app(\App\Services\Maintenance::class)->isActive();
 
+    $activeBans = $user->isSuperAdmin() ? \App\Models\IpBan::active()->count() : 0;
     $pendingArticles = $user->isAdmin() ? \App\Models\Article::pendingReview()->count() : 0;
     $pendingAppointments = $user->can('panel', 'appointments.read|appointments.write')
         ? \App\Models\Appointment::where('status', 'pending')->where('starts_at', '>=', now())->count() : 0;
@@ -22,6 +23,7 @@
             ...($sections['Comptes et sécurité'] ?? []),
             ['admin.service-accounts.index', 'Comptes de service et bots', 'cog', 'admin.service-accounts.*'],
             ['admin.login-path.edit', 'Adresse de connexion', 'lock', 'admin.login-path.*'],
+            ['admin.ip-bans.index', 'Adresses IP bannies', 'no-symbol', 'admin.ip-bans.*'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
         ];
     }
@@ -31,6 +33,7 @@
         'admin.articles.index'     => $pendingArticles ? [$pendingArticles, 'bg-amber-400 text-amber-950', 'Articles à valider'] : null,
         'admin.appointments.index' => $pendingAppointments ? [$pendingAppointments, 'bg-amber-400 text-amber-950', 'Demandes à confirmer'] : null,
         'admin.messages.index'     => $unread ? [$unread, 'bg-primary-500 text-white', 'Messages non lus'] : null,
+        'admin.ip-bans.index'      => $activeBans ? [$activeBans, 'bg-red-500 text-white', 'Adresses IP bannies'] : null,
         'admin.maintenance.edit'   => $maintenanceActive ? ['Active', 'bg-amber-400 text-amber-950', 'Maintenance active'] : null,
     ]);
 @endphp

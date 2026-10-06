@@ -146,6 +146,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::put('/adresse-connexion', [Admin\LoginPathController::class, 'update'])->middleware('throttle:10,1')->name('login-path.update');
     });
 
+    // Adresses IP bannies après des échecs de connexion : super-administrateurs uniquement
+    Route::resource('ip-bannies', Admin\IpBanController::class)
+        ->only(['index', 'edit', 'update', 'destroy'])
+        ->parameters(['ip-bannies' => 'ipBan'])->names('ip-bans')
+        ->middleware('can:manage-ip-bans');
+
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 });

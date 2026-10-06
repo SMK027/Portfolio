@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $audit = fn () => app(AuditTrail::class);
 
         Event::listen(Login::class, fn (Login $e) => $audit()->record('auth.login', $e->user, meta: ['remember' => $e->remember], force: true));
+        // Connexion réussie : les échecs précédents de l'IP ne comptent plus pour le bannissement.
+        Event::listen(Login::class, fn () => app(\App\Services\LoginBan::class)->clearFailures(request()->ip()));
         Event::listen(Logout::class, fn (Logout $e) => $e->user && $audit()->record('auth.logout', $e->user, force: true));
         Event::listen(Failed::class, fn (Failed $e) => $audit()->record('auth.failed', $e->user, meta: [
             'email' => Str::limit((string) ($e->credentials['email'] ?? ''), 100),
@@ -78,6 +80,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-login-path', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('manage-ip-bans', fn (User $user) => $user->isSuperAdmin());
 
         // API : 120 requêtes par minute et par code d'application (ou par IP sans code).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by(

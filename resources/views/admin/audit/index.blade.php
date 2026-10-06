@@ -46,9 +46,9 @@
                             <td>
                                 <span @class([
                                     'badge',
-                                    'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200' => str_ends_with($log->action, '.deleted') || in_array($log->action, ['auth.failed', 'auth.lockout', 'api.auth_failed', 'api.forbidden'], true),
+                                    'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200' => str_ends_with($log->action, '.deleted') || in_array($log->action, ['auth.failed', 'auth.lockout', 'auth.ip_banned', 'api.auth_failed', 'api.forbidden'], true),
                                     'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' => str_ends_with($log->action, '.created'),
-                                    'badge-slate' => ! str_ends_with($log->action, '.deleted') && ! str_ends_with($log->action, '.created') && ! in_array($log->action, ['auth.failed', 'auth.lockout', 'api.auth_failed', 'api.forbidden'], true),
+                                    'badge-slate' => ! str_ends_with($log->action, '.deleted') && ! str_ends_with($log->action, '.created') && ! in_array($log->action, ['auth.failed', 'auth.lockout', 'auth.ip_banned', 'api.auth_failed', 'api.forbidden'], true),
                                 ])>{{ $log->actionLabel() }}</span>
                             </td>
                             <td class="hidden text-sm md:table-cell">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditTrail;
+use App\Services\LoginBan;
 use App\Services\WebAuthn;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -118,6 +119,7 @@ class TwoFactorChallengeController extends Controller
     {
         RateLimiter::hit($this->throttleKey($user), 300);
         $this->audit->record('auth.two_factor_failed', $user, meta: ['méthode' => $method], force: true);
+        app(LoginBan::class)->recordFailure(request()->ip(), 'second facteur ('.$method.')');
     }
 
     protected function ensureIsNotRateLimited(User $user): void

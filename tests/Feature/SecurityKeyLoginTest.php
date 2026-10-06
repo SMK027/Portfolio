@@ -45,6 +45,8 @@ class SecurityKeyLoginTest extends TestCase
 
     public function test_refused_key_is_logged_and_rate_limited(): void
     {
+        // Limite propre à ce mode de connexion : sans le bannissement d'IP, qui intervient dès 3 échecs (IpBanTest).
+        config(['auth.login_ban.enabled' => false]);
         $this->mock(WebAuthn::class, fn ($mock) => $mock->shouldReceive('verifyLogin')->andReturn(null));
 
         foreach (range(1, 10) as $i) {

@@ -112,6 +112,8 @@ class TwoFactorTest extends TestCase
 
     public function test_attempts_are_limited(): void
     {
+        // Limite propre à ce mode de connexion : sans le bannissement d'IP, qui intervient dès 3 échecs (IpBanTest).
+        config(['auth.login_ban.enabled' => false]);
         $user = $this->admin();
         $this->enableTotp($user);
         $this->login($user);

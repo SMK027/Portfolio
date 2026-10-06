@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditTrail;
+use App\Services\LoginBan;
 use App\Services\WebAuthn;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class SecurityKeyLoginController extends Controller
         return response()->json($webauthn->loginOptions($user));
     }
 
-    public function store(Request $request, WebAuthn $webauthn, AuditTrail $audit): JsonResponse
+    public function store(Request $request, WebAuthn $webauthn, AuditTrail $audit, LoginBan $bans): JsonResponse
     {
         $key = 'key-login:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
@@ -41,6 +42,7 @@ class SecurityKeyLoginController extends Controller
         if (! $user) {
             RateLimiter::hit($key, 300);
             $audit->record('auth.failed', null, meta: ['méthode' => 'clé de sécurité (sans mot de passe)'], force: true);
+            $bans->recordFailure($request->ip(), 'clé de sécurité');
 
             return response()->json(['message' => 'Clé refusée : elle n\'est pas enregistrée sur un compte administrateur, ou la vérification (PIN, empreinte) a échoué.'], 422);
         }

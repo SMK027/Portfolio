@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Services\LoginBan;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -54,6 +55,7 @@ class LoginRequest extends FormRequest
         if (! $user instanceof User || $user->isMachine() || ! $provider->validateCredentials($user, $credentials)) {
             event(new Failed('web', $user, $credentials));
             RateLimiter::hit($this->throttleKey());
+            app(LoginBan::class)->recordFailure($this->ip(), 'mot de passe');
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),

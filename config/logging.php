@@ -73,6 +73,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Bannissements d'adresses IP (App\Services\LoginBan) : storage/logs/security-AAAA-MM-JJ.log
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => env('LOG_SECURITY_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

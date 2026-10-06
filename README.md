@@ -124,6 +124,13 @@ docker compose exec app php artisan portfolio:login-path           # affiche l'a
 docker compose exec app php artisan portfolio:login-path --reset   # rétablit /login
 ```
 
+**Bannissement des adresses IP** (fail2ban, *Sécurité → Adresses IP bannies*, super-administrateurs) : après **3 échecs de connexion en 15 minutes** depuis une même adresse IP (mot de passe, clé de sécurité, code de bot ou second facteur), cette adresse est bannie de **tout le site, API comprise**, pendant **45 minutes** (réponse 403 avec en-tête `Retry-After`). Une connexion réussie remet le compteur à zéro. Les super-administrateurs voient les bannissements en cours et peuvent les **lever** ou les **modifier** (date de fin, sans date de fin, motif). Chaque bannissement, modification et levée est enregistré dans le journal d'activité et dans `storage/logs/security-AAAA-MM-JJ.log` (conservé 90 jours) ; les bannissements terminés sont supprimés après 3 mois. Seuils réglables dans `.env` : `LOGIN_BAN_MAX_ATTEMPTS`, `LOGIN_BAN_WINDOW`, `LOGIN_BAN_DURATION` (minutes), `LOGIN_BAN_ENABLED=false` pour désactiver. Si vous avez banni votre propre adresse :
+
+```bash
+docker compose exec app php artisan portfolio:ip-ban                      # liste les adresses bannies
+docker compose exec app php artisan portfolio:ip-ban 203.0.113.7 --lift   # lève un bannissement
+```
+
 **Journal d'activité** (*Sécurité → Journal d'activité*, super-administrateurs) : toutes les opérations d'administration faites depuis le panel, l'API ou la console sont enregistrées :
 - connexions, déconnexions, échecs et blocages ;
 - créations, modifications (avec les champs avant / après) et suppressions ;

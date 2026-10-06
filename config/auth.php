@@ -114,4 +114,24 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bannissement des adresses IP (fail2ban)
+    |--------------------------------------------------------------------------
+    |
+    | Après « max_attempts » échecs de connexion en « window » minutes (mot de
+    | passe, clé de sécurité, code de bot ou second facteur), l'adresse IP est
+    | bannie de tout le site pendant « duration » minutes. Voir App\Services\LoginBan.
+    |
+    */
+
+    'login_ban' => [
+        'enabled'      => (bool) env('LOGIN_BAN_ENABLED', true),
+        'max_attempts' => (int) env('LOGIN_BAN_MAX_ATTEMPTS', 3),
+        'window'       => (int) env('LOGIN_BAN_WINDOW', 15),
+        'duration'     => (int) env('LOGIN_BAN_DURATION', 45),
+        // Canal de log (config/logging.php) ; LOGIN_BAN_LOG_CHANNEL=null (tests) : aucun log
+        'log_channel'  => env('LOGIN_BAN_LOG_CHANNEL', 'security') ?: 'null',
+    ],
+
 ];

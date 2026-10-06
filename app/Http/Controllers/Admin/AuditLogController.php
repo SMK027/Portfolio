@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class AuditLogController extends Controller
 {
     public const CATEGORIES = [
-        'auth'     => 'Authentification',
+        'auth'     => 'Authentification (connexions, bannissements IP)',
         'api'      => 'API',
         'article'  => 'Articles',
         'project'  => 'Projets',
@@ -72,7 +72,7 @@ class AuditLogController extends Controller
     protected function applyCategory($query, string $category): void
     {
         match ($category) {
-            'auth'    => $query->where('action', 'like', 'auth.%'),
+            'auth'    => $query->where(fn ($q) => $q->where('action', 'like', 'auth.%')->orWhere('action', 'like', 'ip_ban.%')),
             'api'     => $query->where('action', 'like', 'api.%'),
             'article' => $query->where(fn ($q) => $q->where('action', 'like', 'article.%')->orWhere('action', 'like', 'article_file.%')),
             'project' => $query->where(fn ($q) => $q->where('action', 'like', 'project.%')->orWhere('action', 'like', 'project_file.%')),
@@ -81,7 +81,7 @@ class AuditLogController extends Controller
             'service' => $query->where(fn ($q) => $q->where('action', 'like', 'service_token.%')->orWhere('actor_role', 'service')->orWhere('action', 'like', 'service_account.%')),
             'setting' => $query->where('action', 'like', 'setting.%'),
             default   => $query->where(fn ($q) => $q
-                ->where('action', 'not like', 'auth.%')->where('action', 'not like', 'api.%')
+                ->where('action', 'not like', 'auth.%')->where('action', 'not like', 'ip_ban.%')->where('action', 'not like', 'api.%')
                 ->where('action', 'not like', 'article%')->where('action', 'not like', 'project%')
                 ->where('action', 'not like', 'content.%')->where('action', 'not like', 'user.%')
                 ->where('action', 'not like', 'setting.%')->where('action', 'not like', 'service%')),

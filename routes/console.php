@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Statistiques de visite : données de plus de 13 mois supprimées chaque nuit.
 Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dailyAt('03:30')->name('statistiques:purge');
 
+// Bannissements d'adresses IP terminés depuis plus de 3 mois : supprimés chaque nuit.
+Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('03:40')->name('ip-bannies:purge');
+
 // Dépôts GitHub des projets : rafraîchis avant l'expiration du cache (12 h).
 Schedule::call(fn () => app(\App\Services\GithubRepositories::class)->refreshAll())->everySixHours()->name('github:rafraichir');
 

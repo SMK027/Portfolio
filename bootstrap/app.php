@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // API : limitation de débit (limiteur « api » défini dans AppServiceProvider).
         $middleware->throttleApi();
 
+        // IP bannies après des échecs de connexion répétés : tout le site, API comprise.
+        // Après TrustProxies (pile globale par défaut), pour lire l'IP réelle du visiteur.
+        $middleware->append(\App\Http\Middleware\BlockBannedIp::class);
+
         // Global (et non "web") pour couvrir aussi les erreurs 404 hors route.
         $middleware->append(\App\Http\Middleware\AddRobotsHeader::class);
 

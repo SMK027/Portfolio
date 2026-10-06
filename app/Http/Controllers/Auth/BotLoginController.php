@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceToken;
 use App\Services\AuditTrail;
+use App\Services\LoginBan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ class BotLoginController extends Controller
         return view('auth.bot-login');
     }
 
-    public function store(Request $request, AuditTrail $audit): RedirectResponse
+    public function store(Request $request, AuditTrail $audit, LoginBan $bans): RedirectResponse
     {
         $request->validate(['code' => ['required', 'string', 'max:100']], [], ['code' => 'code d\'application']);
 
@@ -46,6 +47,7 @@ class BotLoginController extends Controller
                 'méthode' => 'code d\'application (bot)',
                 'préfixe' => substr($plain, 0, 12),
             ], force: true);
+            $bans->recordFailure($request->ip(), 'code d\'application (bot)');
 
             throw ValidationException::withMessages(['code' => 'Code invalide, désactivé, ou compte bot désactivé.']);
         }
