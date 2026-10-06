@@ -10,6 +10,7 @@ use App\Models\AvailabilityBlock;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
 use App\Models\AvailabilitySlot;
+use App\Services\AppointmentReminders;
 use App\Services\SafeMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +54,9 @@ class AppointmentController extends Controller
         abort_unless($appointment->status === 'pending' || ($appointment->status === 'confirmed' && $data['decision'] === 'declined'), 409);
 
         $appointment->update(['status' => $data['decision'], 'admin_note' => $data['admin_note'] ?? null]);
+        if ($data['decision'] === 'confirmed') {
+            AppointmentReminders::skipCovered($appointment);
+        }
         $event = $data['decision'] === 'confirmed' ? AppointmentVisitorMail::CONFIRMED : AppointmentVisitorMail::DECLINED;
         $sent = $mailer->queue($appointment->email, new AppointmentVisitorMail($appointment, $event), 'décision de rendez-vous');
 
@@ -81,6 +85,8 @@ class AppointmentController extends Controller
             'horizon_days' => ['required', 'integer', 'min:1', 'max:180'],
             'location'     => ['required', 'string', 'max:255'],
             'topics'       => ['required', 'string', 'max:500'],
+            'reminder_day'  => ['boolean'],
+            'reminder_hour' => ['boolean'],
         ], [], ['duration' => 'durée', 'notice_hours' => 'délai de prévenance', 'horizon_days' => 'horizon', 'location' => 'lieu', 'topics' => 'sujets']);
 
         AppointmentSettings::save([
@@ -88,6 +94,8 @@ class AppointmentController extends Controller
             'notice_hours' => (int) $data['notice_hours'],
             'horizon_days' => (int) $data['horizon_days'],
             'location'     => $data['location'],
+            'reminder_day'  => $request->boolean('reminder_day'),
+            'reminder_hour' => $request->boolean('reminder_hour'),
             'topics'       => collect(explode(',', $data['topics']))->map(fn ($t) => trim($t))->filter()->unique()->values()->all() ?: AppointmentSettings::DEFAULTS['topics'],
         ]);
 

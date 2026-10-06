@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Statistiques de visite : données de plus de 13 mois supprimées chaque nuit.
 Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dailyAt('03:30')->name('statistiques:purge');
 
+// Rappels des rendez-vous confirmés (la veille et 1 h avant).
+Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())->everyFiveMinutes()->name('rendez-vous:rappels');
+
 // Comptes du personnel arrivés à leur date de désactivation programmée.
 Schedule::call(fn () => \App\Models\User::deactivateExpired())->everyMinute()->name('comptes:desactivation');
 

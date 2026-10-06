@@ -238,6 +238,11 @@
             </div>
             <x-form.input name="location" label="Lieu ou modalité" :value="$settings['location']" required maxlength="255" help="Affiché aux visiteurs et dans l'invitation d'agenda." />
             <x-form.input name="topics" label="Sujets proposés" :value="implode(', ', $settings['topics'])" required maxlength="500" help="Séparés par des virgules." />
+            <fieldset class="space-y-2">
+                <legend class="form-label">Rappels par e-mail (rendez-vous confirmés)</legend>
+                <x-form.checkbox name="reminder_day" label="La veille (24 h avant), avec l'invitation d'agenda" :checked="$settings['reminder_day']" />
+                <x-form.checkbox name="reminder_hour" label="1 h avant" :checked="$settings['reminder_hour']" />
+            </fieldset>
         </x-admin.section>
         <x-admin.form-actions can="appointments.write" :cancel="route('admin.appointments.index')" />
     </form>

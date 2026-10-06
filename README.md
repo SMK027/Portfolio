@@ -70,6 +70,7 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 - disponibilités dans un calendrier (FullCalendar) : glisser sur la grille pour ajouter une plage « chaque semaine » ou « ce jour uniquement », déplacer / étirer pour modifier, cliquer pour supprimer, cliquer sur une date pour fermer la journée ; réglages : durée, délai de prévenance, horizon, lieu et sujets ;
 - le visiteur choisit un créneau libre et reçoit un accusé avec lien d'annulation ; vous êtes notifié ;
 - vous confirmez (avec un message, ex. lien de visio — invitation `.ics` jointe) ou refusez ; double réservation impossible ;
+- **rappels par e-mail** des rendez-vous confirmés : la veille (24 h avant, avec l'invitation `.ics`) et 1 h avant, avec le message de confirmation (ex. lien de visio) et le lien d'annulation ; chacun activable dans les réglages. Un rendez-vous confirmé tardivement ne reçoit pas de rappel redondant ;
 - **horaires bloqués** (glisser sur la grille → « Bloquer ce créneau ») : rendez-vous pris par un autre moyen (e-mail, téléphone…) ou modification de dernière minute ; aucun créneau n'y est proposé ;
 - **blocage ou fermeture d'un jour avec des rendez-vous prévus** : ils sont listés avant confirmation ; une fois confirmé, ils sont annulés et chaque visiteur reçoit un e-mail l'invitant à réserver un nouveau créneau (message facultatif joint) ;
 - autorisations bot : `appointments.read`, `appointments.write`, `appointments.delete`.

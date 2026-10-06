@@ -3,6 +3,10 @@
 # Votre rendez-vous est confirmé
 
 Bonjour {{ $appointment->name }}, notre échange est confirmé.
+@elseif (in_array($event, ['reminder_day', 'reminder_hour'], true))
+# Rappel de votre rendez-vous
+
+Bonjour {{ $appointment->name }}, je vous rappelle notre rendez-vous {{ $event === 'reminder_hour' ? 'dans moins d\'une heure' : ($appointment->starts_at->isTomorrow() ? 'de demain' : 'à venir') }}. À très bientôt !
 @elseif ($event === 'reschedule')
 # Votre rendez-vous doit être déplacé
 

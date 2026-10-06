@@ -13,9 +13,12 @@ final class AppointmentSettings
         'horizon_days' => 30,
         'location'     => 'Visioconférence — le lien vous sera envoyé à la confirmation.',
         'topics'       => ['Stage', 'Alternance', 'Emploi', 'Projet', 'Autre'],
+        // Rappels par e-mail des rendez-vous confirmés (App\Services\AppointmentReminders)
+        'reminder_day'  => true,
+        'reminder_hour' => true,
     ];
 
-    /** @return array{duration: int, notice_hours: int, horizon_days: int, location: string, topics: list<string>} */
+    /** @return array{duration: int, notice_hours: int, horizon_days: int, location: string, topics: list<string>, reminder_day: bool, reminder_hour: bool} */
     public static function current(): array
     {
         return array_merge(self::DEFAULTS, (array) Setting::get(self::KEY, []));

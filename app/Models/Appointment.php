@@ -27,7 +27,10 @@ class Appointment extends Model
 
     protected function casts(): array
     {
-        return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'consented_at' => 'datetime'];
+        return [
+            'starts_at' => 'datetime', 'ends_at' => 'datetime', 'consented_at' => 'datetime',
+            'day_reminder_sent_at' => 'datetime', 'hour_reminder_sent_at' => 'datetime',
+        ];
     }
 
     public function scopeHolding(Builder $query): void

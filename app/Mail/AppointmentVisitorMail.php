@@ -22,6 +22,11 @@ class AppointmentVisitorMail extends Mailable
     /** Créneau bloqué après coup : le visiteur est invité à en réserver un autre. */
     public const RESCHEDULE = 'reschedule';
 
+    /** Rappels d'un rendez-vous confirmé : la veille et 1 h avant. */
+    public const REMINDER_DAY = 'reminder_day';
+
+    public const REMINDER_HOUR = 'reminder_hour';
+
     public function __construct(public Appointment $appointment, public string $event)
     {
     }
@@ -34,6 +39,8 @@ class AppointmentVisitorMail extends Mailable
             self::CONFIRMED => 'Rendez-vous confirmé — '.$when,
             self::DECLINED  => 'Demande de rendez-vous du '.$when,
             self::RESCHEDULE => 'Rendez-vous du '.$when.' annulé — merci d\'en choisir un autre',
+            self::REMINDER_DAY  => 'Rappel : rendez-vous '.($this->appointment->starts_at->isTomorrow() ? 'demain' : 'le '.$this->appointment->starts_at->translatedFormat('j F')).' à '.$this->appointment->starts_at->format('H:i'),
+            self::REMINDER_HOUR => 'Rappel : rendez-vous à '.$this->appointment->starts_at->format('H:i').' (dans moins d\'une heure)',
             default         => 'Demande de rendez-vous reçue — '.$when,
         });
     }
@@ -46,10 +53,10 @@ class AppointmentVisitorMail extends Mailable
         ]);
     }
 
-    /** Invitation agenda jointe à la confirmation. */
+    /** Invitation agenda jointe à la confirmation et au rappel de la veille. */
     public function attachments(): array
     {
-        return $this->event === self::CONFIRMED
+        return in_array($this->event, [self::CONFIRMED, self::REMINDER_DAY], true)
             ? [Attachment::fromData(fn () => $this->appointment->toIcs(Profile::current()->fullName()), 'rendez-vous.ics')->withMime('text/calendar')]
             : [];
     }
