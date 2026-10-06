@@ -90,13 +90,13 @@ Route::get('/dashboard', function () {
 
     return match (true) {
         $user->isAdmin()          => redirect()->route('admin.dashboard'),
-        $user->isBot()            => redirect()->route(\App\Support\PanelSections::firstRouteFor($user) ?? 'bot.idle'),
+        $user->hasLimitedAccess() => redirect()->route(\App\Support\PanelSections::firstRouteFor($user) ?? 'bot.idle'),
         $user->canWriteArticles() => redirect()->route('admin.articles.index'),
         default                   => redirect()->route('profile.edit'),
     };
 })->middleware('auth')->name('dashboard');
 
-// Bot sans aucune autorisation : page d'information
+// Bot ou personnel sans aucune autorisation : page d'information
 Route::get('/admin/aucun-acces', fn () => view('admin.bot-idle'))->middleware('auth')->name('bot.idle');
 
 Route::middleware('auth')->group(function () {

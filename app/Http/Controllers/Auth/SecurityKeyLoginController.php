@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Connexion directe au panel avec une clé de sécurité (sans mot de passe),
- * réservée aux administrateurs. La clé et sa vérification (PIN, biométrie)
+ * réservée aux administrateurs et au personnel. La clé et sa vérification (PIN, biométrie)
  * valent double authentification : aucune étape supplémentaire.
  */
 class SecurityKeyLoginController extends Controller
@@ -44,7 +44,7 @@ class SecurityKeyLoginController extends Controller
             $audit->record('auth.failed', null, meta: ['méthode' => 'clé de sécurité (sans mot de passe)'], force: true);
             $bans->recordFailure($request->ip(), 'clé de sécurité');
 
-            return response()->json(['message' => 'Clé refusée : elle n\'est pas enregistrée sur un compte administrateur, ou la vérification (PIN, empreinte) a échoué.'], 422);
+            return response()->json(['message' => 'Clé refusée : elle n\'est pas enregistrée sur un compte administrateur ou personnel actif, ou la vérification (PIN, empreinte) a échoué.'], 422);
         }
 
         RateLimiter::clear($key);

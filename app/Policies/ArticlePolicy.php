@@ -27,14 +27,14 @@ class ArticlePolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isContributor() || $user->hasBotPermission('articles.write');
+        return $user->isAdmin() || $user->isContributor() || $user->hasPanelPermission('articles.write');
     }
 
     public function update(User $user, Article $article): bool
     {
         return $user->isAdmin()
             || ($user->isContributor() && $article->isAuthoredBy($user))
-            || $user->hasBotPermission('articles.write');
+            || $user->hasPanelPermission('articles.write');
     }
 
     /**
@@ -44,31 +44,31 @@ class ArticlePolicy
     public function changeAuthor(User $user, ?Article $article = null): bool
     {
         return $user->isAdmin()
-            || $user->hasBotPermission('articles.write')
+            || $user->hasPanelPermission('articles.write')
             || ($user->isContributor() && (! $article?->exists || $article->author_id === $user->id));
     }
 
     /** Publier, programmer, épingler. */
     public function publish(User $user, ?Article $article = null): bool
     {
-        return $user->isAdmin() || $user->hasBotPermission('articles.publish');
+        return $user->isAdmin() || $user->hasPanelPermission('articles.publish');
     }
 
     /** Soumettre à validation (ou retirer la demande). */
     public function submit(User $user, Article $article): bool
     {
         return $article->published_at === null
-            && (($user->isContributor() && $article->isAuthoredBy($user)) || $user->hasBotPermission('articles.write'));
+            && (($user->isContributor() && $article->isAuthoredBy($user)) || $user->hasPanelPermission('articles.write'));
     }
 
     /** Valider ou renvoyer en brouillon un article soumis. */
     public function review(User $user, Article $article): bool
     {
-        return $user->isAdmin() || $user->hasBotPermission('articles.publish');
+        return $user->isAdmin() || $user->hasPanelPermission('articles.publish');
     }
 
     public function delete(User $user, Article $article): bool
     {
-        return $user->isAdmin() || $user->hasBotPermission('articles.delete');
+        return $user->isAdmin() || $user->hasPanelPermission('articles.delete');
     }
 }

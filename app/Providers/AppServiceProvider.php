@@ -68,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Comptes : super-admins ; bots autorisés, pour les seuls comptes contributeurs.
         Gate::define('manage-users', fn (User $user, ?User $target = null, string $permission = 'users.write') => $user->isSuperAdmin()
-            || ($user->hasBotPermission($permission) && (! $target?->exists || $target->global_role === 'user')));
+            || ($user->hasPanelPermission($permission) && (! $target?->exists || $target->global_role === 'user')));
         Gate::define('write-articles', fn (User $user) => $user->canWriteArticles());
         // Section du panel : administrateurs, ou bots autorisés (« a|b » = l'une ou l'autre)
         Gate::define('panel', fn (User $user, string $permissions) => $user->canUsePanel($permissions));

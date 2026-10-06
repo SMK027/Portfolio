@@ -8,7 +8,8 @@
     <p class="text-sm text-slate-500">
         Les <strong>administrateurs</strong> gèrent le contenu et voient les pages privées. Les <strong>contributeurs</strong> accèdent uniquement
         à la rédaction d'articles : ils consultent tous les articles, modifient ceux dont ils sont auteurs ou co-auteurs, et leurs
-        nouveaux articles sont publiés après validation par un administrateur. Seuls les super-administrateurs gèrent les comptes.
+        nouveaux articles sont publiés après validation par un administrateur. Le <strong>personnel</strong> n'accède qu'aux sections du panel
+        que vous lui autorisez, avec une désactivation programmable. Seuls les super-administrateurs gèrent les comptes.
     </p>
 
     <div class="card overflow-x-auto">
@@ -19,7 +20,14 @@
                     <tr>
                         <td><p class="font-medium text-slate-900">{{ $user->name }}@if ($user->hasTwoFactor()) <span class="badge-green ml-1" title="Double authentification activée">2FA</span>@endif</p><p class="text-xs text-slate-500">{{ '@'.$user->username }}</p></td>
                         <td class="hidden md:table-cell">{{ $user->email }}</td>
-                        <td><span @class(['badge-primary' => $user->isAdmin(), 'badge-slate' => ! $user->isAdmin()])>{{ \Illuminate\Support\Str::before($user->roleLabel(), ' (') }}</span></td>
+                        <td>
+                            <span @class(['badge-primary' => $user->isAdmin(), 'badge-slate' => ! $user->isAdmin()])>{{ \Illuminate\Support\Str::before($user->roleLabel(), ' (') }}</span>
+                            @if (! $user->isActive())
+                                <span class="badge ml-1 bg-red-50 text-red-700">désactivé</span>
+                            @elseif ($user->deactivates_at)
+                                <span class="badge-amber ml-1" title="Désactivation programmée">jusqu'au {{ $user->deactivates_at->format('d/m/Y H:i') }}</span>
+                            @endif
+                        </td>
                         <td class="hidden sm:table-cell">{{ $user->articles_count }}</td>
                         <td class="whitespace-nowrap text-right">
                             @can('manage-users', $user)

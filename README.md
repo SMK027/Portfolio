@@ -106,7 +106,13 @@ Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-compléti
 - à la connexion, le mot de passe est vérifié puis le second facteur demandé, **avant** l'ouverture de la session ; 5 erreurs bloquent l'étape 5 minutes ; tout est journalisé ;
 - désactiver un facteur ou régénérer les codes demande le mot de passe actuel ; un super-administrateur peut réinitialiser la double authentification d'un compte (*Comptes → Modifier*) ;
 - les clés de sécurité exigent le HTTPS (ou `localhost` en développement) et sont liées au nom de domaine du site.
-- **connexion directe par clé** (administrateurs et super-administrateurs) : bouton « Se connecter avec une clé de sécurité » sur la page de connexion, sans mot de passe. La clé doit vérifier l'utilisateur (PIN, empreinte ou visage) : cela vaut double authentification. Les clés « résidentes » (passkeys) proposent le compte d'elles-mêmes ; sinon, saisir l'e-mail avant de cliquer. Les contributeurs utilisent toujours mot de passe + second facteur.
+- **connexion directe par clé** (administrateurs, super-administrateurs et personnel) : bouton « Se connecter avec une clé de sécurité » sur la page de connexion, sans mot de passe. La clé doit vérifier l'utilisateur (PIN, empreinte ou visage) : cela vaut double authentification. Les clés « résidentes » (passkeys) proposent le compte d'elles-mêmes ; sinon, saisir l'e-mail avant de cliquer. Les contributeurs utilisent toujours mot de passe + second facteur.
+
+**Comptes « Personnel »** (*Comptes → Nouveau compte*, rôle « Personnel », gérés par les super-administrateurs uniquement) : comptes **humains** aux habilitations limitées, comme les bots :
+- connexion par mot de passe, double authentification (application ou clé) et connexion directe par clé de sécurité ; page « Mon compte » ;
+- le compte ne voit dans le panel que les sections cochées dans ses autorisations (mêmes autorisations que les bots : consulter, modifier, supprimer…) ; sans autorisation, il arrive sur une page d'information ;
+- **désactivation programmée** (facultative) : à la date et l'heure choisies, la connexion est refusée et toute session ouverte est coupée à la requête suivante ; une tâche planifiée (chaque minute) marque ensuite le compte « désactivé » dans le journal d'activité. Sans date, le compte n'est jamais désactivé automatiquement. La case « Compte actif » permet aussi de le désactiver ou de le réactiver à tout moment ;
+- un membre du personnel autorisé sur les comptes ne gère que des contributeurs, comme un bot.
 
 **Comptes de service, bots et API** (*Sécurité → Comptes de service et bots*, super-administrateurs uniquement) :
 - un compte de service n'accède jamais au panel : il utilise l'API `/api/v1` avec des **codes d'application** (`Authorization: Bearer pfs_…`) ;

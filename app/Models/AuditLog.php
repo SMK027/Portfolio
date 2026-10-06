@@ -70,6 +70,7 @@ class AuditLog extends Model
         'two_factor.disabled' => 'Application d\'authentification désactivée',
         'two_factor.recovery_codes_regenerated' => 'Codes de secours régénérés',
         'two_factor.reset'    => 'Double authentification réinitialisée',
+        'user.deactivated'    => 'Compte désactivé (date programmée)',
         'api.auth_failed'   => 'Code d\'application refusé',
         'api.forbidden'     => 'Requête API refusée (autorisation manquante)',
         'api.messages_read' => 'Messages lus via l\'API',

@@ -45,12 +45,12 @@
         </div>
     </form>
 
-    {{-- Administrateurs : clé de sécurité seule (PIN ou biométrie demandés par la clé) --}}
+    {{-- Administrateurs et personnel : clé de sécurité seule (PIN ou biométrie demandés par la clé) --}}
     <div class="mt-6 border-t border-slate-100 pt-5" x-data="securityKeyPasswordless({ optionsUrl: @js(route('login.key.options')), loginUrl: @js(route('login.key')) })">
         <button type="button" @click="login(document.getElementById('login-form'))" :disabled="busy || ! supported" class="btn-secondary w-full">
             <x-icon name="lock" class="h-4 w-4" /> <span x-text="busy ? 'Touchez votre clé…' : 'Se connecter avec une clé de sécurité'"></span>
         </button>
-        <p class="mt-2 text-center text-xs text-slate-400">Administrateurs. Si votre clé ne propose pas votre compte, saisissez d'abord votre e-mail.</p>
+        <p class="mt-2 text-center text-xs text-slate-400">Administrateurs et personnel. Si votre clé ne propose pas votre compte, saisissez d'abord votre e-mail.</p>
         <p x-show="! supported" x-cloak class="form-error text-center">Ce navigateur ne prend pas en charge les clés de sécurité.</p>
         <p x-show="error" x-cloak x-text="error" class="form-error text-center"></p>
     </div>

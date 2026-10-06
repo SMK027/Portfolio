@@ -44,9 +44,9 @@ class HandleMaintenanceMode
         if ($user?->isAdmin()
             || $request->is(...self::ALLOWED_PATHS)
             || $request->routeIs('login', 'login.*')
-            || (($user?->canWriteArticles() || $user?->isBot()) && $request->is(...self::WRITER_PATHS))
+            || (($user?->canWriteArticles() || $user?->hasLimitedAccess()) && $request->is(...self::WRITER_PATHS))
             // Bot autorisé : site public comme hors maintenance (les pages privées restent privées)
-            || $user?->hasBotPermission('maintenance.bypass')
+            || $user?->hasPanelPermission('maintenance.bypass')
             || ! $this->maintenance->isActive()) {
             return $next($request);
         }

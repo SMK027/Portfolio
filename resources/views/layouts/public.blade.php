@@ -49,7 +49,7 @@
       @if ($pageViewId = request()->attributes->get('page_view_uuid')) data-page-view="{{ $pageViewId }}" data-page-view-url="{{ route('stats.duration') }}" @endif>
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">Aller au contenu</a>
 
-    @if ($maintenance && ! $isAdmin && auth()->user()?->hasBotPermission('maintenance.bypass'))
+    @if ($maintenance && ! $isAdmin && auth()->user()?->hasPanelPermission('maintenance.bypass'))
         <div class="bg-amber-400 px-4 py-2 text-center text-xs font-medium text-amber-950">
             Maintenance active : ce bot voit le site, les visiteurs voient la page de maintenance.
         </div>

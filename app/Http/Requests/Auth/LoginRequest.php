@@ -62,6 +62,13 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Compte désactivé (ou désactivation programmée atteinte) : mot de passe correct mais accès refusé.
+        if (! $user->isActive()) {
+            app(\App\Services\AuditTrail::class)->record('auth.failed', $user, meta: ['raison' => 'compte désactivé'], force: true);
+
+            throw ValidationException::withMessages(['email' => 'Ce compte est désactivé.']);
+        }
+
         $provider->rehashPasswordIfRequired($user, $credentials);
         RateLimiter::clear($this->throttleKey());
 

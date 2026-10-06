@@ -125,7 +125,7 @@ class WebAuthn
         return $options;
     }
 
-    /** Compte authentifié par la clé (administrateurs uniquement, vérification de l'utilisateur exigée), ou null. */
+    /** Compte authentifié par la clé (administrateurs et personnel, vérification de l'utilisateur exigée), ou null. */
     public function verifyLogin(array $credential): ?User
     {
         $challenge = $this->pullChallenge();

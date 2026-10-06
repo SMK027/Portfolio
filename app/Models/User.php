@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'permissions', 'description', 'is_active', 'avatar', 'bio'])]
+#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'permissions', 'description', 'is_active', 'deactivates_at', 'avatar', 'bio'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
@@ -34,6 +34,7 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'permissions'       => 'array',
             'is_active'         => 'boolean',
+            'deactivates_at'    => 'datetime',
             'two_factor_secret'         => 'encrypted',
             'two_factor_confirmed_at'   => 'datetime',
             'two_factor_recovery_codes' => 'array',
@@ -47,10 +48,10 @@ class User extends Authenticatable
         return $this->hasMany(SecurityKey::class)->orderBy('created_at');
     }
 
-    /** Connexion par clé de sécurité seule : administrateurs et super-administrateurs actifs. */
+    /** Connexion par clé de sécurité seule : administrateurs, super-administrateurs et personnel actifs. */
     public function canUsePasswordlessLogin(): bool
     {
-        return $this->isAdmin() && ! $this->isMachine() && $this->is_active !== false;
+        return ($this->isAdmin() || $this->isStaff()) && $this->isActive();
     }
 
     public function hasTotp(): bool
@@ -125,6 +126,7 @@ class User extends Authenticatable
         'superadmin' => 'Super-administrateur',
         'admin'      => 'Administrateur',
         'user'       => 'Contributeur (rédige des articles soumis à validation)',
+        'staff'      => 'Personnel (accès limité aux sections autorisées)',
     ];
 
     public function articles(): HasMany
@@ -172,6 +174,30 @@ class User extends Authenticatable
         return $this->global_role === 'bot';
     }
 
+    /**
+     * Personnel : compte humain (mot de passe, double authentification, clé de sécurité)
+     * qui n'accède qu'aux sections du panel autorisées par un super-administrateur.
+     */
+    public function isStaff(): bool
+    {
+        return $this->global_role === 'staff';
+    }
+
+    /** Accès au panel limité par des autorisations (bots et personnel). */
+    public function hasLimitedAccess(): bool
+    {
+        return $this->isBot() || $this->isStaff();
+    }
+
+    /**
+     * Compte utilisable : ni désactivé, ni arrivé à sa date de désactivation programmée
+     * (effet immédiat, sans attendre la tâche planifiée qui le marque désactivé).
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active !== false && ! $this->deactivates_at?->isPast();
+    }
+
     /** Compte technique (service ou bot) : jamais de mot de passe ni de page « Mon compte ». */
     public function isMachine(): bool
     {
@@ -185,20 +211,20 @@ class User extends Authenticatable
             && (bool) array_intersect(explode('|', $permissions), $this->permissions ?? []);
     }
 
-    /** Autorisation d'un bot actif (une ou plusieurs séparées par « | »). */
-    public function hasBotPermission(string $permissions): bool
+    /** Autorisation d'un bot ou d'un membre du personnel actif (une ou plusieurs séparées par « | »). */
+    public function hasPanelPermission(string $permissions): bool
     {
-        if (! $this->isBot() || ! $this->is_active) {
+        if (! $this->hasLimitedAccess() || ! $this->isActive()) {
             return false;
         }
 
         return (bool) array_intersect(explode('|', $permissions), $this->permissions ?? []);
     }
 
-    /** Accès à une section du panel : administrateurs, ou bots autorisés. */
+    /** Accès à une section du panel : administrateurs, ou bots et personnel autorisés. */
     public function canUsePanel(string $permissions): bool
     {
-        return $this->isAdmin() || $this->hasBotPermission($permissions);
+        return $this->isAdmin() || $this->hasPanelPermission($permissions);
     }
 
     public function serviceTokens(): HasMany
@@ -221,7 +247,23 @@ class User extends Authenticatable
     /** Accès à l'éditeur d'articles (administrateurs et contributeurs). */
     public function canWriteArticles(): bool
     {
-        return $this->isAdmin() || $this->isContributor() || $this->hasBotPermission('articles.read|articles.write');
+        return $this->isAdmin() || $this->isContributor() || $this->hasPanelPermission('articles.read|articles.write');
+    }
+
+    /**
+     * Marque désactivés les comptes arrivés à leur date de désactivation programmée
+     * (tâche planifiée ; l'accès est déjà refusé dès l'échéance, voir isActive()).
+     */
+    public static function deactivateExpired(): int
+    {
+        $audit = app(\App\Services\AuditTrail::class);
+
+        return static::query()->where('is_active', true)->where('deactivates_at', '<=', now())->get()
+            ->each(function (User $user) use ($audit) {
+                $audit->withoutRecording(fn () => $user->forceFill(['is_active' => false])->save());
+                $audit->record('user.deactivated', $user, meta: ['date' => $user->deactivates_at->format('d/m/Y H:i')], force: true);
+            })
+            ->count();
     }
 
     public function isSuperAdmin(): bool

@@ -4,17 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\ServicePermissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 /**
- * Comptes : administrateurs et contributeurs (co-auteurs d'articles).
- * La consultation est ouverte aux admins, la modification aux super-admins.
- * Un bot autorisé (users.write / users.delete) ne gère que les contributeurs.
+ * Comptes humains : administrateurs, contributeurs (co-auteurs d'articles) et personnel
+ * (autorisations limitées, désactivation programmable). La consultation est ouverte aux
+ * admins, la modification aux super-admins. Un bot ou un membre du personnel autorisé
+ * (users.write / users.delete) ne gère que les contributeurs.
  */
 class UserController extends Controller
 {
@@ -29,7 +32,7 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('admin.users.form', ['user' => new User(['global_role' => request()->user()->isBot() ? 'user' : 'admin'])]);
+        return view('admin.users.form', ['user' => new User(['global_role' => request()->user()->hasLimitedAccess() ? 'user' : 'admin', 'is_active' => true, 'permissions' => []])]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -105,13 +108,32 @@ class UserController extends Controller
     /** @return array<string, mixed> */
     protected function validated(Request $request, User $user): array
     {
-        return $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'username'    => ['required', 'string', 'alpha_dash', 'max:50', Rule::unique('users')->ignore($user)],
-            'email'       => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user)],
-            // Un bot ne peut créer ou garder que des contributeurs.
-            'global_role' => ['required', Rule::in($request->user()->isBot() ? ['user'] : array_keys(User::ROLES))],
-            'password'    => [$user->exists ? 'nullable' : 'required', 'confirmed', Password::defaults()],
+        $data = $request->validate([
+            'name'           => ['required', 'string', 'max:255'],
+            'username'       => ['required', 'string', 'alpha_dash', 'max:50', Rule::unique('users')->ignore($user)],
+            'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user)],
+            // Un bot ou un membre du personnel ne peut créer ou garder que des contributeurs.
+            'global_role'    => ['required', Rule::in($request->user()->hasLimitedAccess() ? ['user'] : array_keys(User::ROLES))],
+            'password'       => [$user->exists ? 'nullable' : 'required', 'confirmed', Password::defaults()],
+            // Personnel : autorisations, activation et désactivation programmée
+            'permissions'    => ['nullable', 'array'],
+            'permissions.*'  => ['string', Rule::in(ServicePermissions::all())],
+            'is_active'      => ['nullable', 'boolean'],
+            'deactivates_at' => ['nullable', 'date', Rule::when($request->boolean('is_active'), 'after:now')],
+        ], [
+            'deactivates_at.after' => 'La date de désactivation doit être dans le futur (ou décochez « Compte actif »).',
+        ], [
+            'deactivates_at' => 'date de désactivation',
         ]);
+
+        // Les autres rôles ne sont ni limités ni désactivables.
+        $staff = $data['global_role'] === 'staff';
+
+        return [
+            ...$data,
+            'permissions'    => $staff ? array_values(array_unique($data['permissions'] ?? [])) : null,
+            'is_active'      => $staff ? $request->boolean('is_active') : true,
+            'deactivates_at' => $staff && filled($data['deactivates_at'] ?? null) ? Carbon::parse($data['deactivates_at']) : null,
+        ];
     }
 }

@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Statistiques de visite : données de plus de 13 mois supprimées chaque nuit.
 Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dailyAt('03:30')->name('statistiques:purge');
 
+// Comptes du personnel arrivés à leur date de désactivation programmée.
+Schedule::call(fn () => \App\Models\User::deactivateExpired())->everyMinute()->name('comptes:desactivation');
+
 // Bannissements d'adresses IP terminés depuis plus de 3 mois : supprimés chaque nuit.
 Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('03:40')->name('ip-bannies:purge');
 

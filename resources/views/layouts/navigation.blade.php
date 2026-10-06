@@ -8,11 +8,11 @@
     $pendingAppointments = $user->can('panel', 'appointments.read|appointments.write')
         ? \App\Models\Appointment::where('status', 'pending')->where('starts_at', '>=', now())->count() : 0;
 
-    // Administrateurs : tout ; bots : sections couvertes par leurs autorisations ;
+    // Administrateurs : tout ; bots et personnel : sections couvertes par leurs autorisations ;
     // contributeurs : rédaction d'articles.
     $sections = match (true) {
         $user->isAdmin()       => ['' => [['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard']]] + \App\Support\PanelSections::for($user),
-        $user->isBot()         => \App\Support\PanelSections::for($user),
+        $user->hasLimitedAccess() => \App\Support\PanelSections::for($user),
         $user->isContributor() => ['Rédaction' => [['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*']]],
         default                => [],
     };
