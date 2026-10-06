@@ -130,6 +130,8 @@ return [
         'max_attempts' => (int) env('LOGIN_BAN_MAX_ATTEMPTS', 3),
         'window'       => (int) env('LOGIN_BAN_WINDOW', 15),
         'duration'     => (int) env('LOGIN_BAN_DURATION', 45),
+        // Adresses jamais bannies, séparées par des virgules (IP ou plages CIDR : 203.0.113.7, 192.168.1.0/24)
+        'whitelist'    => array_values(array_filter(array_map('trim', explode(',', (string) env('LOGIN_BAN_WHITELIST', ''))))),
         // Canal de log (config/logging.php) ; LOGIN_BAN_LOG_CHANNEL=null (tests) : aucun log
         'log_channel'  => env('LOGIN_BAN_LOG_CHANNEL', 'security') ?: 'null',
     ],

@@ -10,6 +10,16 @@
         et dans <code class="rounded bg-slate-100 px-1">storage/logs/security-*.log</code>.
         Votre adresse actuelle : <code class="rounded bg-slate-100 px-1">{{ $myIp }}</code>.
     </p>
+    <p class="text-sm text-slate-500">
+        @if ($whitelist = config('auth.login_ban.whitelist'))
+            Jamais bannies (liste blanche) :
+            @foreach ($whitelist as $entry)<code class="rounded bg-slate-100 px-1">{{ $entry }}</code>@if (! $loop->last), @endif @endforeach.
+        @else
+            Aucune liste blanche :
+        @endif
+        Pour ne jamais bannir vos propres adresses, renseignez <code class="rounded bg-slate-100 px-1">LOGIN_BAN_WHITELIST</code> dans le fichier <code>.env</code>
+        (IP ou plages CIDR séparées par des virgules).
+    </p>
 
     <x-admin.section title="Bannissements en cours">
         @if ($active->isEmpty())

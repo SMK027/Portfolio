@@ -84,6 +84,30 @@ class IpBanTest extends TestCase
         $this->assertStringContainsString('code d\'application', IpBan::sole()->reason);
     }
 
+    public function test_whitelisted_addresses_are_never_banned_nor_blocked(): void
+    {
+        config(['auth.login_ban.whitelist' => ['203.0.113.7', '192.168.1.0/24']]);
+
+        foreach (range(1, 4) as $i) {
+            $this->failLogin('203.0.113.7');
+            $this->failLogin('192.168.1.42');
+        }
+        $this->assertSame(0, IpBan::count());
+
+        // Un bannissement antérieur à l'ajout dans la liste blanche ne bloque plus
+        IpBan::create(['ip_address' => '192.168.1.50', 'banned_until' => now()->addHour()]);
+        $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.50'])->get('/')->assertOk();
+
+        // Hors liste : banni normalement
+        foreach (range(1, 3) as $i) {
+            $this->failLogin('198.51.100.9');
+        }
+        $this->assertTrue(IpBan::active()->where('ip_address', '198.51.100.9')->exists());
+
+        $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.ip-bans.index'))->assertSee('192.168.1.0/24');
+    }
+
     public function test_disabled_ban_never_blocks(): void
     {
         config(['auth.login_ban.enabled' => false]);

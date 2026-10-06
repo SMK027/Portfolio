@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\IpUtils;
 use Throwable;
 
 /**
@@ -34,7 +35,7 @@ class LoginBan
      */
     public function recordFailure(?string $ip, string $method): ?IpBan
     {
-        if (! $this->enabled() || ! $ip) {
+        if (! $this->enabled() || ! $ip || $this->isWhitelisted($ip)) {
             return null;
         }
 
@@ -62,10 +63,18 @@ class LoginBan
         }
     }
 
+    /** Adresse de la liste blanche (config auth.login_ban.whitelist) : jamais bannie ni bloquée. */
+    public function isWhitelisted(string $ip): bool
+    {
+        $whitelist = (array) config('auth.login_ban.whitelist');
+
+        return $whitelist && IpUtils::checkIp($ip, $whitelist);
+    }
+
     /** Bannissement en cours pour cette IP (la base indisponible ne bloque personne). */
     public function activeBanFor(?string $ip): ?IpBan
     {
-        if (! $ip) {
+        if (! $ip || $this->isWhitelisted($ip)) {
             return null;
         }
 
