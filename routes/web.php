@@ -99,6 +99,13 @@ Route::get('/dashboard', function () {
 // Bot ou personnel sans aucune autorisation : page d'information
 Route::get('/admin/aucun-acces', fn () => view('admin.bot-idle'))->middleware('auth')->name('bot.idle');
 
+// Validation superviseur d'une opération non habilitée
+Route::middleware('auth')->prefix('supervision')->name('supervision.')->controller(\App\Http\Controllers\SupervisionController::class)->group(function () {
+    Route::get('/', 'show')->name('show');
+    Route::post('/', 'store')->middleware('throttle:20,1')->name('store');
+    Route::delete('/', 'destroy')->name('destroy');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -151,6 +158,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->only(['index', 'edit', 'update', 'destroy'])
         ->parameters(['ip-bannies' => 'ipBan'])->names('ip-bans')
         ->middleware('can:manage-ip-bans');
+
+    // Superviseurs : super-administrateurs uniquement
+    Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
+        ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');
 
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');

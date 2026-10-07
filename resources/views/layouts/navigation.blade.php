@@ -22,6 +22,7 @@
         $sections['Comptes et sécurité'] = [
             ...($sections['Comptes et sécurité'] ?? []),
             ['admin.service-accounts.index', 'Comptes de service et bots', 'cog', 'admin.service-accounts.*'],
+            ['admin.supervisors.index', 'Superviseurs', 'lock', 'admin.supervisors.*'],
             ['admin.login-path.edit', 'Adresse de connexion', 'lock', 'admin.login-path.*'],
             ['admin.ip-bans.index', 'Adresses IP bannies', 'no-symbol', 'admin.ip-bans.*'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],

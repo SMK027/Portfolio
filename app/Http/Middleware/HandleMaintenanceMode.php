@@ -20,7 +20,7 @@ class HandleMaintenanceMode
      */
     protected const ALLOWED_PATHS = [
         'double-authentification', 'double-authentification/*', 'logout', 'forgot-password', 'reset-password', 'reset-password/*',
-        'admin', 'admin/*', 'robots.txt', 'sitemap.xml', 'veille/apercu/*', 'rendez-vous/annuler/*',
+        'admin', 'admin/*', 'supervision', 'robots.txt', 'sitemap.xml', 'veille/apercu/*', 'rendez-vous/annuler/*',
     ];
 
     /**

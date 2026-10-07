@@ -55,5 +55,13 @@
         </div>
     </div>
     @stack('scripts')
+    {{-- Jeton de supervision (déjà consommé) retiré de la barre d'adresse --}}
+    <script>
+        if (location.search.includes('{{ \App\Services\Supervision::BYPASS_FIELD }}=')) {
+            const url = new URL(location.href);
+            url.searchParams.delete('{{ \App\Services\Supervision::BYPASS_FIELD }}');
+            history.replaceState(null, '', url);
+        }
+    </script>
 </body>
 </html>

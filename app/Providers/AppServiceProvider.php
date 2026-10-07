@@ -75,6 +75,19 @@ class AppServiceProvider extends ServiceProvider
         // Outils de l'éditeur (images, conversions) : rédacteurs d'articles ou de projets
         Gate::define('use-editor', fn (User $user) => $user->canWriteArticles()
             || $user->canUsePanel('projects.write|experiences.write|profile.write'));
+        // Supervision : le bypass validé par un superviseur accorde l'opération,
+        // pour la seule requête rejouée ; les refus sont notés pour proposer la validation.
+        Gate::before(function (User $user, string $ability, array $arguments) {
+            $granted = request()->attributes->get('supervision.granted');
+
+            return $granted && array_intersect(\App\Services\Supervision::operationsFor($ability, $arguments), $granted) ? true : null;
+        });
+        Gate::after(function (User $user, string $ability, ?bool $result, array $arguments) {
+            if ($result === false && \App\Services\Supervision::concerns($user)) {
+                request()->attributes->set('supervision.denied', \App\Services\Supervision::operationsFor($ability, $arguments));
+            }
+        });
+
         // Double authentification : comptes humains uniquement (jamais bots ni services)
         Gate::define('use-two-factor', fn (User $user) => ! $user->isMachine());
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());

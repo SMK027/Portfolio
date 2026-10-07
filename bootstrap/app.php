@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsureAccountIsActive::class,
             \App\Http\Middleware\HandleMaintenanceMode::class,
             \App\Http\Middleware\RecordPageView::class,
+            \App\Http\Middleware\ApplySupervisionBypass::class,
         ]);
 
         // Traefik termine le HTTPS : on fait confiance à ses en-têtes X-Forwarded-*
@@ -69,4 +70,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // L'API répond toujours en JSON (erreurs de validation, 404, 403…).
         $exceptions->shouldRenderJsonWhen(fn ($request) => $request->is('api/*') || $request->expectsJson());
+
+        // Opération refusée faute d'habilitation : validation par un superviseur (voir App\Services\Supervision).
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if ($e instanceof \Illuminate\Auth\Access\AuthorizationException
+                || $e instanceof \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException) {
+                return app(\App\Services\Supervision::class)->challenge($request);
+            }
+        });
     })->create();

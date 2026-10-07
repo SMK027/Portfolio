@@ -18,7 +18,7 @@ use Throwable;
 class AuditTrail
 {
     /** Attributs jamais enregistrés. */
-    public const SECRET = ['password', 'token_hash', 'two_factor_secret', 'two_factor_recovery_codes', 'public_key', 'credential_id', 'preview_token'];
+    public const SECRET = ['password', 'token_hash', 'two_factor_secret', 'two_factor_recovery_codes', 'public_key', 'credential_id', 'preview_token', 'pin_hash'];
 
     /** Attributs ignorés dans les différences (techniques, renouvelés automatiquement). */
     public const IGNORED = ['created_at', 'updated_at', 'last_used_at', 'last_used_ip', 'remember_token', 'recaptcha_score', 'two_factor_last_step', 'sign_count', 'deactivation_warned_at'];

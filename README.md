@@ -105,6 +105,11 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 Dans le formulaire, l'auteur et les co-auteurs se choisissent par auto-complétion (nom, identifiant ou e-mail).
 
+**Supervision des opérations** (*Comptes et sécurité → Superviseurs*, super-administrateurs) : quand un compte personnel, un contributeur ou un bot tente une opération pour laquelle il n'est pas habilité (consulter, créer, modifier, supprimer…), un superviseur peut la valider avec son identifiant et son code PIN (4 à 8 chiffres, haché et salé) :
+- chaque superviseur est rattaché à un administrateur actif, peut être désactivé, et ne valide que les opérations cochées ; le réattribuer impose un nouveau PIN ;
+- la requête (champs et fichiers) est mise en attente 15 min en session, puis rejouée automatiquement ; le bypass est à usage unique, valable 2 min, limité à cette opération et jamais conservé en session ;
+- aucun bypass ne permet de modifier un compte autre qu'un contributeur ; sans superviseur habilité, l'opération est simplement refusée ; PIN limités à 5 essais par 5 min ; validations et échecs au journal d'activité.
+
 **Double authentification** (*Mon compte → Double authentification*, comptes humains uniquement — jamais les bots ni les comptes de service) :
 - **clés de sécurité** (WebAuthn / FIDO2 : YubiKey, Titan, empreinte ou visage de l'appareil…) et/ou **application d'authentification** (codes TOTP à 6 chiffres : Google Authenticator, Authy, 1Password…) ;
 - à l'activation du premier facteur, 8 **codes de secours** à usage unique sont affichés une seule fois (seules leurs empreintes sont conservées) ; ils peuvent être régénérés ;
