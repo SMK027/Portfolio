@@ -83,6 +83,7 @@ class SupervisorController extends Controller
     protected function admins()
     {
         return User::whereIn('global_role', ['admin', 'superadmin'])->orderBy('name')->get()
-            ->mapWithKeys(fn (User $u) => [$u->id => $u->name.' ('.$u->roleLabel().')'.($u->isActive() ? '' : ' — désactivé')]);
+            ->map(fn (User $u) => ['id' => $u->id, 'label' => $u->name, 'hint' => $u->roleLabel().' · @'.$u->username.' · '.$u->email.($u->isActive() ? '' : ' · désactivé')])
+            ->all();
     }
 }

@@ -10,8 +10,9 @@
         <x-admin.section>
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="username" label="Identifiant" :value="$supervisor->username" required maxlength="50" autocomplete="off" help="Lettres, chiffres, tirets." />
-                <x-form.select name="user_id" label="Administrateur rattaché" :value="$supervisor->user_id" :options="$admins" required
-                               :help="$editing ? 'Le réattribuer à un autre administrateur impose un nouveau code PIN.' : null" />
+                <x-form.autocomplete name="user_id" label="Administrateur rattaché" :options="$admins" :selected="array_filter([$supervisor->user_id])" required
+                                     placeholder="Nom, identifiant ou e-mail…"
+                                     :help="$editing ? 'Le réattribuer à un autre administrateur impose un nouveau code PIN.' : 'Administrateurs et super-administrateurs.'" />
                 <x-form.input name="pin" type="password" :label="$editing ? 'Nouveau code PIN (laisser vide pour conserver)' : 'Code PIN'" :required="! $editing"
                               inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" help="4 à 8 chiffres, stocké sous forme d'empreinte." />
                 <x-form.input name="pin_confirmation" type="password" label="Confirmation du PIN" :required="! $editing" inputmode="numeric" maxlength="8" autocomplete="new-password" />
