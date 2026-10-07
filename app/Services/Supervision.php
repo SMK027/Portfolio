@@ -154,10 +154,21 @@ class Supervision
         $bypass = Cache::pull('supervision.bypass.'.$token);
         if (! $bypass || $bypass['user_id'] !== $request->user()?->id
             || $bypass['method'] !== $request->method() || $bypass['path'] !== $request->path()) {
+            app(AuditTrail::class)->record('supervision.rejected', $bypass ? Supervisor::find($bypass['supervisor']) : null, meta: [
+                'raison'  => ! $bypass ? 'jeton inconnu, expiré ou déjà utilisé' : 'jeton présenté pour une autre requête ou un autre compte',
+                'requête' => $request->method().' /'.$request->path(),
+            ], force: true);
+
             return;
         }
 
         $request->attributes->set('supervision.granted', $bypass['operations']);
+        app(AuditTrail::class)->record('supervision.used', Supervisor::find($bypass['supervisor']), meta: [
+            'compte'     => $request->user()->name,
+            'opérations' => $bypass['operations'],
+            'requête'    => $request->method().' /'.$request->path(),
+            'fichiers'   => count($bypass['files']),
+        ], force: true);
         if ($bypass['referer']) {
             $request->headers->set('referer', $bypass['referer']); // back() après une erreur de validation
         }

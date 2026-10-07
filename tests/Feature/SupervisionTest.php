@@ -175,4 +175,38 @@ class SupervisionTest extends TestCase
 
         $this->actingAs($this->admin)->get(route('admin.supervisors.index'))->assertForbidden();
     }
+
+    public function test_every_supervision_step_is_logged(): void
+    {
+        $supervisor = $this->supervisor();
+        $log = fn (string $action) => AuditLog::where('action', $action)->latest('id')->first();
+
+        $this->actingAs($this->staff)->post(route('admin.competences.store'), ['name' => 'Go']);
+        foreach (range(1, 5) as $i) {
+            $this->post(route('supervision.store'), ['username' => 'chef', 'pin' => '0000']);
+        }
+        $this->assertSame(5, AuditLog::where('action', 'supervision.failed')->count());
+        $this->assertSame('identifiant, PIN ou superviseur invalide', $log('supervision.failed')->meta['raison']);
+        $this->assertSame($this->staff->id, $log('supervision.failed')->user_id); // compte demandeur
+        $this->post(route('supervision.store'), ['username' => 'chef', 'pin' => '4821'])->assertSessionHasErrors('pin');
+        $this->assertNotNull($log('supervision.locked'));
+        \Illuminate\Support\Facades\RateLimiter::clear('supervision:'.$this->staff->id.'|chef');
+
+        [$action, $fields] = $this->approve();
+        $granted = $log('supervision.granted');
+        $this->assertSame($supervisor->id, $granted->subject_id);
+        $this->assertSame('POST /admin/competences', $granted->meta['requête']);
+
+        $this->post($action, $fields);
+        $used = $log('supervision.used');
+        $this->assertSame(['skills.write'], $used->meta['opérations']);
+        $this->assertSame($supervisor->id, $used->subject_id);
+
+        $this->post($action, $fields); // jeton réutilisé
+        $this->assertSame('jeton inconnu, expiré ou déjà utilisé', $log('supervision.rejected')->meta['raison']);
+
+        $this->delete(route('supervision.destroy'));
+        $this->assertNotNull($log('supervision.cancelled'));
+        $this->assertStringNotContainsString('4821', AuditLog::all()->toJson()); // jamais le PIN
+    }
 }

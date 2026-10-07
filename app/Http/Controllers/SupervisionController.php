@@ -46,6 +46,11 @@ class SupervisionController extends Controller
 
         $key = 'supervision:'.$request->user()->id.'|'.strtolower($data['username']);
         if (RateLimiter::tooManyAttempts($key, 5)) {
+            $this->audit->record('supervision.locked', Supervisor::where('username', $data['username'])->first(), meta: [
+                'identifiant' => $data['username'],
+                'requête'     => $pending['method'].' /'.$pending['path'],
+            ], force: true);
+
             throw ValidationException::withMessages(['pin' => 'Trop de tentatives : réessayez dans '.ceil(RateLimiter::availableIn($key) / 60).' minute(s).']);
         }
 
@@ -91,6 +96,9 @@ class SupervisionController extends Controller
     {
         $pending = $this->supervision->pending($request);
         $this->supervision->discardPending($request);
+        if ($pending) {
+            $this->audit->record('supervision.cancelled', meta: ['requête' => $pending['method'].' /'.$pending['path']], force: true);
+        }
 
         return redirect()->to($pending['referer'] ?? route('dashboard'))->with('error', 'Opération annulée.');
     }
