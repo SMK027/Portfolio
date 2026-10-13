@@ -27,6 +27,14 @@ class InternshipContact extends Model
         'refused'    => 'Refusé',
     ];
 
+    /** Libellés courts (badges du panel). */
+    public const STATUS_SHORT = [
+        'pending'    => 'En attente',
+        'processing' => 'En cours',
+        'accepted'   => 'Accepté',
+        'refused'    => 'Refusé',
+    ];
+
     /** Couleurs de chaque résultat : classe de badge (panel), fond et texte (exports). */
     public const STATUS_STYLES = [
         'pending'    => ['badge-amber', 'FEF3C7', '92400E'],
@@ -74,6 +82,11 @@ class InternshipContact extends Model
     public function followUpMethodLabel(): ?string
     {
         return $this->follow_up_method ? (self::METHODS[$this->follow_up_method] ?? $this->follow_up_method) : null;
+    }
+
+    public function statusShortLabel(): string
+    {
+        return self::STATUS_SHORT[$this->status] ?? $this->statusLabel();
     }
 
     public function statusLabel(): string

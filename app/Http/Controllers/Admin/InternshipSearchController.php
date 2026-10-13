@@ -42,7 +42,7 @@ class InternshipSearchController extends Controller
             // Tri par relance : contacts sans relance prévue en dernier
             ->when($sort === 'relance', fn ($query) => $query->orderByRaw('follow_up_on is null'))
             ->orderBy(...self::SORTS[$sort])->orderByDesc('id')
-            ->get();
+            ->paginate(25)->withQueryString();
 
         $answered = $all->whereIn('status', ['accepted', 'refused'])->count();
 
@@ -59,6 +59,7 @@ class InternshipSearchController extends Controller
             'status'   => $status,
             'search'   => $search,
             'sort'     => $sort,
+            'grouped'  => in_array($sort, ['recent', 'ancien'], true), // lignes regroupées par date de contact
             'sorts'    => ['recent' => 'Plus récents', 'ancien' => 'Plus anciens', 'relance' => 'Prochaine relance', 'entreprise' => 'Entreprise (A → Z)'],
             'remarks'  => InternshipRemark::ordered()->get(),
         ]);

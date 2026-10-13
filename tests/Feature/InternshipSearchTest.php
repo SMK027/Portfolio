@@ -130,4 +130,14 @@ class InternshipSearchTest extends TestCase
         $this->get(route('admin.internship.index', ['tri' => 'entreprise']))->assertOk()
             ->assertSeeInOrder(['Alpha', 'Bêta'])->assertSee('en retard de 1 j');
     }
+
+    public function test_remark_links_are_shortened_and_escaped(): void
+    {
+        InternshipRemark::create(['noted_on' => '2026-10-13', 'body' => 'Voir (https://www.example.com/offres/recherche?lieux=1&a=2) <b>gras</b>']);
+
+        $this->actingAs(User::factory()->admin()->create())->get(route('admin.internship.index'))->assertOk()
+            ->assertSee('href="https://www.example.com/offres/recherche?lieux=1&amp;a=2"', false)
+            ->assertSee('>example.com/offres/recherche</a>)', false)
+            ->assertSee('&lt;b&gt;gras&lt;/b&gt;', false);
+    }
 }
