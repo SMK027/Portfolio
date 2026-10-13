@@ -59,11 +59,41 @@
             </div>
         @endunless
 
-        <x-admin.section title="Mot de passe" :description="$editing ? 'Laissez vide pour conserver le mot de passe actuel.' : null">
-            <div class="grid gap-5 sm:grid-cols-2">
-                <x-form.input name="password" type="password" label="Mot de passe" :required="! $editing" autocomplete="new-password" />
-                <x-form.input name="password_confirmation" type="password" label="Confirmation" :required="! $editing" autocomplete="new-password" />
+        {{-- Mot de passe et e-mail d'accès : aucun mot de passe n'est envoyé par e-mail --}}
+        @php $passwordMode = old('password_mode', $editing ? 'keep' : 'link'); @endphp
+        <x-admin.section title="Mot de passe et e-mail" x-data="{ mode: @js($passwordMode) }">
+            <fieldset class="space-y-2">
+                <legend class="sr-only">Mot de passe</legend>
+                @foreach ($editing
+                    ? ['keep' => ['Conserver le mot de passe actuel', null],
+                       'set'  => ['Définir un nouveau mot de passe', 'À communiquer vous-même à la personne.'],
+                       'link' => ['Envoyer un lien de réinitialisation par e-mail', 'La personne choisit elle-même son nouveau mot de passe ; l\'actuel reste valable tant qu\'elle ne l\'a pas changé.']]
+                    : ['link' => ['Envoyer une invitation par e-mail', 'La personne reçoit un lien pour choisir elle-même son mot de passe.'],
+                       'set'  => ['Définir le mot de passe maintenant', 'À communiquer vous-même à la personne.']] as $value => [$label, $help])
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 has-[:checked]:border-primary-400 has-[:checked]:bg-primary-50/50">
+                        <input type="radio" name="password_mode" value="{{ $value }}" x-model="mode" @checked($passwordMode === $value) class="mt-0.5 border-slate-300 text-primary-600 focus:ring-primary-500">
+                        <span>
+                            <span class="block text-sm font-medium text-slate-900">{{ $label }}</span>
+                            @if ($help)<span class="block text-xs text-slate-500">{{ $help }}</span>@endif
+                        </span>
+                    </label>
+                @endforeach
+                @error('password_mode')<p class="form-error">{{ $message }}</p>@enderror
+            </fieldset>
+
+            <div x-show="mode === 'set'" x-cloak class="space-y-4">
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <x-form.input name="password" type="password" label="Mot de passe" autocomplete="new-password" x-bind:required="mode === 'set'" />
+                    <x-form.input name="password_confirmation" type="password" label="Confirmation" autocomplete="new-password" x-bind:required="mode === 'set'" />
+                </div>
+                <x-form.checkbox name="notify" :checked="old('notify', true)"
+                                 :label="$editing ? 'Prévenir la personne par e-mail du changement' : 'Envoyer un e-mail de bienvenue (identifiant et lien de connexion)'"
+                                 help="Le mot de passe n'apparaît jamais dans l'e-mail." />
             </div>
+
+            <p x-show="mode === 'link'" x-cloak class="text-xs text-slate-500">
+                Le lien est envoyé à l'adresse ci-dessus, n'est utilisable qu'une fois et expire après {{ intdiv(config('auth.passwords.account_setup.expire'), 60) }} heures.
+            </p>
         </x-admin.section>
 
         <x-admin.form-actions :cancel="route('admin.utilisateurs.index')" />

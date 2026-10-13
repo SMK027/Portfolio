@@ -99,6 +99,15 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Liens envoyés depuis l'administration (invitation à la création du compte,
+        // réinitialisation demandée par un administrateur) : table et durée propres.
+        'account_setup' => [
+            'provider' => 'users',
+            'table' => 'account_setup_tokens',
+            'expire' => (int) env('AUTH_ACCOUNT_SETUP_EXPIRE', 4320), // minutes (72 h)
+            'throttle' => 0,
+        ],
     ],
 
     /*

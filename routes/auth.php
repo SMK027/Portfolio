@@ -37,6 +37,10 @@ Route::middleware('guest')->group(function () {
         Route::post('/cle', 'verifyKey')->middleware('throttle:10,1')->name('two-factor.key');
     });
 
+    // Lien envoyé depuis l'administration : invitation ou réinitialisation
+    Route::get('compte/mot-de-passe/{token}', [\App\Http\Controllers\Auth\AccountSetupController::class, 'create'])->name('account.setup');
+    Route::post('compte/mot-de-passe', [\App\Http\Controllers\Auth\AccountSetupController::class, 'store'])->middleware('throttle:10,1')->name('account.setup.store');
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 

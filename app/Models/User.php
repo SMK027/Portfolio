@@ -251,6 +251,16 @@ class User extends Authenticatable
         return $this->isAdmin() || $this->isContributor() || $this->hasPanelPermission('articles.read|articles.write');
     }
 
+    /** « Mot de passe oublié » : même e-mail que les liens envoyés depuis l'administration. */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        \Illuminate\Support\Facades\Mail::to($this->email)->send(new \App\Mail\AccountAccessMail(
+            $this, \App\Mail\AccountAccessMail::RESET,
+            route('password.reset', ['token' => $token, 'email' => $this->email]),
+            (int) config('auth.passwords.users.expire'),
+        ));
+    }
+
     protected static function booted(): void
     {
         // Nouvelle date de désactivation : un nouvel avertissement sera envoyé.
