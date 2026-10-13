@@ -163,6 +163,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');
 
+    // Suivi de la recherche de stage : administrateurs uniquement
+    Route::prefix('recherche-stage')->name('internship.')->controller(Admin\InternshipSearchController::class)->group(function () {
+        Route::get('/export/{format}', 'export')->whereIn('format', ['pdf', 'excel'])->name('export');
+        Route::post('/remarques', 'storeRemark')->name('remarks.store');
+        Route::put('/remarques/{remark}', 'updateRemark')->name('remarks.update');
+        Route::delete('/remarques/{remark}', 'destroyRemark')->name('remarks.destroy');
+    });
+    Route::resource('recherche-stage', Admin\InternshipSearchController::class)->except('show')
+        ->parameters(['recherche-stage' => 'contact'])->names('internship');
+
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 });

@@ -17,6 +17,11 @@
         default                => [],
     };
 
+    // Réservé aux administrateurs
+    if ($user->isAdmin()) {
+        $sections['Recherche de stage'] = [['admin.internship.index', 'Recherche de stage', 'briefcase', 'admin.internship.*']];
+    }
+
     // Réservé aux super-administrateurs
     if ($user->isSuperAdmin()) {
         $sections['Comptes et sécurité'] = [
