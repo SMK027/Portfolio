@@ -64,15 +64,70 @@ class InternshipSearchTest extends TestCase
         $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
         unlink($file);
 
-        $this->assertSame('Mairie de Lyon', $book->getSheetByName('Contacts')->getCell('A2')->getValue());
-        $this->assertSame('Accepté', $book->getSheetByName('Contacts')->getCell('F2')->getValue());
-        $this->assertSame('Stage trouvé.', $book->getSheetByName('Remarques')->getCell('B2')->getValue());
+        $this->assertSame('Mairie de Lyon', $book->getSheetByName('Contacts')->getCell('A5')->getValue());
+        $this->assertSame('Accepté', $book->getSheetByName('Contacts')->getCell('F5')->getValue());
+        $this->assertSame('Stage trouvé.', $book->getSheetByName('Remarques')->getCell('B5')->getValue());
+        $this->assertSame(1, $book->getSheetByName('Synthèse')->getCell('B5')->getValue());
     }
 
-    public function test_reserved_to_admins(): void
+    public function test_reserved_to_admins_and_authorized_accounts(): void
     {
         $this->actingAs(User::factory()->create())
             ->get(route('admin.internship.index'))->assertForbidden();
         $this->get(route('admin.internship.export', 'excel'))->assertForbidden();
+    }
+
+    public function test_each_action_requires_its_permission(): void
+    {
+        $contact = InternshipContact::create([
+            'company' => 'Atelier Nord', 'address' => '59000 Lille', 'contacted_on' => '2026-10-02',
+            'contact_method' => 'call', 'status' => 'pending',
+        ]);
+        $remark = InternshipRemark::create(['noted_on' => '2026-10-05', 'body' => 'Relancer la semaine prochaine.']);
+        $payload = ['company' => 'Atelier Sud', 'address' => '13000 Marseille', 'contacted_on' => '2026-10-02', 'contact_method' => 'call', 'status' => 'pending'];
+
+        // Consultation seule : liste, fiche en lecture seule et exports, aucune modification
+        $reader = User::factory()->create(['global_role' => 'staff', 'permissions' => ['internship.read'], 'is_active' => true]);
+        $this->actingAs($reader)->get(route('admin.internship.index'))->assertOk()
+            ->assertSee('Atelier Nord')->assertSee('Relancer la semaine')
+            ->assertDontSee(route('admin.internship.create'))->assertDontSee(route('admin.internship.remarks.store'));
+        $this->get(route('admin.internship.edit', $contact))->assertOk()->assertSee('Lecture seule');
+        $this->get(route('admin.internship.export', 'pdf'))->assertOk();
+        $this->post(route('admin.internship.store'), $payload)->assertForbidden();
+        $this->put(route('admin.internship.update', $contact), $payload)->assertForbidden();
+        $this->delete(route('admin.internship.destroy', $contact))->assertForbidden();
+        $this->post(route('admin.internship.remarks.store'), ['noted_on' => '2026-10-06', 'body' => 'x'])->assertForbidden();
+        $this->put(route('admin.internship.remarks.update', $remark), ['noted_on' => '2026-10-06', 'body' => 'x'])->assertForbidden();
+        $this->delete(route('admin.internship.remarks.destroy', $remark))->assertForbidden();
+
+        // Sans consultation, pas d'accès à la liste
+        $writer = User::factory()->create(['global_role' => 'staff', 'permissions' => ['internship.create'], 'is_active' => true]);
+        $this->actingAs($writer)->get(route('admin.internship.index'))->assertForbidden();
+
+        // Habilitations ciblées
+        $editor = User::factory()->create(['global_role' => 'staff', 'is_active' => true, 'permissions' => [
+            'internship.read', 'internship.update', 'internship_remarks.create', 'internship_remarks.delete',
+        ]]);
+        $this->actingAs($editor);
+        $this->put(route('admin.internship.update', $contact), $payload)->assertRedirect();
+        $this->assertSame('Atelier Sud', $contact->fresh()->company);
+        $this->post(route('admin.internship.store'), $payload)->assertForbidden();
+        $this->delete(route('admin.internship.destroy', $contact))->assertForbidden();
+        $this->post(route('admin.internship.remarks.store'), ['noted_on' => '2026-10-06', 'body' => 'Nouvelle piste.'])->assertRedirect();
+        $this->put(route('admin.internship.remarks.update', $remark), ['noted_on' => '2026-10-06', 'body' => 'x'])->assertForbidden();
+        $this->delete(route('admin.internship.remarks.destroy', $remark))->assertRedirect();
+        $this->assertSame(['Nouvelle piste.'], InternshipRemark::pluck('body')->all());
+    }
+
+    public function test_list_can_be_searched_and_sorted(): void
+    {
+        $admin = User::factory()->admin()->create();
+        InternshipContact::create(['company' => 'Alpha', 'address' => 'Paris', 'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending', 'follow_up_on' => today()->subDay()]);
+        InternshipContact::create(['company' => 'Bêta', 'address' => 'Lyon', 'contacted_on' => '2026-10-03', 'contact_method' => 'email', 'status' => 'refused']);
+
+        $this->actingAs($admin)->get(route('admin.internship.index', ['q' => 'Lyon']))->assertOk()
+            ->assertSee('Bêta')->assertDontSee('Alpha');
+        $this->get(route('admin.internship.index', ['tri' => 'entreprise']))->assertOk()
+            ->assertSeeInOrder(['Alpha', 'Bêta'])->assertSee('en retard de 1 j');
     }
 }

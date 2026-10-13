@@ -34,6 +34,7 @@
     .badge-slate { @apply badge bg-slate-100 text-slate-700; }
     .badge-amber { @apply badge bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200; }
     .badge-green { @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200; }
+    .badge-red { @apply badge bg-red-50 text-red-700 ring-1 ring-inset ring-red-200; }
 
     /* ---------- Tableaux d'administration ---------- */
     .admin-table { @apply min-w-full divide-y divide-slate-200 text-sm; }
@@ -133,6 +134,7 @@ html.dark .badge-slate { @apply bg-slate-800 text-slate-300; }
 html.dark .badge-primary { @apply bg-primary-500/15 text-primary-300 ring-primary-500/30; }
 html.dark .badge-green { @apply bg-emerald-500/15 text-emerald-300 ring-emerald-500/30; }
 html.dark .badge-amber { @apply bg-amber-500/15 text-amber-300 ring-amber-500/30; }
+html.dark .badge-red { @apply bg-red-500/15 text-red-300 ring-red-500/30; }
 html.dark .editor-content { @apply prose-invert; }
 html.dark .editor-content .inline-code { @apply bg-slate-800 text-pink-300; }
 html.dark .editor-content .editor-image.with-background { @apply bg-slate-800; }

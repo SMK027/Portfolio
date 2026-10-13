@@ -31,6 +31,15 @@ final class ServicePermissions
             'articles.publish' => 'Publier, programmer, dépublier et épingler des articles',
             'articles.delete'  => 'Supprimer des articles',
         ],
+        'Recherche de stage' => [
+            'internship.read'           => 'Consulter et exporter le suivi de recherche de stage (entreprises et remarques)',
+            'internship.create'         => 'Ajouter des entreprises contactées',
+            'internship.update'         => 'Modifier des entreprises contactées',
+            'internship.delete'         => 'Supprimer des entreprises contactées',
+            'internship_remarks.create' => 'Ajouter des remarques sur la recherche de stage',
+            'internship_remarks.update' => 'Modifier des remarques sur la recherche de stage',
+            'internship_remarks.delete' => 'Supprimer des remarques sur la recherche de stage',
+        ],
         'Statistiques' => [
             'stats.read' => 'Consulter les statistiques de visite',
         ],

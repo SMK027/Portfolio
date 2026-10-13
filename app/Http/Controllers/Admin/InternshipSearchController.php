@@ -15,18 +15,51 @@ use Symfony\Component\HttpFoundation\Response;
 /** Suivi de la recherche de stage (administrateurs uniquement). */
 class InternshipSearchController extends Controller
 {
+    /** Tris proposés : clé => [colonne, sens]. */
+    protected const SORTS = [
+        'recent'    => ['contacted_on', 'desc'],
+        'ancien'    => ['contacted_on', 'asc'],
+        'relance'   => ['follow_up_on', 'asc'],
+        'entreprise' => ['company', 'asc'],
+    ];
+
     public function index(Request $request): View
     {
         $status = $request->query('statut');
         $status = array_key_exists((string) $status, InternshipContact::STATUSES) ? $status : null;
+        $search = trim((string) $request->query('q'));
+        $sort = array_key_exists((string) $request->query('tri'), self::SORTS) ? $request->query('tri') : 'recent';
 
         $all = InternshipContact::ordered()->get();
 
+        $contacts = InternshipContact::query()
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('company', 'like', "%{$search}%")
+                ->orWhere('address', 'like', "%{$search}%")
+                ->orWhere('contact_name', 'like', "%{$search}%")
+                ->orWhere('notes', 'like', "%{$search}%")))
+            // Tri par relance : contacts sans relance prévue en dernier
+            ->when($sort === 'relance', fn ($query) => $query->orderByRaw('follow_up_on is null'))
+            ->orderBy(...self::SORTS[$sort])->orderByDesc('id')
+            ->get();
+
+        $answered = $all->whereIn('status', ['accepted', 'refused'])->count();
+
         return view('admin.internship.index', [
-            'contacts' => $status ? $all->where('status', $status) : $all,
+            'contacts' => $contacts,
             'counts'   => $all->countBy('status'),
-            'total'    => $all->count(),
+            'stats'    => [
+                'total'     => $all->count(),
+                'awaiting'  => $all->filter->isAwaiting()->count(),
+                'due'       => $all->filter->followUpDue()->count(),
+                'accepted'  => $all->where('status', 'accepted')->count(),
+                'responses' => $all->count() ? (int) round($answered / $all->count() * 100) : 0,
+            ],
             'status'   => $status,
+            'search'   => $search,
+            'sort'     => $sort,
+            'sorts'    => ['recent' => 'Plus récents', 'ancien' => 'Plus anciens', 'relance' => 'Prochaine relance', 'entreprise' => 'Entreprise (A → Z)'],
             'remarks'  => InternshipRemark::ordered()->get(),
         ]);
     }

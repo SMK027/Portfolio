@@ -32,6 +32,6 @@
             <x-form.textarea name="notes" label="Notes" :value="$contact->notes" rows="5" maxlength="5000" />
         </x-admin.section>
 
-        <x-admin.form-actions :cancel="route('admin.internship.index')" />
+        <x-admin.form-actions :can="$editing ? 'internship.update' : 'internship.create'" :cancel="route('admin.internship.index')" />
     </form>
 </x-app-layout>

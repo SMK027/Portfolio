@@ -33,6 +33,9 @@ final class PanelSections
             ['admin.appointments.index', 'Rendez-vous', 'calendar', 'admin.appointments.*', 'appointments.read|appointments.write|appointments.delete'],
             ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
         ],
+        'Recherche de stage' => [
+            ['admin.internship.index', 'Recherche de stage', 'briefcase', 'admin.internship.*', 'internship.read'],
+        ],
         'Site' => [
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*', 'pages.read|pages.write'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*', 'seo.read|seo.write'],

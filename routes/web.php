@@ -163,16 +163,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');
 
-    // Suivi de la recherche de stage : administrateurs uniquement
-    Route::prefix('recherche-stage')->name('internship.')->controller(Admin\InternshipSearchController::class)->group(function () {
-        Route::get('/export/{format}', 'export')->whereIn('format', ['pdf', 'excel'])->name('export');
-        Route::post('/remarques', 'storeRemark')->name('remarks.store');
-        Route::put('/remarques/{remark}', 'updateRemark')->name('remarks.update');
-        Route::delete('/remarques/{remark}', 'destroyRemark')->name('remarks.destroy');
-    });
-    Route::resource('recherche-stage', Admin\InternshipSearchController::class)->except('show')
-        ->parameters(['recherche-stage' => 'contact'])->names('internship');
-
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 });
@@ -216,6 +206,21 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->scopeBindings()->middleware($panel('projects.write'))->name('projets.files.destroy');
 
     $crud('annonces', Admin\AnnouncementController::class, 'announcements', ['annonces' => 'announcement']);
+
+    // Suivi de la recherche de stage : une habilitation par action, pour les contacts et les remarques.
+    // La consultation (internship.read) ouvre la liste ; les autres habilitations s'y ajoutent.
+    Route::prefix('recherche-stage')->name('internship.')->controller(Admin\InternshipSearchController::class)->group(function () use ($panel) {
+        Route::get('/', 'index')->middleware($panel('internship.read'))->name('index');
+        Route::get('/export/{format}', 'export')->whereIn('format', ['pdf', 'excel'])->middleware($panel('internship.read'))->name('export');
+        Route::get('/nouveau', 'create')->middleware($panel('internship.create'))->name('create');
+        Route::post('/', 'store')->middleware($panel('internship.create'))->name('store');
+        Route::get('/{contact}/modifier', 'edit')->middleware($panel('internship.read|internship.update'))->name('edit');
+        Route::put('/{contact}', 'update')->middleware($panel('internship.update'))->name('update');
+        Route::delete('/{contact}', 'destroy')->middleware($panel('internship.delete'))->name('destroy');
+        Route::post('/remarques', 'storeRemark')->middleware($panel('internship_remarks.create'))->name('remarks.store');
+        Route::put('/remarques/{remark}', 'updateRemark')->middleware($panel('internship_remarks.update'))->name('remarks.update');
+        Route::delete('/remarques/{remark}', 'destroyRemark')->middleware($panel('internship_remarks.delete'))->name('remarks.destroy');
+    });
 
     Route::get('/messages', [Admin\ContactMessageController::class, 'index'])->middleware($panel('messages.read'))->name('messages.index');
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
