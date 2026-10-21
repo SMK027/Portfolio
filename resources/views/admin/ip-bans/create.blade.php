@@ -28,7 +28,10 @@
                               :min="now()->format('Y-m-d\TH:i')" help="Heure de Paris." />
             </div>
 
-            <x-form.input name="reason" label="Motif" maxlength="255" placeholder="Ex. : aspiration du site, spam du formulaire de contact…" />
+            <x-form.input name="reason" label="Motif" maxlength="255" placeholder="Ex. : aspiration du site, spam du formulaire de contact…" help="Affiché à l'adresse bannie." />
+            <x-form.select name="http_status" label="Code HTTP renvoyé" class="sm:w-72" :options="\App\Models\IpBan::HTTP_STATUSES" :value="\App\Models\IpBan::DEFAULT_STATUS" required
+                           help="Code des réponses servies à cette adresse (pages et API). La page affichée reste celle du blocage." />
+
         </x-admin.section>
 
         <x-admin.form-actions :cancel="route('admin.ip-bans.index')" label="Bannir" />

@@ -112,12 +112,14 @@ class LoginBan
     }
 
     /** Bannissement manuel par un super-administrateur (ou en console) ; $until null = sans date de fin. */
-    public function banManually(string $ip, ?Carbon $until, ?string $reason, ?User $by = null): IpBan
+    public function banManually(string $ip, ?Carbon $until, ?string $reason, ?User $by = null, ?int $status = null): IpBan
     {
         $ban = $this->audit->withoutRecording(fn () => IpBan::create([
             'ip_address'   => $ip,
             'attempts'     => 0,
-            'reason'       => $reason ?: 'Bannissement manuel',
+            'is_manual'    => true,
+            'reason'       => $reason,
+            'http_status'  => $status,
             'banned_until' => $until,
         ]));
 
@@ -127,16 +129,17 @@ class LoginBan
         ]);
         $this->audit->record('auth.ip_banned', $ban, meta: [
             'méthode'   => 'manuel',
+            'code HTTP' => $ban->status(),
             'jusqu\'au' => $until?->format('d/m/Y H:i') ?? 'sans date de fin',
         ], force: true);
 
         return $ban;
     }
 
-    /** Modification par un super-administrateur (date de fin, motif). */
-    public function update(IpBan $ban, ?Carbon $until, ?string $reason, ?User $by = null): void
+    /** Modification par un super-administrateur (date de fin, motif, code HTTP). */
+    public function update(IpBan $ban, ?Carbon $until, ?string $reason, ?User $by = null, ?int $status = null): void
     {
-        $ban->update(['banned_until' => $until, 'reason' => $reason]);
+        $ban->update(['banned_until' => $until, 'reason' => $reason, 'http_status' => $status]);
 
         $this->log()->notice("Bannissement modifié : {$ban->ip_address} ".($until ? 'jusqu\'au '.$until->format('d/m/Y H:i') : 'sans date de fin'), [
             'ban_id' => $ban->id,

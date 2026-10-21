@@ -25,7 +25,10 @@
                               :min="now()->format('Y-m-d\TH:i')" help="Heure de Paris." />
             </div>
 
-            <x-form.input name="reason" label="Motif" :value="$ban->reason" maxlength="255" />
+            <x-form.input name="reason" label="Motif" :value="$ban->reason" maxlength="255" :help="$ban->is_manual ? 'Affiché à l\'adresse bannie.' : 'Interne : l\'adresse voit le message générique sur les échecs de connexion.'" />
+            <x-form.select name="http_status" label="Code HTTP renvoyé" class="sm:w-72" :options="\App\Models\IpBan::HTTP_STATUSES" :value="$ban->status()" required
+                           help="Code des réponses servies à cette adresse (pages et API). La page affichée reste celle du blocage." />
+
         </x-admin.section>
 
         <x-admin.form-actions :cancel="route('admin.ip-bans.index')" />

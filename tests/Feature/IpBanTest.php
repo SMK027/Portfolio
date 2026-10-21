@@ -210,6 +210,36 @@ class IpBanTest extends TestCase
         $this->get('/')->assertForbidden();
     }
 
+    public function test_manual_ban_shows_its_reason_and_chosen_status(): void
+    {
+        $super = User::factory()->superAdmin()->create();
+        $this->actingAs($super)->post(route('admin.ip-bans.store'), [
+            'ip_address' => '198.51.100.9', 'permanent' => 1, 'reason' => 'Aspiration du site', 'http_status' => 404,
+        ])->assertSessionHasNoErrors();
+        $ban = IpBan::sole();
+        $this->assertTrue($ban->is_manual);
+
+        auth()->logout();
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9']);
+        $this->get('/')->assertNotFound()->assertSee('Aspiration du site')->assertDontSee('échecs de connexion');
+        $this->getJson('/api/v1/me')->assertNotFound()->assertJsonPath('message', fn ($m) => str_contains($m, 'Aspiration du site'));
+
+        // Code modifiable ensuite (200 compris) ; code non proposé refusé
+        $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])->actingAs($super);
+        $this->put(route('admin.ip-bans.update', $ban), ['permanent' => 1, 'reason' => 'Spam', 'http_status' => 200])->assertSessionHasNoErrors();
+        $this->put(route('admin.ip-bans.update', $ban), ['permanent' => 1, 'http_status' => 302])->assertSessionHasErrors('http_status');
+        auth()->logout();
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9'])->get('/')->assertOk()->assertSee('Spam');
+    }
+
+    public function test_automatic_ban_keeps_the_generic_message(): void
+    {
+        IpBan::create(['ip_address' => '203.0.113.7', 'attempts' => 3, 'reason' => 'interne', 'banned_until' => now()->addHour(), 'http_status' => 500]);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])->get('/')
+            ->assertStatus(500)->assertSee('échecs de connexion')->assertDontSee('interne');
+    }
+
     public function test_only_super_admins_manage_bans(): void
     {
         $ban = IpBan::create(['ip_address' => '203.0.113.7', 'banned_until' => now()->addHour()]);

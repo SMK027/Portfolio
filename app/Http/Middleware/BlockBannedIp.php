@@ -8,9 +8,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Refuse toutes les requêtes (site, panel, API) d'une adresse IP bannie
- * après des échecs de connexion répétés (voir App\Services\LoginBan).
- * Middleware global, exécuté avant la session : réponse 403 sans cookie.
+ * Refuse toutes les requêtes (site, panel, API) d'une adresse IP bannie, après
+ * des échecs de connexion répétés ou manuellement (voir App\Services\LoginBan).
+ * Middleware global, exécuté avant la session : réponse sans cookie, avec le
+ * code HTTP choisi pour ce bannissement (403 par défaut).
  */
 class BlockBannedIp
 {
@@ -31,15 +32,16 @@ class BlockBannedIp
             $headers['Retry-After'] = (string) max(1, (int) now()->diffInSeconds($ban->banned_until));
         }
 
-        $message = 'Votre adresse IP est temporairement bloquée après plusieurs échecs de connexion.';
+        $message = $ban->publicMessage();
+        $status = $ban->status();
 
         if ($request->is('api/*') || $request->expectsJson()) {
             return response()->json([
                 'message'      => $message,
                 'banned_until' => $ban->banned_until?->toIso8601String(),
-            ], 403, $headers);
+            ], $status, $headers);
         }
 
-        return response()->view('errors.banned', ['ban' => $ban, 'message' => $message], 403, $headers);
+        return response()->view('errors.banned', ['ban' => $ban, 'message' => $message, 'status' => $status], $status, $headers);
     }
 }

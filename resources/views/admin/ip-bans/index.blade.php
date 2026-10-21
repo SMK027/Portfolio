@@ -28,7 +28,7 @@
         @else
             <div class="-mx-4 overflow-x-auto sm:-mx-6">
                 <table class="admin-table">
-                    <thead><tr><th>Adresse IP</th><th>Depuis</th><th>Jusqu'au</th><th class="hidden md:table-cell">Motif</th><th class="w-24"></th></tr></thead>
+                    <thead><tr><th>Adresse IP</th><th>Depuis</th><th>Jusqu'au</th><th class="hidden md:table-cell">Motif</th><th class="hidden md:table-cell">Code</th><th class="w-24"></th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach ($active as $ban)
                             <tr>
@@ -42,7 +42,11 @@
                                         <span class="badge bg-red-50 text-red-700 ring-1 ring-inset ring-red-200">Sans date de fin</span>
                                     @endif
                                 </td>
-                                <td class="hidden text-sm text-slate-600 md:table-cell">{{ $ban->reason ?? '—' }}</td>
+                                <td class="hidden text-sm text-slate-600 md:table-cell">
+                                    {{ $ban->reason ?? '—' }}
+                                    <span class="block text-xs text-slate-400">{{ $ban->is_manual ? 'Manuel' : 'Automatique' }}</span>
+                                </td>
+                                <td class="hidden font-mono text-sm text-slate-600 md:table-cell">{{ $ban->status() }}</td>
                                 <td class="whitespace-nowrap text-right">
                                     <a href="{{ route('admin.ip-bans.edit', $ban) }}" class="inline-flex items-center justify-center rounded-lg p-2 align-middle text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Modifier" aria-label="Modifier"><x-icon name="pencil" class="h-4 w-4" /></a>
                                     <form method="POST" action="{{ route('admin.ip-bans.destroy', $ban) }}" class="inline-flex align-middle">

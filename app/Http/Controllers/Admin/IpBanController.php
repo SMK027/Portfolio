@@ -41,9 +41,11 @@ class IpBanController extends Controller
             'permanent'    => ['boolean'],
             'banned_until' => ['exclude_if:permanent,1', 'required', 'date', 'after:now'],
             'reason'       => ['nullable', 'string', 'max:255'],
+            'http_status'  => $this->statusRules(),
         ], [
             'banned_until.after' => 'La date de fin doit être dans le futur.',
         ], [
+            'http_status'  => 'code HTTP',
             'ip_address'   => 'adresse IP',
             'banned_until' => 'date de fin',
             'reason'       => 'motif',
@@ -71,6 +73,7 @@ class IpBanController extends Controller
             $request->boolean('permanent') ? null : Carbon::parse($data['banned_until']),
             $data['reason'] ?? null,
             $request->user(),
+            isset($data['http_status']) ? (int) $data['http_status'] : null,
         );
 
         if ($self) {
@@ -96,11 +99,13 @@ class IpBanController extends Controller
             'permanent'    => ['boolean'],
             'banned_until' => ['exclude_if:permanent,1', 'required', 'date', 'after:now'],
             'reason'       => ['nullable', 'string', 'max:255'],
+            'http_status'  => $this->statusRules(),
         ], [
             'banned_until.after' => 'La date de fin doit être dans le futur (pour lever le bannissement, utilisez « Lever »).',
         ], [
             'banned_until' => 'date de fin',
             'reason'       => 'motif',
+            'http_status'  => 'code HTTP',
         ]);
 
         $bans->update(
@@ -108,9 +113,16 @@ class IpBanController extends Controller
             $request->boolean('permanent') ? null : Carbon::parse($data['banned_until']),
             $data['reason'] ?? null,
             $request->user(),
+            isset($data['http_status']) ? (int) $data['http_status'] : null,
         );
 
         return redirect()->route('admin.ip-bans.index')->with('success', "Bannissement de {$ipBan->ip_address} modifié.");
+    }
+
+    /** @return list<mixed> */
+    protected function statusRules(): array
+    {
+        return ['nullable', 'integer', \Illuminate\Validation\Rule::in(array_keys(IpBan::HTTP_STATUSES))];
     }
 
     public function destroy(Request $request, IpBan $ipBan, LoginBan $bans): RedirectResponse
