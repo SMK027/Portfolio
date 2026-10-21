@@ -1,11 +1,12 @@
 <x-app-layout>
     <x-slot name="title">Adresses IP bannies</x-slot>
     <x-slot name="header">Adresses IP bannies</x-slot>
+    <x-slot name="actions"><a href="{{ route('admin.ip-bans.create') }}" class="btn-primary"><x-icon name="no-symbol" class="h-4 w-4" /> Bannir une adresse</a></x-slot>
 
     <p class="text-sm text-slate-500">
         Après {{ config('auth.login_ban.max_attempts') }} échecs de connexion en {{ config('auth.login_ban.window') }} minutes
         (mot de passe, clé de sécurité, code de bot ou second facteur), l'adresse IP est bannie de tout le site, API comprise,
-        pendant {{ config('auth.login_ban.duration') }} minutes. Chaque bannissement, modification et levée est enregistré dans le
+        pendant {{ config('auth.login_ban.duration') }} minutes. Vous pouvez aussi bannir une adresse manuellement. Chaque bannissement, modification et levée est enregistré dans le
         <a href="{{ route('admin.audit.index', ['category' => 'auth']) }}" class="font-medium text-primary-600 underline">journal d'activité</a>
         et dans <code class="rounded bg-slate-100 px-1">storage/logs/security-*.log</code>.
         Votre adresse actuelle : <code class="rounded bg-slate-100 px-1">{{ $myIp }}</code>.
@@ -77,6 +78,7 @@
                                     @else
                                         Expiré le {{ $ban->banned_until->format('d/m/Y H:i') }}
                                     @endif
+                                    <a href="{{ route('admin.ip-bans.create', ['ip' => $ban->ip_address]) }}" class="block text-xs font-medium text-primary-600 hover:underline">Bannir de nouveau</a>
                                 </td>
                                 <td class="hidden text-sm text-slate-600 md:table-cell">{{ $ban->reason ?? '—' }}</td>
                             </tr>

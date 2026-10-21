@@ -154,12 +154,40 @@ class IpBanTest extends TestCase
         $this->get(route('admin.ip-bans.edit', $ban))->assertNotFound();
     }
 
+    public function test_super_admin_bans_an_ip_manually(): void
+    {
+        $super = User::factory()->superAdmin()->create();
+        $this->actingAs($super)->get(route('admin.ip-bans.create'))->assertOk();
+
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '198.51.100.9', 'permanent' => 0, 'banned_until' => now()->addDay()->format('Y-m-d\TH:i'), 'reason' => 'Aspirateur'])
+            ->assertRedirect(route('admin.ip-bans.index'));
+        $ban = IpBan::where('ip_address', '198.51.100.9')->sole();
+        $this->assertTrue($ban->isActive());
+        $this->assertSame('Aspirateur', $ban->reason);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'auth.ip_banned', 'user_id' => $super->id]);
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9'])->get('/')->assertForbidden();
+        $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1']);
+
+        // Sans date de fin, IPv6 (écriture normalisée)
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '2001:DB8:0::1', 'permanent' => 1])->assertSessionHasNoErrors();
+        $this->assertNull(IpBan::where('ip_address', '2001:db8::1')->sole()->banned_until);
+
+        // Refus : adresse invalide, déjà bannie, sa propre adresse, liste blanche
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => 'pas-une-ip', 'permanent' => 1])->assertSessionHasErrors('ip_address');
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '198.51.100.9', 'permanent' => 1])->assertSessionHasErrors('ip_address');
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '127.0.0.1', 'permanent' => 1])->assertSessionHasErrors('ip_address');
+        config(['auth.login_ban.whitelist' => ['192.0.2.0/24']]);
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '192.0.2.5', 'permanent' => 1])->assertSessionHasErrors('ip_address');
+        $this->assertSame(2, IpBan::count());
+    }
+
     public function test_only_super_admins_manage_bans(): void
     {
         $ban = IpBan::create(['ip_address' => '203.0.113.7', 'banned_until' => now()->addHour()]);
         $this->actingAs(User::factory()->admin()->create());
 
         $this->get(route('admin.ip-bans.index'))->assertForbidden();
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '198.51.100.9', 'permanent' => 1])->assertForbidden();
         $this->delete(route('admin.ip-bans.destroy', $ban))->assertForbidden();
         $this->assertTrue($ban->fresh()->isActive());
     }

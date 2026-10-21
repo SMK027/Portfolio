@@ -11,8 +11,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
- * Adresses IP bannies après des échecs de connexion (super-administrateurs) :
- * consultation, modification de la date de fin et levée anticipée.
+ * Adresses IP bannies (super-administrateurs) : bannissements automatiques après
+ * des échecs de connexion et bannissements manuels ; consultation, modification
+ * de la date de fin et levée anticipée.
  */
 class IpBanController extends Controller
 {
@@ -25,6 +26,47 @@ class IpBanController extends Controller
                 ->latest()->limit(50)->get(),
             'myIp'    => $request->ip(),
         ]);
+    }
+
+    public function create(Request $request): View
+    {
+        return view('admin.ip-bans.create', ['ip' => (string) $request->query('ip', '')]);
+    }
+
+    public function store(Request $request, LoginBan $bans): RedirectResponse
+    {
+        $data = $request->validate([
+            'ip_address'   => ['required', 'ip'],
+            'permanent'    => ['boolean'],
+            'banned_until' => ['exclude_if:permanent,1', 'required', 'date', 'after:now'],
+            'reason'       => ['nullable', 'string', 'max:255'],
+        ], [
+            'banned_until.after' => 'La date de fin doit être dans le futur.',
+        ], [
+            'ip_address'   => 'adresse IP',
+            'banned_until' => 'date de fin',
+            'reason'       => 'motif',
+        ]);
+
+        $ip = inet_ntop(inet_pton($data['ip_address'])); // forme canonique (IPv6 abrégée, minuscules)
+        $error = match (true) {
+            $ip === $request->ip()                    => 'Il s\'agit de votre adresse actuelle : vous perdriez l\'accès au site.',
+            $bans->isWhitelisted($ip)                 => 'Cette adresse figure dans la liste blanche (LOGIN_BAN_WHITELIST) : elle ne peut pas être bannie.',
+            IpBan::active()->where('ip_address', $ip)->exists() => 'Cette adresse est déjà bannie : modifiez le bannissement en cours.',
+            default                                   => null,
+        };
+        if ($error) {
+            return back()->withErrors(['ip_address' => $error])->withInput();
+        }
+
+        $bans->banManually(
+            $ip,
+            $request->boolean('permanent') ? null : Carbon::parse($data['banned_until']),
+            $data['reason'] ?? null,
+            $request->user(),
+        );
+
+        return redirect()->route('admin.ip-bans.index')->with('success', "{$ip} est bannie du site.");
     }
 
     public function edit(IpBan $ipBan): View

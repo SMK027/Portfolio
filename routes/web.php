@@ -154,9 +154,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::put('/adresse-connexion', [Admin\LoginPathController::class, 'update'])->middleware('throttle:10,1')->name('login-path.update');
     });
 
-    // Adresses IP bannies après des échecs de connexion : super-administrateurs uniquement
+    // Adresses IP bannies (échecs de connexion ou bannissement manuel) : super-administrateurs uniquement
     Route::resource('ip-bannies', Admin\IpBanController::class)
-        ->only(['index', 'edit', 'update', 'destroy'])
+        ->except(['show'])
         ->parameters(['ip-bannies' => 'ipBan'])->names('ip-bans')
         ->middleware('can:manage-ip-bans');
 
