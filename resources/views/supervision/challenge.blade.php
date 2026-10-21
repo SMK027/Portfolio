@@ -5,7 +5,7 @@
     <div class="mx-auto max-w-lg">
         <x-admin.section title="Habilitation requise">
             <p class="text-sm text-slate-600">
-                Votre compte n'est pas habilité pour cette opération. Un superviseur peut la valider <strong>une seule fois</strong>
+                Cette opération exige la validation d'un superviseur, faute d'habilitation de votre compte ou parce qu'elle est sensible. Un superviseur peut la valider <strong>une seule fois</strong>
                 avec son identifiant et son code PIN ; elle sera alors exécutée telle que vous l'avez saisie.
             </p>
             <dl class="space-y-1 rounded-lg bg-slate-50 p-3 text-sm">

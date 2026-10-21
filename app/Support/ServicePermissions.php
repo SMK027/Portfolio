@@ -81,6 +81,16 @@ final class ServicePermissions
         ],
     ];
 
+    /**
+     * Opérations que seuls les superviseurs peuvent valider (jamais attribuées
+     * à un bot ni à un compte), pour des actions sensibles des administrateurs.
+     */
+    public const SUPERVISION_ONLY = [
+        'Sécurité' => [
+            'ip_bans.self' => 'Bannir sa propre adresse IP (super-administrateurs)',
+        ],
+    ];
+
     /** Sections de contenu à lecture / écriture / suppression. */
     private const CRUD = [
         'educations'     => ['educations.read' => 'Lire les formations', 'educations.write' => 'Créer et modifier des formations', 'educations.delete' => 'Supprimer des formations'],
@@ -106,9 +116,15 @@ final class ServicePermissions
         return array_keys(array_merge(...array_values(self::GROUPS)));
     }
 
+    /** Opérations qu'un superviseur peut valider. @return array<string, array<string, string>> */
+    public static function supervisable(): array
+    {
+        return array_merge(self::GROUPS, self::SUPERVISION_ONLY);
+    }
+
     public static function label(string $permission): string
     {
-        return array_merge(...array_values(self::GROUPS))[$permission] ?? $permission;
+        return array_merge(...array_values(self::supervisable()))[$permission] ?? $permission;
     }
 
     public static function isApi(string $permission): bool

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\IpBan;
 use App\Services\LoginBan;
+use App\Services\Supervision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -33,7 +34,7 @@ class IpBanController extends Controller
         return view('admin.ip-bans.create', ['ip' => (string) $request->query('ip', '')]);
     }
 
-    public function store(Request $request, LoginBan $bans): RedirectResponse
+    public function store(Request $request, LoginBan $bans, Supervision $supervision): RedirectResponse
     {
         $data = $request->validate([
             'ip_address'   => ['required', 'ip'],
@@ -50,7 +51,6 @@ class IpBanController extends Controller
 
         $ip = inet_ntop(inet_pton($data['ip_address'])); // forme canonique (IPv6 abrégée, minuscules)
         $error = match (true) {
-            $ip === $request->ip()                    => 'Il s\'agit de votre adresse actuelle : vous perdriez l\'accès au site.',
             $bans->isWhitelisted($ip)                 => 'Cette adresse figure dans la liste blanche (LOGIN_BAN_WHITELIST) : elle ne peut pas être bannie.',
             IpBan::active()->where('ip_address', $ip)->exists() => 'Cette adresse est déjà bannie : modifiez le bannissement en cours.',
             default                                   => null,
@@ -59,12 +59,24 @@ class IpBanController extends Controller
             return back()->withErrors(['ip_address' => $error])->withInput();
         }
 
+        // Sa propre adresse : on perd l'accès au site, d'où une validation superviseur (identifiant + PIN).
+        $self = $ip === inet_ntop(inet_pton($request->ip()));
+        if ($self && ! Supervision::granted($request, 'ip_bans.self')) {
+            return $supervision->require($request, ['ip_bans.self'])
+                ?? back()->withErrors(['ip_address' => 'Il s\'agit de votre adresse actuelle : la bannir exige la validation d\'un superviseur habilité à « Bannir sa propre adresse IP », et aucun ne l\'est.'])->withInput();
+        }
+
         $bans->banManually(
             $ip,
             $request->boolean('permanent') ? null : Carbon::parse($data['banned_until']),
             $data['reason'] ?? null,
             $request->user(),
         );
+
+        if ($self) {
+            // L'accès est coupé dès la prochaine requête : pas de retour au panel.
+            return redirect()->route('home');
+        }
 
         return redirect()->route('admin.ip-bans.index')->with('success', "{$ip} est bannie du site.");
     }

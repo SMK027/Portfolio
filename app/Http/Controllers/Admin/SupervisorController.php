@@ -62,7 +62,7 @@ class SupervisorController extends Controller
             'pin'           => [! $supervisor->exists || $reassigned ? 'required' : 'nullable', 'digits_between:4,8', 'confirmed'],
             'is_active'     => ['nullable', 'boolean'],
             'permissions'   => ['required', 'array', 'min:1'],
-            'permissions.*' => [Rule::in(ServicePermissions::all())],
+            'permissions.*' => [Rule::in(array_keys(array_merge(...array_values(ServicePermissions::supervisable()))))],
         ], [
             'pin.required'        => $reassigned ? 'Réattribution : définissez un nouveau code PIN.' : 'Le code PIN est obligatoire.',
             'permissions.required' => 'Choisissez au moins une opération que ce superviseur peut valider.',
@@ -72,7 +72,7 @@ class SupervisorController extends Controller
             'username'    => $data['username'],
             'user_id'     => (int) $data['user_id'],
             'is_active'   => $request->boolean('is_active'),
-            'permissions' => array_values(array_intersect(ServicePermissions::all(), $data['permissions'])),
+            'permissions' => array_values(array_intersect(array_keys(array_merge(...array_values(ServicePermissions::supervisable()))), $data['permissions'])),
         ]);
         if (filled($data['pin'] ?? null)) {
             $supervisor->setPin($data['pin']);

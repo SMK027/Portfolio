@@ -59,11 +59,25 @@ class Supervision
     public function challenge(Request $request): ?Response
     {
         $operations = (array) $request->attributes->get('supervision.denied', []);
+
+        if (! $operations || ! self::concerns($request->user()) || $this->targetsPrivilegedAccount($request)) {
+            return null;
+        }
+
+        return $this->require($request, $operations);
+    }
+
+    /**
+     * Validation superviseur exigée explicitement par un contrôleur, quel que soit
+     * le compte (administrateurs compris) : écran superviseur, ou null si aucun
+     * superviseur ne peut valider ces opérations.
+     */
+    public function require(Request $request, array $operations): ?Response
+    {
         $user = $request->user();
 
-        if (! $operations || ! self::concerns($user) || $request->expectsJson()
+        if (! $user || $request->expectsJson()
             || $request->attributes->has('supervision.granted') || $request->is('supervision', 'supervision/*')
-            || $this->targetsPrivilegedAccount($request)
             || ! $this->anySupervisorFor($operations)) {
             return null;
         }
@@ -84,6 +98,12 @@ class Supervision
         ]);
 
         return redirect()->route('supervision.show');
+    }
+
+    /** Opération validée par un superviseur pour cette requête (bypass consommé). */
+    public static function granted(Request $request, string $operation): bool
+    {
+        return in_array($operation, (array) $request->attributes->get('supervision.granted', []), true);
     }
 
     /** Requête visant un compte autre qu'un contributeur : jamais débloquable. */

@@ -22,7 +22,7 @@
 
         <x-admin.section title="Opérations qu'il peut valider">
             <div class="grid gap-6 md:grid-cols-2">
-                @foreach (\App\Support\ServicePermissions::GROUPS as $group => $permissions)
+                @foreach (\App\Support\ServicePermissions::supervisable() as $group => $permissions)
                     <fieldset>
                         <legend class="form-label">{{ $group }}</legend>
                         <div class="space-y-1.5">

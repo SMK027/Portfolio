@@ -175,10 +175,39 @@ class IpBanTest extends TestCase
         // Refus : adresse invalide, déjà bannie, sa propre adresse, liste blanche
         $this->post(route('admin.ip-bans.store'), ['ip_address' => 'pas-une-ip', 'permanent' => 1])->assertSessionHasErrors('ip_address');
         $this->post(route('admin.ip-bans.store'), ['ip_address' => '198.51.100.9', 'permanent' => 1])->assertSessionHasErrors('ip_address');
+        // Sa propre adresse sans superviseur habilité : refusée
         $this->post(route('admin.ip-bans.store'), ['ip_address' => '127.0.0.1', 'permanent' => 1])->assertSessionHasErrors('ip_address');
         config(['auth.login_ban.whitelist' => ['192.0.2.0/24']]);
         $this->post(route('admin.ip-bans.store'), ['ip_address' => '192.0.2.5', 'permanent' => 1])->assertSessionHasErrors('ip_address');
         $this->assertSame(2, IpBan::count());
+    }
+
+    public function test_banning_own_ip_requires_a_supervisor(): void
+    {
+        $super = User::factory()->superAdmin()->create();
+        $supervisor = new \App\Models\Supervisor(['username' => 'chef', 'user_id' => $super->id, 'permissions' => ['ip_bans.self'], 'is_active' => true]);
+        $supervisor->setPin('4321');
+        $supervisor->save();
+        $this->actingAs($super);
+
+        // Mise en attente puis écran superviseur
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '127.0.0.1', 'permanent' => 1, 'reason' => 'Test'])
+            ->assertRedirect(route('supervision.show'));
+        $this->assertSame(0, IpBan::count());
+        $this->get(route('supervision.show'))->assertOk()->assertSee('Bannir sa propre adresse IP');
+
+        // Mauvais PIN
+        $this->post(route('supervision.store'), ['username' => 'chef', 'pin' => '0000'])->assertSessionHasErrors('pin');
+
+        // Bon PIN : formulaire de rejeu avec le jeton à usage unique
+        $replay = $this->post(route('supervision.store'), ['username' => 'chef', 'pin' => '4321'])->assertOk();
+        preg_match('/name="_supervision_bypass" value="([^"]+)"/', $replay->getContent(), $m);
+        $this->post(route('admin.ip-bans.store'), ['ip_address' => '127.0.0.1', 'permanent' => 1, 'reason' => 'Test', '_supervision_bypass' => $m[1]])
+            ->assertRedirect(route('home'));
+
+        $this->assertTrue(IpBan::where('ip_address', '127.0.0.1')->sole()->isActive());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'supervision.used']);
+        $this->get('/')->assertForbidden();
     }
 
     public function test_only_super_admins_manage_bans(): void
