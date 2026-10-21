@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Skill;
+use App\Models\SkillCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,8 +14,8 @@ class SkillController extends Controller
     public function index(): View
     {
         return view('admin.skills.index', [
-            'groups' => Skill::ordered()->withCount('projects')->get()
-                ->groupBy(fn (Skill $skill) => $skill->category ?: 'Autres'),
+            'groups'     => Skill::groupByCategory(Skill::ordered()->withCount('projects')->get()),
+            'categories' => SkillCategory::ordered()->withCount('skills')->get(),
         ]);
     }
 
@@ -58,7 +59,7 @@ class SkillController extends Controller
     /** @return list<string> */
     protected function categories(): array
     {
-        return Skill::whereNotNull('category')->distinct()->orderBy('category')->pluck('category')->all();
+        return SkillCategory::ordered()->pluck('name')->all();
     }
 
     /** @return array<string, mixed> */

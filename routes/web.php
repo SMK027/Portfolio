@@ -196,6 +196,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     $crud('experiences', Admin\ExperienceController::class, 'experiences');
     $crud('diplomes', Admin\DiplomaController::class, 'diplomas', ['diplomes' => 'diploma']);
     $crud('certifications', Admin\CertificationController::class, 'certifications');
+    Route::post('/competences/categories', [Admin\SkillCategoryController::class, 'store'])->middleware($panel('skills.write'))->name('competences.categories.store');
+    Route::put('/competences/categories/{category}', [Admin\SkillCategoryController::class, 'update'])->middleware($panel('skills.write'))->name('competences.categories.update');
+    Route::delete('/competences/categories/{category}', [Admin\SkillCategoryController::class, 'destroy'])->middleware($panel('skills.delete'))->name('competences.categories.destroy');
     $crud('competences', Admin\SkillController::class, 'skills', ['competences' => 'skill']);
     $crud('loisirs', Admin\HobbyController::class, 'hobbies', ['loisirs' => 'hobby']);
     Route::post('/themes/rapide', [Admin\ThemeController::class, 'quickStore'])->middleware($panel('themes.write'))->name('themes.quick');

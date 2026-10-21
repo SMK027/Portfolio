@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 
 #[Fillable(['name', 'category', 'level', 'description', 'position'])]
 class Skill extends Model
@@ -23,6 +24,31 @@ class Skill extends Model
         4 => 'Avancé',
         5 => 'Expert',
     ];
+
+    protected static function booted(): void
+    {
+        // Toute catégorie saisie (formulaire, import…) rejoint la liste gérée,
+        // sous l'intitulé existant lorsqu'il ne diffère que par la casse.
+        static::saving(function (Skill $skill) {
+            $name = trim((string) $skill->category);
+            $skill->category = $name === '' ? null : SkillCategory::findOrCreateByName($name)->name;
+        });
+    }
+
+    /**
+     * Regroupe des compétences par catégorie, dans l'ordre des catégories
+     * (« Autres » en dernier pour les compétences sans catégorie).
+     *
+     * @param  Collection<int, Skill>  $skills
+     * @return Collection<string, Collection<int, Skill>>
+     */
+    public static function groupByCategory(Collection $skills): Collection
+    {
+        $order = SkillCategory::ordered()->pluck('name')->flip();
+
+        return $skills->groupBy(fn (Skill $skill) => $skill->category ?: 'Autres')
+            ->sortBy(fn ($group, string $category) => $order[$category] ?? PHP_INT_MAX);
+    }
 
     public function projects(): BelongsToMany
     {

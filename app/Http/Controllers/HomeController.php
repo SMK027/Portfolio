@@ -29,7 +29,7 @@ class HomeController extends Controller
                 ? Article::with('author', 'themes')->published()->forListing()->limit(3)->get()
                 : collect(),
             'skills'   => $canSee('competences')
-                ? Skill::ordered()->get()->groupBy(fn (Skill $skill) => $skill->category ?: 'Autres')
+                ? Skill::groupByCategory(Skill::ordered()->get())
                 : collect(),
         ]);
     }
