@@ -25,6 +25,7 @@ Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::post('/stats/duree', \App\Http\Controllers\PageViewDurationController::class)->middleware('throttle:120,1')->name('stats.duration');
 Route::get('/cv', \App\Http\Controllers\CvController::class)->middleware('throttle:30,1')->name('cv.download');
+Route::post('/cv', [\App\Http\Controllers\CvController::class, 'download'])->middleware('throttle:5,1')->name('cv.download.submit');
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 
@@ -189,6 +190,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     };
 
     Route::get('/presentation/cv', [\App\Http\Controllers\CvController::class, 'preview'])->middleware($panel('profile.read|profile.write'))->name('profile.cv');
+    Route::get('/presentation/cv/codes', [Admin\CvAccessCodeController::class, 'index'])->middleware($panel('profile.read|profile.write'))->name('profile.cv-codes.index');
+    Route::post('/presentation/cv/codes', [Admin\CvAccessCodeController::class, 'store'])->middleware($panel('profile.write'))->name('profile.cv-codes.store');
+    Route::delete('/presentation/cv/codes/{code}', [Admin\CvAccessCodeController::class, 'destroy'])->middleware($panel('profile.write'))->name('profile.cv-codes.destroy');
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->middleware($panel('profile.read|profile.write'))->name('profile.edit');
     Route::put('/presentation', [Admin\ProfileController::class, 'update'])->middleware($panel('profile.write'))->name('profile.update');
 

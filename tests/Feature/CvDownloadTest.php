@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CvAccessCode;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,10 @@ class CvDownloadTest extends TestCase
         $this->assertSame([], Storage::disk('public')->allFiles()); // rien dans le dossier public
 
         $this->get(route('home'))->assertSee(route('cv.download'));
-        $response = $this->get(route('cv.download'))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->get(route('cv.download'))->assertOk()->assertSee('Code d&#039;accès', false);
+        $code = CvAccessCode::create(['label' => 'Test', 'code' => CvAccessCode::generate()]);
+        $response = $this->post(route('cv.download.submit'), ['code' => strtolower($code->formatted())])
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
         $this->assertStringContainsString('CV%20-%20L%C3%A9o%20Franz.pdf', $response->headers->get('Content-Disposition'));
     }
@@ -70,5 +74,37 @@ class CvDownloadTest extends TestCase
 
         Storage::disk('local')->assertMissing($path);
         $this->get(route('cv.download'))->assertNotFound();
+    }
+
+    public function test_cv_requires_a_valid_code(): void
+    {
+        $this->upload();
+
+        $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertSessionHasErrors('code');
+        $this->post(route('cv.download.submit'))->assertSessionHasErrors('code');
+
+        $expired = CvAccessCode::create(['label' => 'Expiré', 'code' => CvAccessCode::generate(), 'expires_at' => now()->subDay()]);
+        $this->post(route('cv.download.submit'), ['code' => $expired->code])->assertSessionHasErrors('code');
+
+        $once = CvAccessCode::create(['label' => 'Unique', 'code' => CvAccessCode::generate(), 'max_uses' => 1]);
+        $this->post(route('cv.download.submit'), ['code' => $once->code])->assertOk();
+        $this->assertSame(1, $once->fresh()->uses);
+        $this->post(route('cv.download.submit'), ['code' => $once->code])->assertSessionHasErrors('code');
+
+        // Champ piège rempli : refusé même avec un code valide.
+        $valid = CvAccessCode::create(['label' => 'Valide', 'code' => CvAccessCode::generate()]);
+        $this->post(route('cv.download.submit'), ['code' => $valid->code, 'website' => 'x'])->assertSessionHasErrors('website');
+    }
+
+    public function test_admin_manages_codes(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.profile.cv-codes.store'), ['label' => 'Société X', 'max_uses' => 3])
+            ->assertSessionHasNoErrors();
+        $code = CvAccessCode::sole();
+        $this->assertMatchesRegularExpression('/^[A-Z2-9]{8}$/', $code->code);
+        $this->get(route('admin.profile.cv-codes.index'))->assertOk()->assertSee($code->formatted());
+
+        $this->delete(route('admin.profile.cv-codes.destroy', $code))->assertRedirect();
+        $this->assertSame(0, CvAccessCode::count());
     }
 }
