@@ -79,6 +79,7 @@ class CvDownloadTest extends TestCase
     public function test_cv_requires_a_valid_code(): void
     {
         $this->upload();
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class); // limite testée à part
 
         $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertSessionHasErrors('code');
         $this->post(route('cv.download.submit'))->assertSessionHasErrors('code');
@@ -106,5 +107,15 @@ class CvDownloadTest extends TestCase
 
         $this->delete(route('admin.profile.cv-codes.destroy', $code))->assertRedirect();
         $this->assertSame(0, CvAccessCode::count());
+    }
+
+    public function test_code_attempts_are_rate_limited(): void
+    {
+        $this->upload();
+
+        foreach (range(1, 5) as $i) {
+            $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertSessionHasErrors('code');
+        }
+        $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertStatus(429);
     }
 }
