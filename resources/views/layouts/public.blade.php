@@ -210,6 +210,7 @@
         <div class="border-t border-slate-100">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-slate-400 sm:px-6">
                 <span>© {{ now()->year }} {{ $siteName }}</span>
+                <button type="button" class="hover:text-slate-600" @click="$dispatch('cookie-consent-open')" x-data>Gérer les cookies</button>
                 {{-- Masqué quand l'adresse de connexion est personnalisée (App\Services\LoginPath) --}}
                 @if (auth()->guest() && ! \App\Services\LoginPath::isCustom())
                     <a href="{{ route('login') }}" class="hover:text-slate-600">Espace administrateur</a>
@@ -217,6 +218,8 @@
             </div>
         </div>
     </footer>
+
+    <x-cookie-banner />
 
     @stack('scripts')
 </body>

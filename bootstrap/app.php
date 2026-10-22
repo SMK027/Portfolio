@@ -40,6 +40,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Durée de lecture envoyée par navigator.sendBeacon (sans jeton CSRF ; donnée sans effet de bord).
         $middleware->validateCsrfTokens(except: ['stats/duree']);
 
+        // Choix du bandeau de cookies, écrit en JavaScript : non chiffré pour rester lisible côté serveur.
+        $middleware->encryptCookies(except: ['cookie_consent']);
+
         $middleware->web(append: [
             \App\Http\Middleware\EnsureBotTokenIsValid::class,
             \App\Http\Middleware\EnsureAccountIsActive::class,

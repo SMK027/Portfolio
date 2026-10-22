@@ -18,6 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
  *   visite récurrente, cookie de visite (30 min) pour le temps par visite ;
  * - les personnes connectées, les robots, les préchargements et les
  *   navigateurs demandant à ne pas être suivis (DNT / GPC) sont ignorés.
+ *
+ * TODO : phase de développement — le choix du bandeau de cookies (cookie
+ * « cookie_consent », voir components/cookie-banner) n'est pas encore pris en
+ * compte : la collecte a lieu même en cas de refus. À corriger avant la production.
  */
 class RecordPageView
 {
