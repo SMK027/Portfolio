@@ -9,10 +9,10 @@ class PageView extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['uuid', 'path', 'route', 'referrer_host', 'visitor', 'viewed_on', 'ip_address', 'country', 'region', 'city', 'latitude', 'longitude', 'device', 'browser', 'os', 'visitor_id', 'session_id', 'is_new_visitor', 'duration'];
+    protected $fillable = ['uuid', 'path', 'route', 'referrer_host', 'visitor', 'viewed_on', 'ip_address', 'country', 'region', 'city', 'latitude', 'longitude', 'device', 'browser', 'os', 'visitor_id', 'session_id', 'is_new_visitor', 'duration', 'last_seen_at', 'left_at'];
 
     protected function casts(): array
     {
-        return ['viewed_on' => 'date', 'is_new_visitor' => 'boolean', 'duration' => 'integer'];
+        return ['viewed_on' => 'date', 'is_new_visitor' => 'boolean', 'duration' => 'integer', 'last_seen_at' => 'datetime', 'left_at' => 'datetime'];
     }
 }

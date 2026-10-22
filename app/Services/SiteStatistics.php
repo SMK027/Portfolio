@@ -93,11 +93,37 @@ class SiteStatistics
         return PageView::where('id', '>', $afterId)->latest('id')->limit($limit)->get();
     }
 
-    /** Visiteurs distincts ayant vu une page dans les $minutes dernières minutes. */
-    public function activeVisitors(int $minutes = 5): int
+    /** Sans battement depuis ce délai (secondes), une page n'est plus considérée comme ouverte. */
+    public const ONLINE_SECONDS = 75;
+
+    /**
+     * Pages actuellement ouvertes et visibles : battement récent sans signal de départ,
+     * ou page tout juste chargée (navigateur sans JavaScript ou premier battement à venir).
+     */
+    protected function onlineQuery()
     {
-        return PageView::where('created_at', '>=', now()->subMinutes($minutes))
-            ->distinct()->count(\Illuminate\Support\Facades\DB::raw('coalesce(visitor_id, visitor)'));
+        $limit = now()->subSeconds(self::ONLINE_SECONDS);
+
+        return PageView::whereNull('left_at')->where(fn ($q) => $q
+            ->where('last_seen_at', '>=', $limit)
+            ->orWhere(fn ($q) => $q->whereNull('last_seen_at')->where('created_at', '>=', $limit)));
+    }
+
+    /**
+     * Visiteurs en ligne, avec la page qu'ils consultent (la plus récente s'ils en ont plusieurs ouvertes).
+     *
+     * @return \Illuminate\Support\Collection<int, PageView>
+     */
+    public function online()
+    {
+        return $this->onlineQuery()->latest('id')->limit(500)->get()
+            ->unique(fn (PageView $view) => $view->visitor_id ?? $view->visitor)
+            ->values();
+    }
+
+    public function activeVisitors(): int
+    {
+        return $this->online()->count();
     }
 
     /** Supprime les données de plus de 13 mois et efface les IP de plus de 3 mois. */

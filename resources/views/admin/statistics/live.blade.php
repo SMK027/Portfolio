@@ -7,7 +7,7 @@
     {{-- Page 1 : les nouvelles pages vues s'ajoutent en tête toutes les 5 secondes. --}}
     <div x-data="{
             lastId: {{ (int) ($views->first()?->id ?? 0) }},
-            active: {{ $activeNow }},
+            active: {{ $online->count() }},
             paused: false,
             fresh: 0,
             live: {{ $views->onFirstPage() ? 'true' : 'false' }},
@@ -19,6 +19,7 @@
                     if (! r.ok) return;
                     const data = await r.json();
                     this.active = data.active;
+                    this.$refs.online.innerHTML = data.online;
                     if (! data.count) return;
                     this.lastId = data.last_id;
                     this.fresh += data.count;
@@ -34,8 +35,8 @@
             <div class="card flex items-center gap-3 px-5 py-4">
                 <span class="relative flex h-3 w-3"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" x-show="live && ! paused"></span><span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span></span>
                 <div>
-                    <p class="font-display text-2xl font-bold text-slate-900" x-text="active">{{ $activeNow }}</p>
-                    <p class="text-xs text-slate-500">visiteur(s) actif(s) sur les {{ $activeMinutes }} dernières minutes</p>
+                    <p class="font-display text-2xl font-bold text-slate-900" x-text="active">{{ $online->count() }}</p>
+                    <p class="text-xs text-slate-500">visiteur(s) en ligne en ce moment</p>
                 </div>
             </div>
             <template x-if="live">
@@ -48,6 +49,14 @@
                 <a href="{{ route('admin.statistics', ['onglet' => 'temps-reel']) }}" class="text-sm font-medium text-primary-600 underline">Revenir au direct</a>
             @endunless
         </div>
+
+        <x-admin.section title="En ce moment">
+            <p class="text-sm text-slate-500">
+                Pages ouvertes et visibles : la page signale sa présence toutes les 30 secondes tant qu'elle est affichée,
+                et son départ quand elle est fermée ou passe en arrière-plan. Sans signal depuis {{ \App\Services\SiteStatistics::ONLINE_SECONDS }} secondes, le visiteur n'est plus compté.
+            </p>
+            <div x-ref="online">@include('admin.statistics._online')</div>
+        </x-admin.section>
 
         <x-admin.section title="Trafic, du plus récent au plus ancien">
             <div class="-mx-4 overflow-x-auto sm:-mx-6">

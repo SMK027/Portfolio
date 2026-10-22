@@ -10,9 +10,6 @@ use Illuminate\View\View;
 
 class StatisticsController extends Controller
 {
-    /** Fenêtre des « visiteurs actifs » de l'onglet temps réel. */
-    public const ACTIVE_MINUTES = 5;
-
     public function __invoke(Request $request, SiteStatistics $statistics): View|JsonResponse
     {
         if ($request->query('onglet') === 'temps-reel') {
@@ -38,19 +35,20 @@ class StatisticsController extends Controller
 
         if ($request->has('depuis') && $request->expectsJson()) {
             $views = $statistics->since(max(0, (int) $request->query('depuis')));
+            $online = $statistics->online();
 
             return response()->json([
                 'count'   => $views->count(),
                 'last_id' => $views->first()?->id,
-                'active'  => $statistics->activeVisitors(self::ACTIVE_MINUTES),
+                'active'  => $online->count(),
+                'online'  => view('admin.statistics._online', ['online' => $online, 'showIps' => $showIps])->render(),
                 'html'    => $views->map(fn ($view) => view('admin.statistics._row', ['view' => $view, 'showIps' => $showIps, 'dateFormat' => 'd/m/Y H:i:s'])->render())->join(''),
             ]);
         }
 
         return view('admin.statistics.live', [
             'views'         => $statistics->latest(100),
-            'activeNow'     => $statistics->activeVisitors(self::ACTIVE_MINUTES),
-            'activeMinutes' => self::ACTIVE_MINUTES,
+            'online'        => $statistics->online(),
             'showIps'       => $showIps,
         ]);
     }

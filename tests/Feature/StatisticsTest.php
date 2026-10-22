@@ -168,4 +168,32 @@ class StatisticsTest extends TestCase
             ->assertJsonPath('count', 1)->assertJsonPath('last_id', $new->id)->assertJsonPath('active', 3)
             ->assertJsonPath('html', fn ($html) => str_contains($html, '/nouvelle') && ! str_contains($html, '/recente'));
     }
+
+    public function test_heartbeats_and_leave_signals_drive_online_visitors(): void
+    {
+        $view = PageView::create(['uuid' => fake()->uuid(), 'path' => '/projets', 'visitor' => str_repeat('a', 16), 'viewed_on' => today(), 'visitor_id' => fake()->uuid()]);
+        $online = fn () => app(\App\Services\SiteStatistics::class)->activeVisitors();
+
+        $this->assertSame(1, $online()); // page tout juste chargée
+
+        $this->travel(2)->minutes();
+        $this->assertSame(0, $online()); // aucun battement reçu
+
+        $this->post(route('stats.duration'), ['id' => $view->uuid, 'seconds' => 120])->assertNoContent();
+        $this->assertSame(1, $online());
+        $this->assertSame(120, $view->fresh()->duration);
+
+        $this->post(route('stats.duration'), ['id' => $view->uuid, 'seconds' => 125, 'left' => 1]);
+        $this->assertSame(0, $online());
+        $this->assertNotNull($view->fresh()->left_at);
+
+        // De retour sur l'onglet : de nouveau en ligne, la durée ne diminue jamais
+        $this->post(route('stats.duration'), ['id' => $view->uuid, 'seconds' => 10]);
+        $this->assertSame(1, $online());
+        $this->assertSame(125, $view->fresh()->duration);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->getJson(route('admin.statistics', ['onglet' => 'temps-reel', 'depuis' => $view->id]))
+            ->assertJsonPath('active', 1)->assertJsonPath('online', fn ($html) => str_contains($html, '/projets'));
+    }
 }
