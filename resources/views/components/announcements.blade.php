@@ -12,7 +12,7 @@
     <div aria-label="Annonces" role="region">
         @foreach ($announcements as $announcement)
             <div x-data="{ show: true, key: @js($announcement->dismissKey()) }"
-                 x-init="try { show = localStorage.getItem(key) !== '1' } catch (e) {}"
+                 x-init="show = (() => { try { return localStorage.getItem(key) !== '1' } catch (e) { return true } })()"
                  x-show="show" x-transition.opacity
                  class="bg-gradient-to-r {{ $styles[$announcement->style] ?? $styles['primary'] }}">
                 <div class="mx-auto flex max-w-6xl items-start gap-3 px-4 py-3 sm:items-center sm:px-6">
