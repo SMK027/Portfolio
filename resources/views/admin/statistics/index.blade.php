@@ -160,7 +160,7 @@
                     @forelse ($latest as $view)
                         <tr>
                             <td class="whitespace-nowrap text-xs text-slate-500">{{ $view->created_at?->format('d/m H:i') }}</td>
-                            @if ($showIps)<td class="font-mono text-xs">{{ $view->ip_address ?? '—' }}</td>@endif
+                            @if ($showIps)<td class="font-mono text-xs">@if ($view->ip_address && auth()->user()->can('view-audit-log'))<a href="{{ route('admin.ip-history', ['ip' => $view->ip_address]) }}" class="hover:text-primary-700 hover:underline" title="Historique de cette IP">{{ $view->ip_address }}</a>@else{{ $view->ip_address ?? '—' }}@endif</td>@endif
                             <td class="whitespace-nowrap text-sm">{{ \App\Services\GeoIp::label($view->country) }}</td>
                             <td class="whitespace-nowrap text-sm">{{ \App\Support\UserAgent::DEVICES[$view->device] ?? '—' }}<span class="block text-xs text-slate-400">{{ collect([$view->browser, $view->os])->filter()->join(' · ') }}</span></td>
                             <td class="max-w-xs truncate text-sm"><a href="{{ url($view->path) }}" target="_blank" class="hover:text-primary-700">{{ $view->path }}</a></td>

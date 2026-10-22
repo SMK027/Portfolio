@@ -148,6 +148,8 @@ docker compose exec app php artisan portfolio:ip-ban                      # list
 docker compose exec app php artisan portfolio:ip-ban 203.0.113.7 --lift   # lève un bannissement
 ```
 
+**Historique d'une IP** (*Sécurité → Historique d'une IP*, super-administrateurs) : saisir une adresse IPv4 ou IPv6 affiche une synthèse (localisation, première et dernière visite, pages vues, visites, appareils, bannissement en cours avec lien pour bannir) et la chronologie de tout ce qu'elle a fait : pages vues (durée de lecture, site d'origine), messages de contact, demandes de rendez-vous, opérations du journal d'activité. Les IP des statistiques, du journal et des bannissements mènent directement à cette page. L'historique ne remonte pas au-delà de 3 mois (effacement des IP des visites) et chaque consultation est journalisée.
+
 **Journal d'activité** (*Sécurité → Journal d'activité*, super-administrateurs) : toutes les opérations d'administration faites depuis le panel, l'API ou la console sont enregistrées :
 - connexions, déconnexions, échecs et blocages ;
 - créations, modifications (avec les champs avant / après) et suppressions ;

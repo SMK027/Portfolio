@@ -62,6 +62,7 @@ class AuditLog extends Model
         'auth.ip_banned'    => 'Adresse IP bannie (échecs de connexion)',
         'ip_ban.updated'    => 'Bannissement IP modifié',
         'ip_ban.lifted'     => 'Bannissement IP levé',
+        'ip_history.viewed' => 'Historique d\'une IP consulté',
         'auth.password_reset' => 'Mot de passe réinitialisé',
         'auth.session_revoked' => 'Session coupée (code désactivé ou supprimé)',
         'supervision.granted' => 'Opération validée par un superviseur',

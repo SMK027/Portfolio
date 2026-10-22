@@ -32,7 +32,7 @@
                     <tbody class="divide-y divide-slate-100">
                         @foreach ($active as $ban)
                             <tr>
-                                <td class="font-mono text-sm">{{ $ban->ip_address }}</td>
+                                <td class="font-mono text-sm"><a href="{{ route('admin.ip-history', ['ip' => $ban->ip_address]) }}" class="hover:text-primary-700 hover:underline" title="Historique de cette IP">{{ $ban->ip_address }}</a></td>
                                 <td class="whitespace-nowrap text-xs text-slate-500">{{ $ban->created_at->format('d/m/Y H:i') }}</td>
                                 <td class="whitespace-nowrap text-sm">
                                     @if ($ban->banned_until)
@@ -73,7 +73,7 @@
                     <tbody class="divide-y divide-slate-100">
                         @foreach ($history as $ban)
                             <tr>
-                                <td class="font-mono text-sm">{{ $ban->ip_address }}</td>
+                                <td class="font-mono text-sm"><a href="{{ route('admin.ip-history', ['ip' => $ban->ip_address]) }}" class="hover:text-primary-700 hover:underline" title="Historique de cette IP">{{ $ban->ip_address }}</a></td>
                                 <td class="whitespace-nowrap text-xs text-slate-500">{{ $ban->created_at->format('d/m/Y H:i') }}</td>
                                 <td class="whitespace-nowrap text-sm">
                                     @if ($ban->lifted_at)

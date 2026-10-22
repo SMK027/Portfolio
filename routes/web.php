@@ -165,6 +165,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');
 
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
+    Route::get('/historique-ip', Admin\IpHistoryController::class)->middleware('can:view-audit-log')->name('ip-history');
     Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
 });
 

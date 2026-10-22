@@ -61,7 +61,7 @@
                                 @if ($log->subject_type)<span class="text-xs text-slate-400">{{ $log->subjectLabel() }}</span><br>@endif
                                 <span class="text-slate-700">{{ \Illuminate\Support\Str::limit($log->subject_label, 60) }}</span>
                             </td>
-                            <td class="hidden text-xs text-slate-500 lg:table-cell">{{ $log->viaLabel() }}@if ($log->ip_address) · {{ $log->ip_address }}@endif</td>
+                            <td class="hidden text-xs text-slate-500 lg:table-cell">{{ $log->viaLabel() }}@if ($log->ip_address) · <a href="{{ route('admin.ip-history', ['ip' => $log->ip_address]) }}" class="hover:text-primary-700 hover:underline">{{ $log->ip_address }}</a>@endif</td>
                             <td class="text-right"><a href="{{ route('admin.audit.show', $log) }}" class="inline-flex items-center justify-center align-middle rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Détail" aria-label="Détail"><x-icon name="eye" class="h-4 w-4" /></a></td>
                         </tr>
                     @endforeach
