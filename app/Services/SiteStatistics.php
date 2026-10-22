@@ -87,6 +87,19 @@ class SiteStatistics
         return PageView::latest('id')->paginate($perPage, ['*'], 'visites')->withQueryString();
     }
 
+    /** Pages vues plus récentes que $afterId (temps réel), de la plus récente à la plus ancienne. */
+    public function since(int $afterId, int $limit = 100)
+    {
+        return PageView::where('id', '>', $afterId)->latest('id')->limit($limit)->get();
+    }
+
+    /** Visiteurs distincts ayant vu une page dans les $minutes dernières minutes. */
+    public function activeVisitors(int $minutes = 5): int
+    {
+        return PageView::where('created_at', '>=', now()->subMinutes($minutes))
+            ->distinct()->count(\Illuminate\Support\Facades\DB::raw('coalesce(visitor_id, visitor)'));
+    }
+
     /** Supprime les données de plus de 13 mois et efface les IP de plus de 3 mois. */
     public function prune(): int
     {

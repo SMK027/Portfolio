@@ -1,6 +1,7 @@
 @php
     $max = max(1, $stats['series']->max('views'));
     $trend = $stats['previousViews'] ? round(($stats['views'] - $stats['previousViews']) / $stats['previousViews'] * 100) : null;
+    $fmt = fn ($s) => \App\Services\SiteStatistics::duration($s);
 @endphp
 <x-app-layout>
     <x-slot name="title">Statistiques</x-slot>
@@ -12,6 +13,8 @@
             @endforeach
         </div>
     </x-slot>
+
+    @include('admin.statistics._tabs', ['tab' => 'overview'])
 
     <p class="text-sm text-slate-500">
         Mesure d'audience à usage statistique uniquement : cookie propre au site (13 mois) pour reconnaître un visiteur qui revient,
@@ -40,8 +43,7 @@
         </div>
     </div>
 
-    @php $fmt = fn ($s) => \App\Services\SiteStatistics::duration($s); @endphp
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div class="card p-5">
             <p class="text-sm text-slate-500">Visites</p>
             <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ number_format($stats['visits'], 0, ',', ' ') }}</p>
@@ -54,11 +56,11 @@
         </div>
         <div class="card p-5">
             <p class="text-sm text-slate-500">Temps moyen par visite</p>
-            <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $fmt($stats['avgVisitTime']) }}</p>
+            <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ \App\Services\SiteStatistics::duration($stats['avgVisitTime']) }}</p>
         </div>
         <div class="card p-5">
             <p class="text-sm text-slate-500">Temps moyen par page</p>
-            <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $fmt($stats['avgPageTime']) }}</p>
+            <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ \App\Services\SiteStatistics::duration($stats['avgPageTime']) }}</p>
         </div>
     </div>
 
@@ -158,15 +160,7 @@
                 <thead><tr><th>Date</th>@if ($showIps)<th>IP</th>@endif<th>Pays</th><th>Appareil</th><th>Page</th><th>Visiteur</th><th class="text-right">Durée</th></tr></thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($latest as $view)
-                        <tr>
-                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $view->created_at?->format('d/m H:i') }}</td>
-                            @if ($showIps)<td class="font-mono text-xs">@if ($view->ip_address && auth()->user()->can('view-audit-log'))<a href="{{ route('admin.ip-history', ['ip' => $view->ip_address]) }}" class="hover:text-primary-700 hover:underline" title="Historique de cette IP">{{ $view->ip_address }}</a>@else{{ $view->ip_address ?? '—' }}@endif</td>@endif
-                            <td class="whitespace-nowrap text-sm">{{ \App\Services\GeoIp::label($view->country) }}</td>
-                            <td class="whitespace-nowrap text-sm">{{ \App\Support\UserAgent::DEVICES[$view->device] ?? '—' }}<span class="block text-xs text-slate-400">{{ collect([$view->browser, $view->os])->filter()->join(' · ') }}</span></td>
-                            <td class="max-w-xs truncate text-sm"><a href="{{ url($view->path) }}" target="_blank" class="hover:text-primary-700">{{ $view->path }}</a></td>
-                            <td class="text-sm">@if ($view->visitor_id)<span @class(['badge-green' => $view->is_new_visitor, 'badge-slate' => ! $view->is_new_visitor])>{{ $view->is_new_visitor ? 'Nouveau' : 'Récurrent' }}</span>@else — @endif</td>
-                            <td class="whitespace-nowrap text-right text-sm">{{ $fmt($view->duration) }}</td>
-                        </tr>
+                        @include('admin.statistics._row')
                     @empty
                         <tr><td colspan="7" class="text-sm text-slate-500">Aucune visite enregistrée.</td></tr>
                     @endforelse

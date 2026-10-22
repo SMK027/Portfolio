@@ -153,4 +153,19 @@ class StatisticsTest extends TestCase
         $this->assertSame(['country' => 'DE', 'region' => null, 'city' => null, 'latitude' => null, 'longitude' => null], $geoip->locate('10.0.0.1', 'DE'));
         $this->assertNull($geoip->country('10.0.0.1', 'XX'));
     }
+
+    public function test_live_tab_lists_views_newest_first_and_polls_new_ones(): void
+    {
+        $old = PageView::create(['path' => '/ancienne', 'visitor' => str_repeat('a', 16), 'viewed_on' => today(), 'visitor_id' => fake()->uuid()]);
+        PageView::create(['path' => '/recente', 'visitor' => str_repeat('b', 16), 'viewed_on' => today(), 'ip_address' => '203.0.113.10']);
+
+        $this->actingAs(User::factory()->admin()->create());
+        $this->get(route('admin.statistics', ['onglet' => 'temps-reel']))->assertOk()
+            ->assertSee('Temps réel')->assertSeeInOrder(['/recente', '/ancienne'])->assertSee('203.0.113.10');
+
+        $new = PageView::create(['path' => '/nouvelle', 'visitor' => str_repeat('c', 16), 'viewed_on' => today()]);
+        $this->getJson(route('admin.statistics', ['onglet' => 'temps-reel', 'depuis' => $old->id + 1]))->assertOk()
+            ->assertJsonPath('count', 1)->assertJsonPath('last_id', $new->id)->assertJsonPath('active', 3)
+            ->assertJsonPath('html', fn ($html) => str_contains($html, '/nouvelle') && ! str_contains($html, '/recente'));
+    }
 }
