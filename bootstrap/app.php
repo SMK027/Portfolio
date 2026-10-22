@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Après TrustProxies (pile globale par défaut), pour lire l'IP réelle du visiteur.
         $middleware->append(\App\Http\Middleware\BlockBannedIp::class);
 
+        // Pays de la liste noire (VPN, bots, attaques) : tout le site, API comprise.
+        $middleware->append(\App\Http\Middleware\BlockCountry::class);
+
         // En-têtes de sécurité (CSP, HSTS, X-Frame-Options…) sur toutes les réponses.
         $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
 

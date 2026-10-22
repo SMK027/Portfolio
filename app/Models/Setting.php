@@ -46,6 +46,7 @@ class Setting extends Model
             'maintenance.enabled'       => 'Maintenance : activation',
             'maintenance.ends_at'       => 'Maintenance : date de fin',
             'maintenance.reason'        => 'Maintenance : motif',
+            'security.blocked_countries' => 'Pays bloqués',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

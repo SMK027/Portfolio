@@ -160,6 +160,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->parameters(['ip-bannies' => 'ipBan'])->names('ip-bans')
         ->middleware('can:manage-ip-bans');
 
+    // Liste noire de pays : super-administrateurs uniquement
+    Route::middleware('can:manage-ip-bans')->group(function () {
+        Route::get('/pays-bloques', [Admin\BlockedCountryController::class, 'edit'])->name('blocked-countries.edit');
+        Route::put('/pays-bloques', [Admin\BlockedCountryController::class, 'update'])->name('blocked-countries.update');
+    });
+
     // Superviseurs : super-administrateurs uniquement
     Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');

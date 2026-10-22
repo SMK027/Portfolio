@@ -25,6 +25,7 @@
             ['admin.supervisors.index', 'Superviseurs', 'lock', 'admin.supervisors.*'],
             ['admin.login-path.edit', 'Adresse de connexion', 'lock', 'admin.login-path.*'],
             ['admin.ip-bans.index', 'Adresses IP bannies', 'no-symbol', 'admin.ip-bans.*'],
+            ['admin.blocked-countries.edit', 'Pays bloqués', 'no-symbol', 'admin.blocked-countries.*'],
             ['admin.ip-history', 'Historique d\'une IP', 'search', 'admin.ip-history'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
         ];
