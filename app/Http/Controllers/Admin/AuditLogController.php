@@ -37,9 +37,13 @@ class AuditLogController extends Controller
             'category' => ['nullable', 'in:'.implode(',', array_keys(self::CATEGORIES))],
             'from'     => ['nullable', 'date'],
             'to'       => ['nullable', 'date'],
+            'archived' => ['nullable', 'in:only,all'],
         ]);
 
+        // Par défaut, seules les entrées récentes (non archivées) sont listées.
         $logs = AuditLog::query()
+            ->when(($filters['archived'] ?? null) === null, fn ($q) => $q->whereNull('archived_at'))
+            ->when(($filters['archived'] ?? null) === 'only', fn ($q) => $q->whereNotNull('archived_at'))
             ->when($filters['q'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q
                 ->where('subject_label', 'like', "%{$term}%")
                 ->orWhere('actor_name', 'like', "%{$term}%")

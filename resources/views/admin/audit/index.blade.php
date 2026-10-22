@@ -5,6 +5,7 @@
     <p class="text-sm text-slate-500">
         Toutes les opérations d'administration (panel, API des comptes de service, console) : connexions, créations, modifications,
         suppressions, validations, imports… Les actions des visiteurs sur le site public ne sont pas enregistrées. Le journal ne peut être ni modifié ni effacé depuis le site.
+        Les entrées sont archivées au bout de {{ \App\Models\AuditLog::ARCHIVE_AFTER_MONTHS }} mois (masquées par défaut), puis supprimées définitivement au bout de {{ \App\Models\AuditLog::DELETE_AFTER_MONTHS }} mois.
     </p>
 
     <form method="GET" class="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -21,7 +22,12 @@
             <option value="">Panel, API et console</option>
             @foreach (\App\Models\AuditLog::VIAS as $key => $label)<option value="{{ $key }}" @selected(($filters['via'] ?? '') === $key)>{{ $label }}</option>@endforeach
         </select>
-        <div class="flex gap-2 lg:col-span-6">
+        <div class="flex flex-wrap gap-2 lg:col-span-6">
+            <select name="archived" class="form-input w-auto">
+                <option value="">Entrées récentes</option>
+                <option value="only" @selected(($filters['archived'] ?? '') === 'only')>Archives</option>
+                <option value="all" @selected(($filters['archived'] ?? '') === 'all')>Récentes et archives</option>
+            </select>
             <label class="flex items-center gap-2 text-sm text-slate-600">Du <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="form-input"></label>
             <label class="flex items-center gap-2 text-sm text-slate-600">au <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="form-input"></label>
             <button class="btn-primary ml-auto">Filtrer</button>
@@ -38,7 +44,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach ($logs as $log)
                         <tr>
-                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $log->created_at->format('d/m/Y H:i:s') }}</td>
+                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $log->created_at->format('d/m/Y H:i:s') }}@if ($log->archived_at)<br><span class="badge-slate">archivée</span>@endif</td>
                             <td class="text-sm">
                                 {{ $log->actor_name ?? '—' }}
                                 @if ($log->actor_role === 'service')<span class="badge-slate ml-1">service</span>@endif

@@ -153,7 +153,7 @@ docker compose exec app php artisan portfolio:ip-ban 203.0.113.7 --lift   # lèv
 - créations, modifications (avec les champs avant / après) et suppressions ;
 - validations d'articles, imports et exports, codes créés ou révoqués, refus d'accès à l'API, lectures de messages via l'API…
 
-Les secrets ne sont jamais enregistrés et les actions du site public sont ignorées. Le journal ne peut être ni modifié ni supprimé depuis l'application.
+Les secrets ne sont jamais enregistrés et les actions du site public sont ignorées. Le journal ne peut être ni modifié ni supprimé depuis l'application. Conservation : chaque nuit, les entrées de plus d'**1 mois** sont archivées (masquées par défaut, filtre « Archives » pour les consulter) et celles de plus de **3 mois** sont supprimées définitivement.
 
 **Validation des articles des contributeurs** :
 - les articles créés par un contributeur restent en brouillon ; il les **soumet pour validation** quand ils sont prêts ;

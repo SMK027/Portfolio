@@ -96,12 +96,18 @@ class AuditLog extends Model
 
     public const VIAS = ['web' => 'Panel', 'api' => 'API', 'console' => 'Console'];
 
+    /** Conservation : archivage après 1 mois, suppression définitive après 3 mois. */
+    public const ARCHIVE_AFTER_MONTHS = 1;
+
+    public const DELETE_AFTER_MONTHS = 3;
+
     protected function casts(): array
     {
         return [
             'changes'    => 'array',
             'meta'       => 'array',
-            'created_at' => 'datetime',
+            'created_at'  => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -110,6 +116,22 @@ class AuditLog extends Model
         // Journal inaltérable depuis l'application.
         static::updating(fn () => throw new LogicException('Le journal d\'activité ne peut pas être modifié.'));
         static::deleting(fn () => throw new LogicException('Le journal d\'activité ne peut pas être supprimé.'));
+    }
+
+    /**
+     * Seule exception à l'inaltérabilité : la tâche planifiée de conservation
+     * (requêtes directes, sans passer par les événements du modèle).
+     *
+     * @return array{archived: int, deleted: int}
+     */
+    public static function applyRetention(): array
+    {
+        $deleted = static::query()->where('created_at', '<', now()->subMonths(self::DELETE_AFTER_MONTHS))->toBase()->delete();
+        $archived = static::query()->whereNull('archived_at')
+            ->where('created_at', '<', now()->subMonths(self::ARCHIVE_AFTER_MONTHS))
+            ->toBase()->update(['archived_at' => now()]);
+
+        return ['archived' => $archived, 'deleted' => $deleted];
     }
 
     public function user(): BelongsTo

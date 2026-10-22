@@ -18,6 +18,9 @@ Schedule::call(fn () => \App\Models\User::warnUpcomingDeactivations())->hourly()
 // Bannissements d'adresses IP terminés depuis plus de 3 mois : supprimés chaque nuit.
 Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('03:40')->name('ip-bannies:purge');
 
+// Journal d'activité : archivé après 1 mois, supprimé définitivement après 3 mois.
+Schedule::call(fn () => \App\Models\AuditLog::applyRetention())->dailyAt('03:50')->name('journal:conservation');
+
 // Dépôts GitHub des projets : rafraîchis avant l'expiration du cache (12 h).
 Schedule::call(fn () => app(\App\Services\GithubRepositories::class)->refreshAll())->everySixHours()->name('github:rafraichir');
 

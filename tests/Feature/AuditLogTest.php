@@ -133,4 +133,21 @@ class AuditLogTest extends TestCase
         $this->actingAs(User::factory()->admin()->create())->get(route('admin.audit.index'))->assertForbidden();
         $this->actingAs(User::factory()->create())->get(route('admin.audit.index'))->assertForbidden();
     }
+
+    public function test_entries_are_archived_after_one_month_and_deleted_after_three(): void
+    {
+        $entry = fn (string $label, $date) => AuditLog::create(['actor_name' => 'Léo', 'via' => 'web', 'action' => 'theme.created', 'subject_label' => $label, 'created_at' => $date]);
+        $entry('Thème Alpha', now()->subDays(10));
+        $entry('Thème Beta', now()->subMonths(2));
+        $entry('Thème Gamma', now()->subMonths(3)->subDay());
+
+        $this->assertSame(['archived' => 1, 'deleted' => 1], AuditLog::applyRetention());
+        $this->assertSame(['Thème Alpha', 'Thème Beta'], AuditLog::orderBy('id')->pluck('subject_label')->all());
+        $this->assertNull(AuditLog::where('subject_label', 'Thème Alpha')->value('archived_at'));
+        $this->assertSame(['archived' => 0, 'deleted' => 0], AuditLog::applyRetention());
+
+        $this->actingAs($this->admin)->get(route('admin.audit.index'))->assertSee('Thème Alpha')->assertDontSee('Thème Beta');
+        $this->actingAs($this->admin)->get(route('admin.audit.index', ['archived' => 'only']))->assertSee('Thème Beta')->assertDontSee('Thème Alpha');
+        $this->actingAs($this->admin)->get(route('admin.audit.index', ['archived' => 'all']))->assertSee('Thème Beta')->assertSee('Thème Alpha');
+    }
 }
