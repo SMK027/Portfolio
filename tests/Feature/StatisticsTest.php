@@ -128,4 +128,29 @@ class StatisticsTest extends TestCase
         $this->post(route('login.bot'), ['code' => $plain]);
         $this->get(route('admin.statistics'))->assertOk()->assertSee('France')->assertDontSee('203.0.113.10');
     }
+
+    public function test_city_level_location_is_recorded_and_shown(): void
+    {
+        $this->mock(\App\Services\GeoIp::class, fn ($mock) => $mock->shouldReceive('locate')->andReturn(
+            ['country' => 'FR', 'region' => 'Île-de-France', 'city' => 'Paris', 'latitude' => 48.86, 'longitude' => 2.35]
+        ));
+
+        $this->get('/', self::BROWSER)->assertOk();
+
+        $view = PageView::first();
+        $this->assertSame(['FR', 'Île-de-France', 'Paris'], [$view->country, $view->region, $view->city]);
+        $this->assertEquals(48.86, $view->latitude);
+
+        $this->actingAs(User::factory()->admin()->create())->get(route('admin.statistics'))
+            ->assertSee('Paris')->assertSee('Île-de-France');
+    }
+
+    public function test_geoip_ignores_private_ips_and_trusts_the_proxy_country(): void
+    {
+        $geoip = new \App\Services\GeoIp;
+
+        $this->assertNull($geoip->locate('192.168.1.10')['country']);
+        $this->assertSame(['country' => 'DE', 'region' => null, 'city' => null, 'latitude' => null, 'longitude' => null], $geoip->locate('10.0.0.1', 'DE'));
+        $this->assertNull($geoip->country('10.0.0.1', 'XX'));
+    }
 }

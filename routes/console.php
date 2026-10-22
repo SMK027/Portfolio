@@ -21,11 +21,11 @@ Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('0
 // Dépôts GitHub des projets : rafraîchis avant l'expiration du cache (12 h).
 Schedule::call(fn () => app(\App\Services\GithubRepositories::class)->refreshAll())->everySixHours()->name('github:rafraichir');
 
-// Base de pays (DB-IP Lite) : mise à jour mensuelle, et au premier besoin.
+// Bases de géolocalisation (DB-IP City/Country Lite) : mise à jour mensuelle, et au premier besoin.
 Artisan::command('portfolio:geoip-update', function () {
     $ok = app(\App\Services\GeoIp::class)->update();
-    $ok ? $this->info('Base de pays mise à jour : '.\App\Services\GeoIp::path()) : $this->error('Téléchargement impossible (voir les logs).');
-})->purpose('Télécharge la base IP → pays (DB-IP Lite, CC BY 4.0)');
+    $ok ? $this->info('Bases de géolocalisation mises à jour : '.dirname(\App\Services\GeoIp::path())) : $this->error('Téléchargement impossible (voir les logs).');
+})->purpose('Télécharge les bases IP → pays / ville (DB-IP Lite, CC BY 4.0)');
 Schedule::command('portfolio:geoip-update')->monthlyOn(3, '04:00')->name('geoip:update');
 
 Artisan::command('inspire', function () {

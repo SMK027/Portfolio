@@ -49,7 +49,7 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Statistiques de visite** (*Site → Statistiques*), à usage statistique uniquement : pages vues, visiteurs, visites, nouveaux / récurrents, temps moyen par visite et par page, pays, type d'appareil, navigateur, système, pages les plus vues, sites d'origine et détail des dernières pages vues (avec IP, visibles des seuls administrateurs).
 - cookie propre au site `pv_vid` (13 mois) pour reconnaître un visiteur qui revient, cookie de visite `pv_sid` (30 min d'inactivité) ; temps de lecture mesuré quand la page est visible et envoyé en la quittant ;
-- pays déduit d'une base locale (DB-IP Lite, CC BY 4.0, `php artisan portfolio:geoip-update`, mise à jour mensuelle automatique) : aucune IP envoyée à un tiers ;
+- pays, région et ville (approximatifs, centre de la ville au mieux) déduits de bases locales (DB-IP City/Country Lite via `geoip2/geoip2`, CC BY 4.0, `php artisan portfolio:geoip-update`, mise à jour mensuelle automatique) : aucune IP envoyée à un tiers ;
 - IP effacées après 3 mois, données supprimées après 13 mois ; robots, personnes connectées et navigateurs DNT / GPC ignorés. Autorisation bot : `stats.read` (sans les IP).
 - **RGPD** : ces données sont personnelles ; mentionnez cette mesure d'audience (finalité, durées, cookies, droit d'opposition) dans vos mentions légales.
 

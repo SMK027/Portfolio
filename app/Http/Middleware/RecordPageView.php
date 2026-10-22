@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Mesure d'audience du site public (usage statistique uniquement) :
- * - IP (effacée après 3 mois), pays (base locale), appareil, navigateur ;
+ * - IP (effacée après 3 mois), pays, région et ville (base locale), appareil, navigateur ;
  * - cookie visiteur propre au site (13 mois) pour distinguer 1re visite et
  *   visite récurrente, cookie de visite (30 min) pour le temps par visite ;
  * - les personnes connectées, les robots, les préchargements et les
@@ -55,6 +55,8 @@ class RecordPageView
                 $sessionId = $this->validUuid($request->cookie(self::SESSION_COOKIE)) ?? (string) Str::uuid();
                 $agent = UserAgent::parse($request->userAgent());
 
+                $location = $this->geoip->locate($request->ip(), $request->header('CF-IPCountry'));
+
                 PageView::create([
                     'uuid'           => $request->attributes->get('page_view_uuid'),
                     'path'           => '/'.ltrim($request->path(), '/'),
@@ -63,7 +65,11 @@ class RecordPageView
                     'visitor'        => substr(hash('sha256', now()->toDateString().config('app.key').$request->ip().$request->userAgent()), 0, 16),
                     'viewed_on'      => now()->toDateString(),
                     'ip_address'     => $request->ip(),
-                    'country'        => $this->geoip->country($request->ip(), $request->header('CF-IPCountry')),
+                    'country'        => $location['country'],
+                    'region'         => $location['region'],
+                    'city'           => $location['city'],
+                    'latitude'       => $location['latitude'],
+                    'longitude'      => $location['longitude'],
                     'device'         => $agent['device'],
                     'browser'        => $agent['browser'],
                     'os'             => $agent['os'],

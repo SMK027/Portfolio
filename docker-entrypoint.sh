@@ -91,8 +91,8 @@ else
     echo "[entrypoint] Caches vidés (environnement $APP_ENV)."
 fi
 
-# Base de pays des statistiques (DB-IP Lite) : téléchargée en arrière-plan si absente
-if [ ! -f storage/app/geoip/country.mmdb ]; then
+# Bases de géolocalisation des statistiques (DB-IP Lite) : téléchargées en arrière-plan si absentes
+if [ ! -f storage/app/geoip/country.mmdb ] || [ ! -f storage/app/geoip/city.mmdb ]; then
     (su -s /bin/sh www-data -c "php artisan portfolio:geoip-update" > /dev/null 2>&1 &)
 fi
 

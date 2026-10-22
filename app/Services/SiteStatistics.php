@@ -52,6 +52,8 @@ class SiteStatistics
             'pagesPerVisit' => $visits->avg('pages'),
             'countries'     => $base()->select('country', DB::raw('count(*) as views'), DB::raw('count(distinct visitor_id) as visitors'))
                 ->groupBy('country')->orderByDesc('views')->limit(15)->get(),
+            'cities'        => $base()->whereNotNull('city')->select('country', 'region', 'city', DB::raw('count(*) as views'), DB::raw('count(distinct visitor_id) as visitors'))
+                ->groupBy('country', 'region', 'city')->orderByDesc('views')->limit(15)->get(),
             'devices'       => $base()->whereNotNull('device')->select('device', DB::raw('count(*) as views'))->groupBy('device')->orderByDesc('views')->get(),
             'browsers'      => $base()->whereNotNull('browser')->select('browser', DB::raw('count(*) as views'))->groupBy('browser')->orderByDesc('views')->limit(8)->get(),
             'systems'       => $base()->whereNotNull('os')->select('os', DB::raw('count(*) as views'))->groupBy('os')->orderByDesc('views')->limit(8)->get(),

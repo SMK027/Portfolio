@@ -113,7 +113,7 @@
         };
     @endphp
     <div class="grid gap-6 lg:grid-cols-2">
-        <x-admin.section title="Pays">
+        <x-admin.section title="Pays et villes">
             @php $total = max(1, $stats['countries']->sum('views')); @endphp
             @forelse ($stats['countries'] as $row)
                 <div class="text-sm">
@@ -123,7 +123,17 @@
             @empty
                 <p class="text-sm text-slate-500">Aucune donnée.</p>
             @endforelse
-            <p class="text-xs text-slate-400">Géolocalisation : <a href="https://db-ip.com" target="_blank" rel="noopener" class="underline">IP Geolocation by DB-IP</a> (CC BY 4.0).</p>
+            @if ($stats['cities']->isNotEmpty())
+                <p class="form-label mt-2">Villes</p>
+                @php $cityTotal = max(1, $stats['cities']->sum('views')); @endphp
+                @foreach ($stats['cities'] as $row)
+                    <div class="text-sm">
+                        <div class="flex justify-between gap-3"><span>{{ $row->city }}<span class="text-slate-500">{{ $row->region ? ', '.$row->region : '' }} · {{ $row->country }}</span></span><span class="text-slate-500"><span class="font-semibold text-slate-900">{{ $row->views }}</span> vues · {{ $row->visitors }} visiteur(s)</span></div>
+                        <div class="mt-1 h-1.5 rounded-full bg-slate-100"><div class="h-1.5 rounded-full bg-primary-500" style="width: {{ round($row->views / $cityTotal * 100) }}%"></div></div>
+                    </div>
+                @endforeach
+            @endif
+            <p class="text-xs text-slate-400">Géolocalisation approximative (ville au mieux) : <a href="https://db-ip.com" target="_blank" rel="noopener" class="underline">IP Geolocation by DB-IP</a> (CC BY 4.0).</p>
         </x-admin.section>
         <x-admin.section title="Appareils et navigateurs">
             @foreach ([['Type d\'appareil', $bars($stats['devices'], 'device', \App\Support\UserAgent::DEVICES)], ['Navigateur', $bars($stats['browsers'], 'browser')], ['Système', $bars($stats['systems'], 'os')]] as [$title, $rows])

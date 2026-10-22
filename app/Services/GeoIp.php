@@ -2,73 +2,153 @@
 
 namespace App\Services;
 
+use GeoIp2\Database\Reader;
+use GeoIp2\Exception\AddressNotFoundException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use MaxMind\Db\Reader;
 
 /**
- * Pays d'une adresse IP, à partir d'une base locale (DB-IP « IP to Country
- * Lite », licence CC BY 4.0) : aucune IP n'est envoyée à un service externe.
+ * Localisation approximative d'une adresse IP (usage statistique uniquement),
+ * à partir de bases locales DB-IP « Lite » (licence CC BY 4.0) lues avec
+ * geoip2/geoip2 : aucune IP n'est envoyée à un service externe.
+ * La base « City » (pays, région, ville) est utilisée si présente, sinon la
+ * base « Country ». La précision reste celle de la ville, au mieux.
  */
 class GeoIp
 {
-    protected ?Reader $reader = null;
+    public const DATABASES = ['city' => 'dbip-city-lite', 'country' => 'dbip-country-lite'];
 
-    public static function path(): string
+    /** @var array<string, Reader|false> */
+    protected array $readers = [];
+
+    public static function path(string $database = 'country'): string
     {
-        return storage_path('app/geoip/country.mmdb');
+        return storage_path("app/geoip/{$database}.mmdb");
+    }
+
+    /**
+     * @return array{country: ?string, region: ?string, city: ?string, latitude: ?float, longitude: ?float}
+     */
+    public function locate(?string $ip, ?string $header = null): array
+    {
+        $location = ['country' => null, 'region' => null, 'city' => null, 'latitude' => null, 'longitude' => null];
+
+        if ($ip && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            try {
+                if ($reader = $this->reader('city')) {
+                    $record = $reader->city($ip);
+                    $location = [
+                        'country'   => $record->country->isoCode,
+                        'region'    => $this->limit($record->mostSpecificSubdivision->name),
+                        'city'      => $this->limit($record->city->name),
+                        // Centre de la ville (pas la position du visiteur), arrondi à ~1 km.
+                        'latitude'  => $record->location->latitude !== null ? round($record->location->latitude, 2) : null,
+                        'longitude' => $record->location->longitude !== null ? round($record->location->longitude, 2) : null,
+                    ];
+                } elseif ($reader = $this->reader('country')) {
+                    $location['country'] = $reader->country($ip)->country->isoCode;
+                }
+            } catch (AddressNotFoundException) {
+                // IP absente de la base : localisation inconnue.
+            } catch (\Throwable $e) {
+                Log::warning('GeoIP : recherche impossible — '.$e->getMessage());
+            }
+        }
+
+        // En-tête fourni par un proxy (ex. Cloudflare), prioritaire pour le pays s'il est valide.
+        if ($header && preg_match('/^[A-Z]{2}$/', $header) && ! in_array($header, ['XX', 'T1'], true)) {
+            if ($location['country'] !== null && $location['country'] !== $header) {
+                $location = array_map(fn () => null, $location); // ville incohérente avec le pays
+            }
+            $location['country'] = $header;
+        }
+
+        $code = $location['country'];
+        $location['country'] = is_string($code) && strlen($code) === 2 ? strtoupper($code) : null;
+
+        return $location;
     }
 
     /** Code pays ISO (ex. « FR »), ou null (IP privée, inconnue, base absente). */
     public function country(?string $ip, ?string $header = null): ?string
     {
-        // En-tête fourni par un proxy (ex. Cloudflare), si présent et valide.
-        if ($header && preg_match('/^[A-Z]{2}$/', $header) && ! in_array($header, ['XX', 'T1'], true)) {
-            return $header;
-        }
-        if (! $ip || ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            return null;
-        }
-
-        try {
-            $this->reader ??= is_file(self::path()) ? new Reader(self::path()) : null;
-            $code = $this->reader?->get($ip)['country']['iso_code'] ?? null;
-
-            return is_string($code) && strlen($code) === 2 ? strtoupper($code) : null;
-        } catch (\Throwable $e) {
-            Log::warning('GeoIP : recherche impossible — '.$e->getMessage());
-
-            return null;
-        }
+        return $this->locate($ip, $header)['country'];
     }
 
-    /** Télécharge la base du mois (ou du mois précédent si pas encore publiée). */
+    protected function reader(string $database): ?Reader
+    {
+        if (! isset($this->readers[$database])) {
+            $this->readers[$database] = is_file(self::path($database)) ? new Reader(self::path($database), ['fr', 'en']) : false;
+        }
+
+        return $this->readers[$database] ?: null;
+    }
+
+    protected function limit(?string $value): ?string
+    {
+        return $value !== null && $value !== '' ? mb_substr($value, 0, 100) : null;
+    }
+
+    /** Télécharge les bases du mois (ou du mois précédent si pas encore publiées). */
     public function update(): bool
     {
+        $ok = true;
+        foreach (self::DATABASES as $database => $name) {
+            $ok = $this->download($database, $name) && $ok;
+        }
+
+        return $ok;
+    }
+
+    protected function download(string $database, string $name): bool
+    {
+        $path = self::path($database);
         foreach ([now(), now()->subMonthNoOverflow()] as $month) {
-            $url = 'https://download.db-ip.com/free/dbip-country-lite-'.$month->format('Y-m').'.mmdb.gz';
+            $url = "https://download.db-ip.com/free/{$name}-".$month->format('Y-m').'.mmdb.gz';
             try {
-                $response = Http::timeout(120)->get($url);
-                if (! $response->successful()) {
+                // Téléchargement et décompression en flux : la base « City » dépasse 100 Mo.
+                @mkdir(dirname($path), 0775, true);
+                $response = Http::timeout(600)->sink($path.'.gz')->get($url);
+                if (! $response->successful() || ! $this->gunzip($path.'.gz', $path.'.tmp') || filesize($path.'.tmp') < 1_000_000) {
+                    @unlink($path.'.tmp');
+
                     continue;
                 }
-                $data = gzdecode($response->body());
-                if ($data === false || strlen($data) < 1_000_000) {
-                    continue;
-                }
-                @mkdir(dirname(self::path()), 0775, true);
-                file_put_contents(self::path().'.tmp', $data);
-                new Reader(self::path().'.tmp'); // base valide ?
-                rename(self::path().'.tmp', self::path());
+                (new Reader($path.'.tmp'))->close(); // base valide ?
+                rename($path.'.tmp', $path);
+                unset($this->readers[$database]);
 
                 return true;
             } catch (\Throwable $e) {
                 Log::warning("GeoIP : mise à jour impossible ({$url}) — ".$e->getMessage());
-                @unlink(self::path().'.tmp');
+                @unlink($path.'.tmp');
+            } finally {
+                @unlink($path.'.gz');
             }
         }
 
         return false;
+    }
+
+    protected function gunzip(string $from, string $to): bool
+    {
+        $in = @gzopen($from, 'rb');
+        $out = @fopen($to, 'wb');
+        if (! $in || ! $out) {
+            return false;
+        }
+        while (! gzeof($in)) {
+            $chunk = gzread($in, 1 << 20);
+            if ($chunk === false) {
+                break;
+            }
+            fwrite($out, $chunk);
+        }
+        $ok = gzeof($in);
+        gzclose($in);
+        fclose($out);
+
+        return $ok;
     }
 
     /** Nom du pays en français, avec drapeau. */

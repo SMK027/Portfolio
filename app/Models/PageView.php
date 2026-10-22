@@ -9,7 +9,7 @@ class PageView extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['uuid', 'path', 'route', 'referrer_host', 'visitor', 'viewed_on', 'ip_address', 'country', 'device', 'browser', 'os', 'visitor_id', 'session_id', 'is_new_visitor', 'duration'];
+    protected $fillable = ['uuid', 'path', 'route', 'referrer_host', 'visitor', 'viewed_on', 'ip_address', 'country', 'region', 'city', 'latitude', 'longitude', 'device', 'browser', 'os', 'visitor_id', 'session_id', 'is_new_visitor', 'duration'];
 
     protected function casts(): array
     {

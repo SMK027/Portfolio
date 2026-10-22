@@ -10,6 +10,7 @@
         "bacon/bacon-qr-code": "^3.1",
         "dompdf/dompdf": "*",
         "ezyang/htmlpurifier": "^4.19",
+        "geoip2/geoip2": "^3.0",
         "laravel/framework": "^13.7",
         "laravel/tinker": "^3.0",
         "lbuchs/webauthn": "^2.2",
