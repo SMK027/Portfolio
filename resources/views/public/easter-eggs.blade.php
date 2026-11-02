@@ -8,10 +8,10 @@
         @endif
 
         <header class="mb-10 text-center">
-            <x-icon name="sparkles" class="mx-auto h-10 w-10 text-primary-500" />
-            <h1 class="mt-3 font-display text-3xl font-bold text-slate-900 dark:text-white">{{ $settings['title'] }}</h1>
+            <x-icon name="sparkles" class="mx-auto h-10 w-10 text-primary-600" />
+            <h1 class="mt-3 font-display text-3xl font-bold text-slate-900">{{ $settings['title'] }}</h1>
             @if ($settings['intro'])
-                <p class="mx-auto mt-3 max-w-2xl whitespace-pre-line text-slate-600 dark:text-slate-300">{{ $settings['intro'] }}</p>
+                <p class="mx-auto mt-3 max-w-2xl whitespace-pre-line text-slate-700">{{ $settings['intro'] }}</p>
             @endif
         </header>
 
@@ -22,23 +22,23 @@
                 @foreach ($eggs as $egg)
                     @if (! in_array($egg->id, $unlocked, true))
                         {{-- Verrouillé : seule l'empreinte de la combinaison est transmise --}}
-                        <article class="card flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center"
+                        <article class="card flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center"
                                  data-egg-lock="{{ json_encode(['url' => route('easter-eggs.unlock', $egg), ...\App\Services\EasterEggs::fingerprint(explode(' ', $egg->unlock_sequence))]) }}">
-                            <x-icon name="lock" class="h-8 w-8 text-slate-300" />
-                            <p class="font-display font-semibold text-slate-400">???</p>
-                            @if ($egg->hint)<p class="text-sm italic text-slate-500">Indice : {{ $egg->hint }}</p>@endif
+                            <x-icon name="lock" class="h-8 w-8 text-slate-500" />
+                            <p class="font-display text-lg font-semibold text-slate-700">???</p>
+                            @if ($egg->hint)<p class="text-sm italic text-slate-600">Indice : {{ $egg->hint }}</p>@endif
                         </article>
                     @else
                         <article id="egg-{{ $egg->id }}" class="card space-y-4 p-6" @if ($egg->type === 'effect') data-egg-effect="{{ $egg->effect }}" data-egg-id="{{ $egg->id }}" @endif>
-                            <h2 class="flex items-center gap-2 font-display text-lg font-semibold text-slate-900 dark:text-white">
-                                <x-icon :name="$egg->icon()" class="h-5 w-5 text-primary-500" /> {{ $egg->title }}
+                            <h2 class="flex items-center gap-2 font-display text-lg font-semibold text-slate-900">
+                                <x-icon :name="$egg->icon()" class="h-5 w-5 text-primary-600" /> {{ $egg->title }}
                             </h2>
                             @if ($egg->type === 'image' && $egg->images->isNotEmpty())
                                 {{-- Clic : plein écran ; flèches, clavier et balayage pour passer d'une image à l'autre --}}
                                 <x-carousel :images="$egg->images" :title="$egg->title" :label="'Images — '.$egg->title" />
                             @endif
                             @if ($egg->body)
-                                <div class="prose prose-slate max-w-none dark:prose-invert">{!! \Illuminate\Support\Str::markdown($egg->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
+                                <div class="editor-content">{!! \Illuminate\Support\Str::markdown($egg->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
                             @endif
                             @if ($egg->type === 'link' && $egg->link_url)
                                 <a href="{{ $egg->link_url }}" target="_blank" rel="noopener noreferrer nofollow" class="btn-primary">
