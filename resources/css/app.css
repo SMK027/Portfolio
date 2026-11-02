@@ -162,6 +162,7 @@ html.dark .from-primary-100, html.dark .from-slate-200 { background-image: linea
 /* Horaires bloqués : au-dessus des plages, sous les rendez-vous */
 .availability-calendar .fc-timegrid-event-harness:has(> .availability-block) { inset-inline: 2px 2px !important; z-index: 4 !important; }
 .availability-calendar .availability-closed, .availability-closed-swatch { background: repeating-linear-gradient(45deg, theme('colors.red.100'), theme('colors.red.100') 6px, theme('colors.red.50') 6px, theme('colors.red.50') 12px); opacity: 1; }
+.availability-calendar .availability-google, .availability-google-swatch { @apply border-0 text-slate-700; background: repeating-linear-gradient(135deg, theme('colors.sky.100'), theme('colors.sky.100') 6px, theme('colors.sky.200') 6px, theme('colors.sky.200') 12px); }
 .availability-calendar .fc-closed-label { @apply block p-1 text-xs font-semibold text-red-700; }
 .availability-calendar .fc-event-time { @apply text-[11px] font-semibold; }
 .availability-calendar .fc-event-title { @apply text-[11px]; }

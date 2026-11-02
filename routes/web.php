@@ -242,6 +242,14 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->middleware($panel('messages.delete'))->name('messages.destroy');
 
     Route::get('/rendez-vous', [Admin\AppointmentController::class, 'index'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.index');
+    // Avant « /rendez-vous/{appointment} », qui capturerait « google-agenda ».
+    Route::controller(Admin\GoogleCalendarController::class)->prefix('/rendez-vous/google-agenda')->name('appointments.google.')->group(function () use ($panel) {
+        Route::post('/connexion', 'redirect')->middleware($panel('appointments.write'))->name('connect');
+        Route::get('/retour', 'callback')->middleware($panel('appointments.write'))->name('callback');
+        Route::put('/', 'update')->middleware($panel('appointments.write'))->name('update');
+        Route::post('/synchroniser', 'sync')->middleware($panel('appointments.write'))->name('sync');
+        Route::delete('/', 'disconnect')->middleware($panel('appointments.write'))->name('disconnect');
+    });
     Route::put('/rendez-vous/{appointment}/decision', [Admin\AppointmentController::class, 'decide'])->middleware($panel('appointments.write'))->name('appointments.decide');
     Route::delete('/rendez-vous/{appointment}', [Admin\AppointmentController::class, 'destroy'])->middleware($panel('appointments.delete'))->name('appointments.destroy');
     Route::get('/rendez-vous/disponibilites', [Admin\AppointmentController::class, 'editAvailability'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.availability');

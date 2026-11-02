@@ -46,6 +46,13 @@ return [
         'recipient' => env('CONTACT_RECIPIENT'),
     ],
 
+    // Google Agenda : synchronisation des disponibilités (panel → Rendez-vous → Disponibilités).
+    // Identifiants OAuth « Application Web » ; URI de redirection : {APP_URL}/<admin>/rendez-vous/google-agenda/retour
+    'google_calendar' => [
+        'client_id'     => env('GOOGLE_CALENDAR_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CALENDAR_CLIENT_SECRET'),
+    ],
+
     // Dépôts GitHub des projets (facultatif : relève la limite de 60 à 5 000 requêtes/heure)
     'github' => [
         'token' => env('GITHUB_TOKEN'),

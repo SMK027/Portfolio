@@ -10,6 +10,9 @@ Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dail
 // Rappels des rendez-vous confirmés (la veille et 1 h avant).
 Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())->everyFiveMinutes()->name('rendez-vous:rappels');
 
+// Google Agenda : périodes occupées importées (elles bloquent les créneaux de rendez-vous).
+Schedule::call(fn () => app(\App\Services\GoogleCalendar::class)->syncBusy())->everyTenMinutes()->name('rendez-vous:google-agenda');
+
 // Comptes du personnel arrivés à leur date de désactivation programmée.
 Schedule::call(fn () => \App\Models\User::deactivateExpired())->everyMinute()->name('comptes:desactivation');
 // … et avertis quelques jours avant (STAFF_DEACTIVATION_WARNING_DAYS).

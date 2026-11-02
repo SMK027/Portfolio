@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Jobs\SyncAppointmentToGoogle;
 use App\Models\Concerns\Auditable;
+use App\Services\GoogleCalendar;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -24,6 +26,22 @@ class Appointment extends Model
     protected $fillable = ['starts_at', 'ends_at', 'name', 'email', 'phone', 'topic', 'message', 'status', 'admin_note', 'cancel_token', 'ip_address', 'consented_at'];
 
     protected $hidden = ['cancel_token'];
+
+    /** Rendez-vous confirmés reportés dans Google Agenda, et retirés s'ils sont annulés ou supprimés. */
+    protected static function booted(): void
+    {
+        static::saved(function (Appointment $appointment) {
+            $relevant = $appointment->wasChanged('status') || ($appointment->status === 'confirmed' && $appointment->wasChanged(['starts_at', 'ends_at']));
+            if ($relevant && ($appointment->status === 'confirmed' || $appointment->google_event_id) && app(GoogleCalendar::class)->isConnected()) {
+                SyncAppointmentToGoogle::dispatch($appointment->id);
+            }
+        });
+        static::deleted(function (Appointment $appointment) {
+            if ($appointment->google_event_id && app(GoogleCalendar::class)->isConnected()) {
+                SyncAppointmentToGoogle::dispatch(null, $appointment->google_event_id);
+            }
+        });
+    }
 
     protected function casts(): array
     {

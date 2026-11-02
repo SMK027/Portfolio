@@ -10,7 +10,9 @@ use App\Models\AvailabilityBlock;
 use App\Models\AvailabilityClosure;
 use App\Models\AvailabilityRule;
 use App\Models\AvailabilitySlot;
+use App\Models\GoogleBusyPeriod;
 use App\Services\AppointmentReminders;
+use App\Services\GoogleCalendar;
 use App\Services\SafeMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -72,9 +74,14 @@ class AppointmentController extends Controller
     }
 
     /** Calendrier des disponibilités (FullCalendar) et réglages. */
-    public function editAvailability(): View
+    public function editAvailability(GoogleCalendar $google): View
     {
-        return view('admin.appointments.availability', ['settings' => AppointmentSettings::current()]);
+        return view('admin.appointments.availability', [
+            'settings' => AppointmentSettings::current(),
+            'google'   => $google,
+            // Liste des agendas : uniquement si connecté ; une panne Google n'empêche pas d'afficher la page.
+            'googleCalendars' => $google->isConnected() ? rescue(fn () => $google->calendars(), null, report: false) : null,
+        ]);
     }
 
     public function updateSettings(Request $request): RedirectResponse
@@ -104,7 +111,8 @@ class AppointmentController extends Controller
 
     /**
      * Événements affichés par FullCalendar sur la période demandée :
-     * plages hebdomadaires (récurrentes), plages ponctuelles, jours fermés, horaires bloqués, rendez-vous.
+     * plages hebdomadaires (récurrentes), plages ponctuelles, jours fermés, horaires bloqués,
+     * périodes occupées dans Google Agenda, rendez-vous.
      */
     public function events(Request $request): JsonResponse
     {
@@ -156,6 +164,15 @@ class AppointmentController extends Controller
                     'note'      => $block->note,
                     'deleteUrl' => route('admin.appointments.availability.blocks.destroy', $block),
                 ],
+            ]),
+            ...GoogleBusyPeriod::where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (GoogleBusyPeriod $busy) => [
+                'id'         => 'google-'.$busy->id,
+                'title'      => 'Occupé (Google Agenda)',
+                'start'      => $busy->starts_at->format('Y-m-d\TH:i:s'),
+                'end'        => $busy->ends_at->format('Y-m-d\TH:i:s'),
+                'editable'   => false,
+                'classNames' => ['availability-google'],
+                'extendedProps' => ['kind' => 'google'],
             ]),
             ...Appointment::holding()->where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (Appointment $appointment) => [
                 'id'         => 'appointment-'.$appointment->id,

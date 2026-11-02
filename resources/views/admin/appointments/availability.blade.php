@@ -37,6 +37,9 @@
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-emerald-500"></span> RDV confirmé</li>
                 <li class="flex items-center gap-1.5"><span class="availability-block-swatch h-3 w-3 rounded"></span> Horaire bloqué</li>
                 <li class="flex items-center gap-1.5"><span class="availability-closed-swatch h-3 w-3 rounded"></span> Jour fermé</li>
+                @if ($google->isConnected())
+                    <li class="flex items-center gap-1.5"><span class="availability-google-swatch h-3 w-3 rounded"></span> Occupé (Google Agenda)</li>
+                @endif
             </ul>
         </div>
 
@@ -226,6 +229,68 @@
              :class="notice?.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white'"
              class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl px-4 py-2.5 text-sm shadow-lg" x-text="notice?.message"></div>
     </section>
+
+    {{-- Google Agenda --}}
+    @if ($google->isConfigured())
+        @php($status = $google->status())
+        @php($gs = $google->settings())
+        <x-admin.section title="Google Agenda" description="Les événements de vos agendas Google bloquent les créneaux correspondants (mise à jour toutes les 10 minutes) ; les rendez-vous confirmés y sont ajoutés automatiquement.">
+            @if (! $google->isConnected())
+                <p class="text-sm text-slate-600">URI de redirection à autoriser dans la console Google Cloud : <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{{ $google->redirectUri() }}</code></p>
+                @if ($editable)
+                    <form method="POST" action="{{ route('admin.appointments.google.connect') }}">
+                        @csrf
+                        <button class="btn-primary"><x-icon name="calendar" class="h-4 w-4" /> Connecter Google Agenda</button>
+                    </form>
+                @endif
+            @else
+                <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+                    <p>
+                        Connecté{{ $gs['account'] ? ' à '.$gs['account'] : '' }}.
+                        @if ($status['synced_at'])
+                            Dernière synchronisation : {{ \Illuminate\Support\Carbon::parse($status['synced_at'])->diffForHumans() }}.
+                        @endif
+                    </p>
+                    @if ($editable)
+                        <div class="flex gap-2">
+                            <form method="POST" action="{{ route('admin.appointments.google.sync') }}">@csrf
+                                <button class="btn-secondary btn-sm"><x-icon name="arrows-updown" class="h-4 w-4" /> Synchroniser</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.appointments.google.disconnect') }}" onsubmit="return confirm('Déconnecter Google Agenda ?')">@csrf @method('DELETE')
+                                <button class="btn-ghost btn-sm text-red-600">Déconnecter</button>
+                            </form>
+                        </div>
+                    @endif
+                </div>
+                @if ($status['error'])
+                    <p class="rounded-lg bg-red-50 p-3 text-sm text-red-800">Dernière synchronisation en échec : {{ $status['error'] }}</p>
+                @endif
+
+                @if ($googleCalendars === null)
+                    <p class="text-sm text-amber-700">Liste des agendas indisponible pour le moment.</p>
+                @elseif ($editable)
+                    <form method="POST" action="{{ route('admin.appointments.google.update') }}" class="space-y-4">
+                        @csrf @method('PUT')
+                        <fieldset class="space-y-2">
+                            <legend class="form-label">Agendas qui bloquent les créneaux</legend>
+                            @foreach ($googleCalendars as $calendar)
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <input type="checkbox" name="calendars[]" value="{{ $calendar['primary'] ? 'primary' : $calendar['id'] }}" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                           @checked(in_array($calendar['primary'] ? 'primary' : $calendar['id'], $gs['calendars'], true))>
+                                    {{ $calendar['name'] }} @if ($calendar['primary'])<span class="text-xs text-slate-400">(principal)</span>@endif
+                                </label>
+                            @endforeach
+                            @error('calendars')<p class="form-error">{{ $message }}</p>@enderror
+                        </fieldset>
+                        <x-form.checkbox name="push" label="Ajouter les rendez-vous confirmés à Google Agenda" :checked="$gs['push']" />
+                        <x-form.select name="target" label="Agenda des rendez-vous" :value="$gs['target']"
+                                       :options="collect($googleCalendars)->where('writable', true)->mapWithKeys(fn ($c) => [$c['primary'] ? 'primary' : $c['id'] => $c['name']])->all()" required />
+                        <div class="flex justify-end"><button class="btn-primary">Enregistrer</button></div>
+                    </form>
+                @endif
+            @endif
+        </x-admin.section>
+    @endif
 
     {{-- Réglages --}}
     <form method="POST" action="{{ route('admin.appointments.availability.update') }}" class="space-y-6">
