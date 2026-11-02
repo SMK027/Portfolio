@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EasterEgg;
+use App\Models\EasterEggImage;
 use App\Services\EasterEggs;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,7 +42,7 @@ class EasterEggController extends Controller
         }
         abort_unless($this->eggs->hasAccess($request) || $isManager, 404);
 
-        $eggs = $this->eggs->visibleFor($request);
+        $eggs = $this->eggs->visibleFor($request)->load('images');
         $justUnlocked = $request->session()->pull('easter_eggs.just_unlocked');
 
         return $this->private(response()->view('public.easter-eggs', [
@@ -70,13 +71,13 @@ class EasterEggController extends Controller
     }
 
     /** Image d'un élément : stockée hors du dossier public, servie seulement s'il est visible et déverrouillé. */
-    public function image(Request $request, EasterEgg $egg): Response
+    public function image(Request $request, EasterEgg $egg, EasterEggImage $image): Response
     {
         $isManager = (bool) $request->user()?->canUsePanel('easter_eggs.read|easter_eggs.write|easter_eggs.delete');
         $allowed = $isManager || ($this->eggs->hasAccess($request) && $this->eggs->isVisible($request, $egg) && $this->eggs->isUnlocked($request, $egg));
-        abort_unless($allowed && $egg->image_path && Storage::disk('local')->exists($egg->image_path), 404);
+        abort_unless($allowed && Storage::disk('local')->exists($image->path), 404);
 
-        return $this->private(Storage::disk('local')->response($egg->image_path, null, ['Cache-Control' => 'private, max-age=600']));
+        return $this->private(Storage::disk('local')->response($image->path, null, ['Cache-Control' => 'private, max-age=600']));
     }
 
     protected function private(Response $response): Response

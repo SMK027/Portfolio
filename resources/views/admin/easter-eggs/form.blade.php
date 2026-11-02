@@ -29,9 +29,26 @@
             </fieldset>
             <x-form.textarea name="body" label="Texte (Markdown)" :value="$egg->body" rows="5" maxlength="10000"
                              help="Obligatoire pour un texte ; légende ou description pour les autres types. Le HTML est ignoré." />
-            <div x-show="type === 'image'" x-cloak>
-                <x-form.image name="image" label="Image ou GIF animé" :current="$editing && $egg->image_path ? route('easter-eggs.image', $egg) : null"
-                              help="10 Mo max. Stockée hors du dossier public : servie uniquement aux visiteurs qui ont trouvé l'élément." />
+            <div x-show="type === 'image'" x-cloak class="space-y-3">
+                <span class="form-label">Images ou GIF animés</span>
+                @if ($editing && $egg->images->isNotEmpty())
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        @foreach ($egg->images as $image)
+                            <label class="group relative block cursor-pointer overflow-hidden rounded-lg border border-slate-200" x-data="{ removed: false }">
+                                <img src="{{ $image->url() }}" alt="" loading="lazy" class="aspect-video w-full object-cover transition" :class="removed && 'opacity-30 grayscale'">
+                                <span class="flex items-center gap-1.5 bg-white px-2 py-1 text-xs text-slate-600">
+                                    <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" x-model="removed" class="rounded border-slate-300 text-red-600 focus:ring-red-500"> Supprimer
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
+                <input type="file" name="images[]" multiple accept="image/png,image/jpeg,image/webp,image/gif"
+                       class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100">
+                <p class="form-help">Plusieurs fichiers à la fois possibles (20 max., 10 Mo chacun), ajoutés à la suite des images existantes ; elles défilent en carrousel sur la page.
+                    Stockées hors du dossier public : servies uniquement aux visiteurs qui ont trouvé l'élément.</p>
+                @error('images')<p class="form-error">{{ $message }}</p>@enderror
+                @error('images.*')<p class="form-error">{{ $message }}</p>@enderror
             </div>
             <div x-show="type === 'link'" x-cloak class="grid gap-5 sm:grid-cols-[1fr_220px]">
                 <x-form.input name="link_url" type="url" label="URL" :value="$egg->link_url" maxlength="2048" />

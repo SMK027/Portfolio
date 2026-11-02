@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -13,7 +14,7 @@ use Illuminate\Support\Carbon;
  * (App\Services\EasterEggs::isVisible), et verrouillé tant que sa combinaison n'est pas tapée.
  */
 #[Fillable([
-    'title', 'type', 'body', 'image_path', 'link_url', 'link_label', 'effect', 'unlock_sequence', 'hint',
+    'title', 'type', 'body', 'link_url', 'link_label', 'effect', 'unlock_sequence', 'hint',
     'starts_at', 'ends_at', 'weekdays', 'time_from', 'time_to', 'device', 'countries', 'country_mode',
     'min_unlocked', 'is_active', 'position',
 ])]
@@ -48,6 +49,12 @@ class EasterEgg extends Model
             'is_active'    => 'boolean',
             'min_unlocked' => 'integer',
         ];
+    }
+
+    /** Images (carrousel), dans l'ordre d'ajout. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(EasterEggImage::class)->orderBy('position')->orderBy('id');
     }
 
     public function scopeOrdered(Builder $query): void

@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /** Page d'easter eggs : réglages d'accès et éléments. */
@@ -64,6 +65,7 @@ class EasterEggController extends Controller
     {
         $egg = new EasterEgg;
         $egg->fill($this->validated($request, $egg))->save();
+        $this->syncImages($request, $egg);
 
         return redirect()->route('admin.easter-eggs.index')->with('success', 'Élément ajouté.');
     }
@@ -76,18 +78,36 @@ class EasterEggController extends Controller
     public function update(Request $request, EasterEgg $easterEgg): RedirectResponse
     {
         $easterEgg->update($this->validated($request, $easterEgg));
+        $this->syncImages($request, $easterEgg);
 
         return redirect()->route('admin.easter-eggs.index')->with('success', 'Élément mis à jour.');
     }
 
     public function destroy(EasterEgg $easterEgg): RedirectResponse
     {
-        if ($easterEgg->image_path) {
-            Storage::disk('local')->delete($easterEgg->image_path);
-        }
+        Storage::disk('local')->delete($easterEgg->images->pluck('path')->all());
         $easterEgg->delete();
 
         return back()->with('success', 'Élément supprimé.');
+    }
+
+    /**
+     * Images cochées « supprimer » retirées, nouvelles images ajoutées à la suite.
+     * Disque privé : elles ne sont servies qu'aux visiteurs qui ont trouvé l'élément.
+     */
+    protected function syncImages(Request $request, EasterEgg $egg): void
+    {
+        $removed = $egg->images()->whereIn('id', (array) $request->input('remove_images', []))->get();
+        Storage::disk('local')->delete($removed->pluck('path')->all());
+        $removed->each->delete();
+
+        $position = (int) $egg->images()->max('position');
+        foreach ($request->file('images', []) as $file) {
+            $egg->images()->create([
+                'path'     => app(ImageOptimizer::class)->store($file, 'easter-eggs', 'local')['path'],
+                'position' => ++$position,
+            ]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -97,7 +117,10 @@ class EasterEggController extends Controller
             'title'           => ['required', 'string', 'max:150'],
             'type'            => ['required', Rule::in(array_keys(EasterEgg::TYPES))],
             'body'            => ['nullable', 'string', 'max:10000', Rule::requiredIf($request->input('type') === 'text')],
-            'image'           => [...$this->imageRules(10240), Rule::requiredIf($request->input('type') === 'image' && ! $egg->image_path)],
+            'images'          => ['nullable', 'array', 'max:20'],
+            'images.*'        => $this->imageRules(10240),
+            'remove_images'   => ['nullable', 'array'],
+            'remove_images.*' => ['integer'],
             'link_url'        => ['nullable', 'url:http,https', 'max:2048', Rule::requiredIf($request->input('type') === 'link')],
             'link_label'      => ['nullable', 'string', 'max:60'],
             'effect'          => ['nullable', Rule::in(array_keys(EasterEgg::EFFECTS)), Rule::requiredIf($request->input('type') === 'effect')],
@@ -120,16 +143,12 @@ class EasterEggController extends Controller
             'hint' => 'indice', 'time_from' => 'heure de début', 'time_to' => 'heure de fin', 'min_unlocked' => 'progression',
         ]);
 
-        $image = $egg->image_path;
-        if ($request->hasFile('image')) {
-            $image && Storage::disk('local')->delete($image);
-            // Disque privé : l'image n'est servie qu'aux visiteurs qui ont trouvé l'élément.
-            $image = app(ImageOptimizer::class)->store($request->file('image'), 'easter-eggs', 'local')['path'];
-        } elseif ($request->boolean('remove_image') && $request->input('type') !== 'image') {
-            $image && Storage::disk('local')->delete($image);
-            $image = null;
+        // Type « Image » : au moins une image doit rester après ajouts et suppressions.
+        $kept = $egg->exists ? $egg->images()->whereNotIn('id', $data['remove_images'] ?? [])->count() : 0;
+        if ($data['type'] === 'image' && $kept + count($request->file('images', [])) === 0) {
+            throw ValidationException::withMessages(['images' => 'Ajoutez au moins une image.']);
         }
-        unset($data['image']);
+        unset($data['images'], $data['remove_images']);
 
         // Avec espaces : des touches (« ArrowUp ArrowDown b a ») ; sans : un mot tapé lettre par lettre.
         $raw = trim((string) ($data['unlock_sequence'] ?? ''));
@@ -137,7 +156,6 @@ class EasterEggController extends Controller
 
         return [
             ...$data,
-            'image_path'      => $image,
             'unlock_sequence' => $sequence ?: null,
             'weekdays'        => ($data['weekdays'] ?? []) && count($data['weekdays']) < 7 ? array_map('intval', $data['weekdays']) : null,
             'countries'       => collect(preg_split('/[\s,;]+/', strtoupper((string) ($data['countries'] ?? ''))))->filter()->unique()->values()->all() ?: null,

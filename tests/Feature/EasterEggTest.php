@@ -126,19 +126,45 @@ class EasterEggTest extends TestCase
         Storage::fake('local');
         $this->actingAs(User::factory()->admin()->create());
         $this->post(route('admin.easter-eggs.store'), [
-            'title' => 'GIF', 'type' => 'image', 'image' => UploadedFile::fake()->image('chat.gif'), 'country_mode' => 'only',
-            'unlock_sequence' => 'chat', 'is_active' => '1',
+            'title' => 'GIF', 'type' => 'image', 'country_mode' => 'only', 'unlock_sequence' => 'chat', 'is_active' => '1',
+            'images' => [UploadedFile::fake()->image('chat.gif'), UploadedFile::fake()->image('chien.png')],
         ])->assertRedirect(route('admin.easter-eggs.index'));
         $egg = EasterEgg::sole();
-        Storage::disk('local')->assertExists($egg->image_path);
+        [$first, $second] = $egg->images->all();
+        Storage::disk('local')->assertExists([$first->path, $second->path]);
         $this->assertSame('c h a t', $egg->unlock_sequence);
 
         auth()->logout();
-        $this->get(route('easter-eggs.image', $egg))->assertNotFound();
+        $this->get($first->url())->assertNotFound();
         $this->enter();
-        $this->get(route('easter-eggs.image', $egg))->assertNotFound(); // encore verrouillé
+        $this->get($first->url())->assertNotFound(); // encore verrouillé
         $this->postJson(route('easter-eggs.unlock', $egg), ['keys' => ['c', 'h', 'a', 't']])->assertOk();
-        $this->get(route('easter-eggs.image', $egg))->assertOk();
+        $this->get($first->url())->assertOk();
+        $this->get(route('easter-eggs.show'))->assertSee('aria-roledescription="carrousel"', false)->assertSee($second->url(), false);
+
+        // Une image d'un autre élément n'est pas accessible par celui-ci.
+        $other = $this->egg(['type' => 'image']);
+        $this->get(route('easter-eggs.image', [$other, $first]))->assertNotFound();
+    }
+
+    public function test_images_can_be_removed_but_an_image_element_keeps_at_least_one(): void
+    {
+        Storage::fake('local');
+        $this->actingAs(User::factory()->admin()->create());
+        $egg = $this->egg(['type' => 'image']);
+        $image = $egg->images()->create(['path' => UploadedFile::fake()->image('a.png')->store('easter-eggs', 'local')]);
+        $fields = ['title' => 'GIF', 'type' => 'image', 'country_mode' => 'only', 'is_active' => '1'];
+
+        $this->put(route('admin.easter-eggs.update', $egg), $fields + ['remove_images' => [$image->id]])->assertSessionHasErrors('images');
+        $this->put(route('admin.easter-eggs.update', $egg), $fields + ['remove_images' => [$image->id], 'images' => [UploadedFile::fake()->image('b.png')]])
+            ->assertSessionHasNoErrors();
+
+        Storage::disk('local')->assertMissing($image->path);
+        $this->assertSame(1, $egg->images()->count());
+
+        $path = $egg->images()->value('path');
+        $this->delete(route('admin.easter-eggs.destroy', $egg));
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_admin_settings_and_permissions(): void

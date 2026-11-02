@@ -34,7 +34,7 @@ Route::controller(\App\Http\Controllers\EasterEggController::class)->prefix('sur
     Route::get('/', 'show')->name('show');
     Route::post('/declencheur', 'trigger')->middleware('throttle:20,1')->name('trigger');
     Route::post('/{egg}/deverrouiller', 'unlock')->middleware('throttle:30,1')->name('unlock');
-    Route::get('/{egg}/image', 'image')->name('image');
+    Route::get('/{egg}/images/{image}', 'image')->scopeBindings()->name('image');
 });
 
 Route::get('/formations', [BackgroundController::class, 'formations'])->middleware('page:formations')->name('formations');

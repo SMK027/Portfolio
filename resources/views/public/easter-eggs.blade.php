@@ -33,8 +33,9 @@
                             <h2 class="flex items-center gap-2 font-display text-lg font-semibold text-slate-900 dark:text-white">
                                 <x-icon :name="$egg->icon()" class="h-5 w-5 text-primary-500" /> {{ $egg->title }}
                             </h2>
-                            @if ($egg->type === 'image' && $egg->image_path)
-                                <img src="{{ route('easter-eggs.image', $egg) }}" alt="{{ $egg->title }}" loading="lazy" class="w-full rounded-lg">
+                            @if ($egg->type === 'image' && $egg->images->isNotEmpty())
+                                {{-- Clic : plein écran ; flèches, clavier et balayage pour passer d'une image à l'autre --}}
+                                <x-carousel :images="$egg->images" :title="$egg->title" :label="'Images — '.$egg->title" />
                             @endif
                             @if ($egg->body)
                                 <div class="prose prose-slate max-w-none dark:prose-invert">{!! \Illuminate\Support\Str::markdown($egg->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
