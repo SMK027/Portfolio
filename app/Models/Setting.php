@@ -48,6 +48,7 @@ class Setting extends Model
             'maintenance.reason'        => 'Maintenance : motif',
             'security.blocked_countries' => 'Pays bloqués',
             'appointments.google'       => 'Google Agenda',
+            'easter_eggs.settings'      => 'Page d\'easter eggs',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

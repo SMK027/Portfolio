@@ -28,6 +28,14 @@ Alpine.start();
 // Mesure d'audience : durée de lecture des pages publiques.
 import('./components/page-timer').then(({ default: start }) => start());
 
+// Easter eggs : déclencheurs cachés (toutes les pages publiques) et page secrète.
+if (document.getElementById('easter-egg-triggers')) {
+    import('./easter-eggs/triggers').then(({ default: start }) => start());
+}
+if (document.querySelector('[data-easter-eggs]')) {
+    import('./easter-eggs/page').then(({ default: start }) => start());
+}
+
 // FullCalendar n'est chargé que sur la page des disponibilités.
 const availability = document.querySelector('[data-availability-calendar]');
 if (availability) {

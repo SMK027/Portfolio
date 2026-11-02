@@ -221,6 +221,11 @@
 
     <x-cookie-banner />
 
+    {{-- Déclencheurs de la page d'easter eggs (combinaisons transmises sous forme d'empreinte) --}}
+    @if ($easterEggTriggers)
+        <script type="application/json" id="easter-egg-triggers">@json($easterEggTriggers)</script>
+    @endif
+
     @stack('scripts')
 </body>
 </html>

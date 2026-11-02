@@ -29,6 +29,14 @@ Route::post('/cv', [\App\Http\Controllers\CvController::class, 'download'])->mid
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 
+// Page d'easter eggs : accessible uniquement via un déclencheur caché (lien signé, puis session).
+Route::controller(\App\Http\Controllers\EasterEggController::class)->prefix('surprise')->name('easter-eggs.')->group(function () {
+    Route::get('/', 'show')->name('show');
+    Route::post('/declencheur', 'trigger')->middleware('throttle:20,1')->name('trigger');
+    Route::post('/{egg}/deverrouiller', 'unlock')->middleware('throttle:30,1')->name('unlock');
+    Route::get('/{egg}/image', 'image')->name('image');
+});
+
 Route::get('/formations', [BackgroundController::class, 'formations'])->middleware('page:formations')->name('formations');
 Route::get('/diplomes', [BackgroundController::class, 'diplomas'])->middleware('page:diplomes')->name('diplomes');
 Route::get('/certifications', [BackgroundController::class, 'certifications'])->middleware('page:certifications')->name('certifications');
@@ -220,6 +228,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->scopeBindings()->middleware($panel('projects.write'))->name('projets.files.destroy');
 
     $crud('annonces', Admin\AnnouncementController::class, 'announcements', ['annonces' => 'announcement']);
+    Route::put('/easter-eggs/reglages', [Admin\EasterEggController::class, 'updateSettings'])->middleware($panel('easter_eggs.write'))->name('easter-eggs.settings');
+    $crud('easter-eggs', Admin\EasterEggController::class, 'easter_eggs', ['easter-eggs' => 'easterEgg']);
 
     // Suivi de la recherche de stage : une habilitation par action, pour les contacts et les remarques.
     // La consultation (internship.read) ouvre la liste ; les autres habilitations s'y ajoutent.

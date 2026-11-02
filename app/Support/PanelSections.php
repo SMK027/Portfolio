@@ -39,6 +39,7 @@ final class PanelSections
         'Site' => [
             ['admin.pages.index', 'Pages & visibilité', 'eye', 'admin.pages.*', 'pages.read|pages.write'],
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*', 'seo.read|seo.write'],
+            ['admin.easter-eggs.index', 'Easter eggs', 'sparkles', 'admin.easter-eggs.*', 'easter_eggs.read|easter_eggs.write|easter_eggs.delete'],
             ['admin.statistics', 'Statistiques', 'squares', 'admin.statistics', 'stats.read'],
             ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*', 'maintenance.read|maintenance.manage'],
             ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*', 'content.export|content.import'],

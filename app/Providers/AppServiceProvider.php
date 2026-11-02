@@ -115,6 +115,7 @@ class AppServiceProvider extends ServiceProvider
                 'announcements' => Announcement::visible()->ordered()->get(),
                 'indexable'     => Setting::siteIsIndexable(),
                 'maintenance'   => app(\App\Services\Maintenance::class)->isActive(),
+                'easterEggTriggers' => app(\App\Services\EasterEggs::class)->triggers(),
             ]);
         });
 

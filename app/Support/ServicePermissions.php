@@ -48,6 +48,11 @@ final class ServicePermissions
             'announcements.write'  => 'Créer et modifier des annonces',
             'announcements.delete' => 'Supprimer des annonces',
         ],
+        'Easter eggs' => [
+            'easter_eggs.read'   => 'Consulter la page d\'easter eggs et ses réglages (déclencheurs compris)',
+            'easter_eggs.write'  => 'Modifier les réglages et les éléments de la page d\'easter eggs',
+            'easter_eggs.delete' => 'Supprimer des éléments de la page d\'easter eggs',
+        ],
         'Messages' => [
             'messages.read'   => 'Lire les messages de contact (données personnelles)',
             'messages.delete' => 'Supprimer des messages de contact',
