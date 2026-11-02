@@ -80,11 +80,13 @@ class EasterEggTest extends TestCase
         $egg = $this->egg(['unlock_sequence' => 'p o n e y', 'hint' => 'Un petit cheval']);
         $this->enter();
 
-        $this->get(route('easter-eggs.show'))->assertOk()->assertSee('Un petit cheval')->assertDontSee('<strong>secret</strong>', false);
+        $this->get(route('easter-eggs.show'))->assertOk()->assertSee('Un petit cheval')->assertDontSee('<strong>secret</strong>', false)
+            ->assertSee('data-egg-input', false);
         $this->postJson(route('easter-eggs.unlock', $egg), ['keys' => ['c', 'h', 'e', 'v', 'a', 'l']])->assertStatus(422);
         $this->postJson(route('easter-eggs.unlock', $egg), ['keys' => ['p', 'o', 'n', 'e', 'y']])->assertOk();
 
-        $this->get(route('easter-eggs.show'))->assertSee('<strong>secret</strong>', false);
+        // Plus rien de verrouillé : le champ de saisie mobile disparaît.
+        $this->get(route('easter-eggs.show'))->assertSee('<strong>secret</strong>', false)->assertDontSee('data-egg-input', false);
     }
 
     public function test_display_conditions(): void

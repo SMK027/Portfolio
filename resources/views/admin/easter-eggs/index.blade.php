@@ -26,7 +26,7 @@
 
         <x-admin.section title="Déclencheurs" description="Laissez un champ vide pour désactiver ce déclencheur. Les combinaisons ne sont jamais envoyées en clair au navigateur.">
             <x-form.input name="sequence" label="Séquence de touches" :value="$settings['sequence']" maxlength="255"
-                          help="Noms de touches séparés par des espaces (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Enter, Escape, lettres, chiffres…). Par défaut : le code Konami." />
+                          help="Noms de touches séparés par des espaces (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Enter, Escape, lettres, chiffres…). Par défaut : le code Konami. Sur mobile, chaque balayage compte comme une flèche : seule une séquence composée uniquement de flèches peut s'y faire au doigt." />
             <x-form.input name="word" label="Mot magique" :value="$settings['word']" maxlength="40" help="Tapé au clavier n'importe où sur le site (hors champs de saisie)." />
             <div class="grid gap-5 sm:grid-cols-[1fr_180px]">
                 <x-form.input name="click_selector" label="Élément à cliquer (sélecteur CSS)" :value="$settings['click_selector']" maxlength="150"

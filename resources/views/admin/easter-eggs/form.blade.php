@@ -62,7 +62,7 @@
         <x-admin.section title="Combinaison propre (facultatif)" description="L'élément apparaît verrouillé (« ??? ») tant que le visiteur n'a pas tapé cette combinaison sur la page.">
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-form.input name="unlock_sequence" label="Combinaison" :value="$egg->unlock_sequence" maxlength="255"
-                              help="Un mot (« licorne ») ou des touches séparées par des espaces (« ArrowUp ArrowUp Enter »)." />
+                              help="Un mot (« licorne ») ou des touches séparées par des espaces (« ArrowUp ArrowUp Enter »). Sur mobile : flèches par balayage, ou saisie dans le champ affiché sur la page." />
                 <x-form.input name="hint" label="Indice affiché" :value="$egg->hint" maxlength="255" placeholder="Ex. : un animal qui n'existe pas" />
             </div>
         </x-admin.section>

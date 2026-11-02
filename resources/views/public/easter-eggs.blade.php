@@ -15,6 +15,19 @@
             @endif
         </header>
 
+        {{-- Mobile : le clavier virtuel n'envoie pas de touches fiables, les combinaisons se saisissent ici --}}
+        @if ($eggs->contains(fn ($egg) => ! in_array($egg->id, $unlocked, true)))
+            <form data-egg-input hidden class="mx-auto mb-8 max-w-md space-y-2" autocomplete="off">
+                <label for="egg-combination" class="form-label text-center">Une combinaison à tester ?</label>
+                <div class="flex gap-2">
+                    <input id="egg-combination" type="text" class="form-input flex-1" autocapitalize="none" autocorrect="off" spellcheck="false"
+                           enterkeyhint="go" maxlength="255" placeholder="Un mot, ou des touches séparées par des espaces">
+                    <button class="btn-primary"><x-icon name="lock" class="h-4 w-4" /> Essayer</button>
+                </div>
+                <p data-egg-input-error hidden class="form-error text-center">Ce n'est pas la bonne combinaison.</p>
+            </form>
+        @endif
+
         @if ($eggs->isEmpty())
             <x-empty-state icon="sparkles" message="Rien à voir ici… pour l'instant." />
         @else

@@ -1,16 +1,38 @@
 // Page d'easter eggs : combinaisons propres des éléments verrouillés et effets visuels.
-import { listenForSequences } from './keys';
+import { findMatch, isTouchDevice, keysFromText, listenForSequences } from './keys';
 import { play } from './effects';
 
 export default function start() {
     const root = document.querySelector('[data-easter-eggs]');
     const locks = [...root.querySelectorAll('[data-egg-lock]')].map((el) => ({ el, ...JSON.parse(el.dataset.eggLock) }));
 
-    listenForSequences(locks, (keys, lock) => {
-        window.axios.post(lock.url, { keys })
-            .then(() => window.location.reload())
-            .catch(() => lock.el.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250 }));
-    });
+    const shake = (el) => el.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250 });
+    const tryUnlock = (keys, lock) => window.axios.post(lock.url, { keys })
+        .then(() => window.location.reload())
+        .catch(() => shake(lock.el));
+
+    listenForSequences(locks, tryUnlock);
+
+    // Mobile uniquement : champ de saisie pour les combinaisons au clavier.
+    const form = root.querySelector('[data-egg-input]');
+    if (form && isTouchDevice()) {
+        const input = form.querySelector('input');
+        const error = form.querySelector('[data-egg-input-error]');
+        form.hidden = false;
+        input.addEventListener('input', () => { error.hidden = true; });
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const keys = keysFromText(input.value);
+            const lock = keys.length && window.crypto?.subtle ? await findMatch(keys, locks) : null;
+            if (lock) {
+                input.blur();
+                tryUnlock(keys, lock);
+            } else {
+                error.hidden = false;
+                shake(form);
+            }
+        });
+    }
 
     root.querySelectorAll('[data-egg-effect]').forEach((card) => {
         card.querySelector('[data-egg-play]')?.addEventListener('click', () => play(card.dataset.eggEffect));
