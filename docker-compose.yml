@@ -60,6 +60,8 @@ services:
       - SECURITY_HEADERS=${SECURITY_HEADERS:-true}
       - STAFF_DEACTIVATION_WARNING_DAYS=${STAFF_DEACTIVATION_WARNING_DAYS:-3}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GOOGLE_CALENDAR_CLIENT_ID=${GOOGLE_CALENDAR_CLIENT_ID:-}
+      - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${APP_DOMAIN:-app.example.com}`)"
