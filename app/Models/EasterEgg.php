@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  * (App\Services\EasterEggs::isVisible), et verrouillé tant que sa combinaison n'est pas tapée.
  */
 #[Fillable([
-    'title', 'type', 'body', 'link_url', 'link_label', 'effect', 'unlock_sequence', 'hint',
+    'title', 'type', 'body', 'link_url', 'link_label', 'effect', 'code_html', 'code_css', 'code_js', 'code_allow_cdn', 'unlock_sequence', 'hint',
     'starts_at', 'ends_at', 'weekdays', 'time_from', 'time_to', 'device', 'countries', 'country_mode',
     'min_unlocked', 'is_active', 'position',
 ])]
@@ -28,7 +28,11 @@ class EasterEgg extends Model
         'image'  => ['Image / GIF', 'photo'],
         'link'   => ['Lien', 'link'],
         'effect' => ['Effet visuel', 'sparkles'],
+        'code'   => ['Code (HTML/CSS/JS)', 'squares'],
     ];
+
+    /** Bibliothèques autorisées dans le code d'un élément, si l'option est cochée. */
+    public const CODE_CDNS = ['https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com'];
 
     public const EFFECTS = [
         'confetti'    => 'Confettis',
@@ -47,6 +51,7 @@ class EasterEgg extends Model
             'weekdays'     => 'array',
             'countries'    => 'array',
             'is_active'    => 'boolean',
+            'code_allow_cdn' => 'boolean',
             'min_unlocked' => 'integer',
         ];
     }
@@ -60,6 +65,12 @@ class EasterEgg extends Model
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderBy('id');
+    }
+
+    /** Le code s'exécute avec les droits de quiconque l'écrit : réservé aux super-administrateurs. */
+    public static function canEditCode(?User $user): bool
+    {
+        return (bool) $user?->isSuperAdmin();
     }
 
     public function isLocked(): bool

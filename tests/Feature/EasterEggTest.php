@@ -184,4 +184,47 @@ class EasterEggTest extends TestCase
         $this->assertSame(['FR', 'BE'], EasterEgg::sole()->countries);
         $this->assertSame([1, 2], EasterEgg::sole()->weekdays);
     }
+
+    public function test_code_is_served_isolated_and_only_once_found(): void
+    {
+        $egg = $this->egg(['type' => 'code', 'body' => null, 'code_html' => '<p id="x">Salut</p>', 'code_js' => 'easterEgg.effect("confetti")', 'unlock_sequence' => 'c o d e']);
+
+        $this->get(route('easter-eggs.code', $egg))->assertNotFound();
+        $this->enter();
+        $this->get(route('easter-eggs.code', $egg))->assertNotFound(); // encore verrouillé
+        $this->postJson(route('easter-eggs.unlock', $egg), ['keys' => ['c', 'o', 'd', 'e']])->assertOk();
+
+        $response = $this->get(route('easter-eggs.code', $egg))->assertOk()->assertSee('<p id="x">Salut</p>', false);
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertStringStartsWith('sandbox allow-scripts', $csp);
+        $this->assertStringNotContainsString('allow-same-origin', $csp);
+        $this->assertStringContainsString("connect-src 'none'", $csp);
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+
+        // La page n'insère jamais le code : seulement l'iframe isolée.
+        $this->get(route('easter-eggs.show'))->assertSee('sandbox="allow-scripts', false)->assertDontSee('<p id="x">', false);
+
+        $egg->update(['code_allow_cdn' => true]);
+        $this->assertStringContainsString('script-src \'unsafe-inline\' \'unsafe-eval\' https://cdnjs.cloudflare.com', $this->get(route('easter-eggs.code', $egg))->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_only_super_admins_manage_code_elements(): void
+    {
+        $fields = ['title' => 'Jeu', 'type' => 'code', 'code_html' => '<canvas></canvas>', 'code_js' => 'alert(1)', 'country_mode' => 'only', 'is_active' => '1'];
+
+        $this->actingAs(User::factory()->admin()->create());
+        $this->post(route('admin.easter-eggs.store'), $fields)->assertForbidden();
+        $text = $this->egg();
+        $this->put(route('admin.easter-eggs.update', $text), ['title' => 'T', 'type' => 'text', 'body' => 'x', 'country_mode' => 'only', 'code_js' => 'alert(1)'])->assertRedirect();
+        $this->assertNull($text->fresh()->code_js); // champ ajouté à la main ignoré
+
+        $this->actingAs(User::factory()->superAdmin()->create());
+        $this->post(route('admin.easter-eggs.store'), ['code_html' => '', 'code_js' => ''] + $fields)->assertSessionHasErrors('code_html');
+        $this->post(route('admin.easter-eggs.store'), $fields)->assertRedirect(route('admin.easter-eggs.index'));
+        $code = EasterEgg::where('type', 'code')->sole();
+        $this->assertSame('alert(1)', $code->code_js);
+
+        $this->actingAs(User::factory()->admin()->create());
+        $this->put(route('admin.easter-eggs.update', $code), ['title' => 'Piraté', 'type' => 'text', 'body' => 'x', 'country_mode' => 'only'])->assertForbidden();
+    }
 }

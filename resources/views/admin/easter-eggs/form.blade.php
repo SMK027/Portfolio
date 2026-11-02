@@ -15,8 +15,9 @@
             <x-form.input name="title" label="Titre" :value="$egg->title" required maxlength="150" />
             <fieldset>
                 <legend class="form-label">Type</legend>
-                <div class="grid gap-2 sm:grid-cols-4">
+                <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
                     @foreach (\App\Models\EasterEgg::TYPES as $value => [$label, $icon])
+                        @continue($value === 'code' && ! \App\Models\EasterEgg::canEditCode(auth()->user()) && $egg->type !== 'code')
                         <label class="cursor-pointer">
                             <input type="radio" name="type" value="{{ $value }}" x-model="type" class="peer sr-only">
                             <span class="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-700 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500">
@@ -53,6 +54,22 @@
             <div x-show="type === 'link'" x-cloak class="grid gap-5 sm:grid-cols-[1fr_220px]">
                 <x-form.input name="link_url" type="url" label="URL" :value="$egg->link_url" maxlength="2048" />
                 <x-form.input name="link_label" label="Texte du bouton" :value="$egg->link_label" maxlength="60" placeholder="Ouvrir" />
+            </div>
+            <div x-show="type === 'code'" x-cloak class="space-y-4">
+                @if (\App\Models\EasterEgg::canEditCode(auth()->user()))
+                    <p class="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                        Exécuté dans une iframe isolée : le code n'a accès ni au site, ni aux cookies, ni à la session du visiteur, et ne peut rien charger d'externe
+                        (sauf option ci-dessous). La hauteur s'adapte au contenu ; <code class="text-xs">easterEgg.effect('confetti')</code> déclenche un effet visuel
+                        de la page (<code class="text-xs">confetti</code>, <code class="text-xs">matrix</code>, <code class="text-xs">barrel-roll</code>, <code class="text-xs">invert</code>).
+                    </p>
+                    <x-form.textarea name="code_html" label="HTML (contenu de <body>)" :value="$egg->code_html" rows="8" spellcheck="false" />
+                    <x-form.textarea name="code_css" label="CSS" :value="$egg->code_css" rows="6" spellcheck="false" />
+                    <x-form.textarea name="code_js" label="JavaScript" :value="$egg->code_js" rows="10" spellcheck="false" />
+                    <x-form.checkbox name="code_allow_cdn" label="Autoriser les bibliothèques de cdnjs, jsDelivr et unpkg" :checked="$egg->code_allow_cdn"
+                                     help="Ex. : <script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js&quot;></script> dans le HTML." />
+                @else
+                    <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Seuls les super-administrateurs peuvent consulter et modifier le code de cet élément.</p>
+                @endif
             </div>
             <div x-show="type === 'effect'" x-cloak>
                 <x-form.select name="effect" label="Effet" :value="$egg->effect" :options="\App\Models\EasterEgg::EFFECTS" placeholder="Choisir…" />

@@ -80,6 +80,40 @@ class EasterEggController extends Controller
         return $this->private(Storage::disk('local')->response($image->path, null, ['Cache-Control' => 'private, max-age=600']));
     }
 
+    /**
+     * Code d'un élément, chargé dans une iframe « sandbox » de la page. L'en-tête CSP « sandbox »
+     * (sans allow-same-origin) donne au document une origine opaque, même ouvert directement :
+     * ni cookies, ni session, ni accès à la page parente ; aucune ressource externe sauf, sur option,
+     * les CDN de EasterEgg::CODE_CDNS.
+     */
+    public function code(Request $request, EasterEgg $egg): Response
+    {
+        $isManager = (bool) $request->user()?->canUsePanel('easter_eggs.read|easter_eggs.write|easter_eggs.delete');
+        $allowed = $isManager || ($this->eggs->hasAccess($request) && $this->eggs->isVisible($request, $egg) && $this->eggs->isUnlocked($request, $egg));
+        abort_unless($allowed && $egg->type === 'code', 404);
+
+        $cdn = $egg->code_allow_cdn ? ' '.implode(' ', EasterEgg::CODE_CDNS) : '';
+        $csp = implode('; ', [
+            'sandbox allow-scripts allow-pointer-lock allow-modals',
+            "default-src 'none'",
+            "script-src 'unsafe-inline' 'unsafe-eval'".$cdn,
+            "style-src 'unsafe-inline'".$cdn,
+            'img-src data: blob:'.$cdn,
+            'font-src data:'.$cdn,
+            'media-src data: blob:',
+            'connect-src '.($cdn ? ltrim($cdn) : "'none'"),
+            "base-uri 'none'",
+            "form-action 'none'",
+            "frame-ancestors 'self'",
+        ]);
+
+        return $this->private(response()->view('public.easter-egg-frame', ['egg' => $egg], 200, [
+            'Content-Security-Policy' => $csp,
+            'Cache-Control'           => 'private, no-store',
+            'Referrer-Policy'         => 'no-referrer',
+        ]));
+    }
+
     protected function private(Response $response): Response
     {
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow, noarchive');

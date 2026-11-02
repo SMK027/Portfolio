@@ -82,5 +82,6 @@ const EFFECTS = { confetti, matrix, 'barrel-roll': barrelRoll, invert };
 
 export function play(name) {
     if (name !== 'invert' && reduced()) return;
-    EFFECTS[name]?.();
+    // Nom éventuellement envoyé par le code d'un élément : seuls les effets connus sont acceptés.
+    if (Object.hasOwn(EFFECTS, name)) EFFECTS[name]();
 }

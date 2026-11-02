@@ -113,6 +113,10 @@ class EasterEggController extends Controller
     /** @return array<string, mixed> */
     protected function validated(Request $request, EasterEgg $egg): array
     {
+        // Code exécuté sur la page : créé et modifié par les super-administrateurs seulement.
+        $touchesCode = $request->input('type') === 'code' || $egg->type === 'code';
+        abort_if($touchesCode && ! EasterEgg::canEditCode($request->user()), 403, 'Seuls les super-administrateurs peuvent gérer les éléments « Code ».');
+
         $data = $request->validate([
             'title'           => ['required', 'string', 'max:150'],
             'type'            => ['required', Rule::in(array_keys(EasterEgg::TYPES))],
@@ -124,6 +128,10 @@ class EasterEggController extends Controller
             'link_url'        => ['nullable', 'url:http,https', 'max:2048', Rule::requiredIf($request->input('type') === 'link')],
             'link_label'      => ['nullable', 'string', 'max:60'],
             'effect'          => ['nullable', Rule::in(array_keys(EasterEgg::EFFECTS)), Rule::requiredIf($request->input('type') === 'effect')],
+            'code_html'       => ['nullable', 'string', 'max:200000'],
+            'code_css'        => ['nullable', 'string', 'max:200000'],
+            'code_js'         => ['nullable', 'string', 'max:200000'],
+            'code_allow_cdn'  => ['nullable', 'boolean'],
             'unlock_sequence' => ['nullable', 'string', 'max:255'],
             'hint'            => ['nullable', 'string', 'max:255'],
             'starts_at'       => ['nullable', 'date'],
@@ -149,6 +157,16 @@ class EasterEggController extends Controller
             throw ValidationException::withMessages(['images' => 'Ajoutez au moins une image.']);
         }
         unset($data['images'], $data['remove_images']);
+
+        if ($data['type'] === 'code') {
+            if (blank($data['code_html'] ?? null) && blank($data['code_js'] ?? null)) {
+                throw ValidationException::withMessages(['code_html' => 'Renseignez du HTML ou du JavaScript.']);
+            }
+            $data['code_allow_cdn'] = $request->boolean('code_allow_cdn');
+        } else {
+            // Les autres types ne modifient jamais le code (ni par un champ ajouté à la main).
+            unset($data['code_html'], $data['code_css'], $data['code_js'], $data['code_allow_cdn']);
+        }
 
         // Avec espaces : des touches (« ArrowUp ArrowDown b a ») ; sans : un mot tapé lettre par lettre.
         $raw = trim((string) ($data['unlock_sequence'] ?? ''));

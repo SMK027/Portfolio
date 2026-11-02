@@ -34,6 +34,21 @@ export default function start() {
         });
     }
 
+    // Éléments « Code » : messages de l'iframe isolée (hauteur du contenu, effets visuels).
+    const frames = [...root.querySelectorAll('[data-egg-frame]')];
+    window.addEventListener('message', (event) => {
+        const frame = frames.find((f) => f.contentWindow === event.source);
+        if (! frame || String(event.data?.easterEgg) !== frame.dataset.eggFrame) return;
+        const { height, effect } = event.data;
+        if (Number.isFinite(height)) frame.style.height = `${Math.min(Math.max(height, 80), 4000)}px`;
+        if (typeof effect === 'string') play(effect);
+    });
+    root.querySelectorAll('[data-egg-fullscreen]').forEach((button) => {
+        const frame = root.querySelector(`[data-egg-frame="${button.dataset.eggFullscreen}"]`);
+        if (! frame?.requestFullscreen) return button.remove();
+        button.addEventListener('click', () => frame.requestFullscreen());
+    });
+
     root.querySelectorAll('[data-egg-effect]').forEach((card) => {
         card.querySelector('[data-egg-play]')?.addEventListener('click', () => play(card.dataset.eggEffect));
         if (card.dataset.eggId === root.dataset.justUnlocked) play(card.dataset.eggEffect);

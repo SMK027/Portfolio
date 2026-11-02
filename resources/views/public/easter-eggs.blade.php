@@ -50,6 +50,17 @@
                                 {{-- Clic : plein écran ; flèches, clavier et balayage pour passer d'une image à l'autre --}}
                                 <x-carousel :images="$egg->images" :title="$egg->title" :label="'Images — '.$egg->title" />
                             @endif
+                            @if ($egg->type === 'code')
+                                {{-- Code isolé : origine opaque, aucun accès au site ni à la session --}}
+                                <div class="space-y-2">
+                                    <iframe src="{{ route('easter-eggs.code', $egg) }}" data-egg-frame="{{ $egg->id }}" title="{{ $egg->title }}"
+                                            sandbox="allow-scripts allow-pointer-lock allow-modals" allow="fullscreen" referrerpolicy="no-referrer" loading="lazy"
+                                            class="block h-64 w-full rounded-lg border border-slate-200 bg-white"></iframe>
+                                    <div class="text-right">
+                                        <button type="button" class="btn-ghost btn-sm" data-egg-fullscreen="{{ $egg->id }}"><x-icon name="arrows-expand" class="h-4 w-4" /> Plein écran</button>
+                                    </div>
+                                </div>
+                            @endif
                             @if ($egg->body)
                                 <div class="editor-content">{!! \Illuminate\Support\Str::markdown($egg->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
                             @endif
