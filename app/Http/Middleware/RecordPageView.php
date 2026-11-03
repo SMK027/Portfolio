@@ -29,7 +29,7 @@ class RecordPageView
     public const ROUTES = [
         'home', 'formations', 'diplomes', 'certifications', 'competences', 'experiences', 'loisirs',
         'projects.index', 'projects.theme', 'projects.show', 'articles.index', 'articles.show',
-        'contact.show', 'appointments.show', 'search',
+        'contact.show', 'appointments.show', 'search', 'recommendations.index', 'terminal',
     ];
 
     protected const BOTS = '/bot|crawl|spider|slurp|facebookexternalhit|preview|monitor|uptime|curl|wget|python|httpclient|headless|lighthouse|pingdom/i';
