@@ -3,6 +3,7 @@
 namespace App\Services\Transfer;
 
 use App\Models\Announcement;
+use App\Models\Recommendation;
 use App\Models\Article;
 use App\Models\Certification;
 use App\Models\Diploma;
@@ -56,6 +57,7 @@ class ContentTransfer
         'projects'       => 'Projets',
         'articles'       => 'Articles de veille',
         'announcements'  => 'Annonces',
+        'recommendations' => 'Recommandations (rédigées)',
     ];
 
     /** Rapport de l'import : section => [created, updated, skipped, errors[]]. */
@@ -206,6 +208,16 @@ class ContentTransfer
         ])->all();
     }
 
+    /** Recommandations rédigées ; les invitations en attente (liens personnels) ne sont pas exportées. */
+    protected function exportRecommendations(): array
+    {
+        return Recommendation::where('status', '!=', Recommendation::INVITED)->ordered()->get()->map(fn (Recommendation $r) => [
+            ...$r->only(['author_name', 'author_role', 'author_company', 'relationship', 'author_url', 'content', 'status', 'is_featured', 'position']),
+            'submitted_at' => $r->submitted_at?->toIso8601String(),
+            'approved_at'  => $r->approved_at?->toIso8601String(),
+        ])->all();
+    }
+
     /** Dates exportées dans le format de leur précision (« 2024 », « 2024-09 »…). */
     protected function exportDates(Model $model, array $fields): array
     {
@@ -253,6 +265,10 @@ class ContentTransfer
                     'author' => 'admin@app.local', 'themes' => ['Réseau'], 'is_pinned' => false, 'published_at' => '2025-03-01T10:00:00+01:00',
                 ]],
                 'announcements'  => [['title' => 'Je recherche une alternance', 'style' => 'success', 'link_url' => 'https://portfolio.leofranz.fr/contact']],
+                'recommendations' => [[
+                    'author_name' => 'Claire Martin', 'author_role' => 'Responsable informatique', 'author_company' => 'Entreprise',
+                    'relationship' => 'Tutrice de stage', 'content' => 'Texte de la recommandation…', 'status' => 'approved', 'is_featured' => true,
+                ]],
             ],
         ];
     }
@@ -689,6 +705,41 @@ class ContentTransfer
             'is_active'      => (bool) ($data['is_active'] ?? true),
             'is_dismissible' => (bool) ($data['is_dismissible'] ?? true),
             'position'       => (int) ($data['position'] ?? 0),
+        ]);
+    }
+
+    /** Une recommandation existante (même auteur) est mise à jour. */
+    protected function importRecommendations(array $item, string $label): void
+    {
+        $data = $this->validate($item, $label, 'recommendations', [
+            'author_name'    => ['required', 'string', 'max:120'],
+            'author_role'    => ['nullable', 'string', 'max:150'],
+            'author_company' => ['nullable', 'string', 'max:150'],
+            'relationship'   => ['nullable', 'string', 'max:150'],
+            'author_url'     => ['nullable', 'url:http,https', 'max:2048'],
+            'content'        => ['required', 'string', 'max:3000'],
+            'status'         => ['nullable', Rule::in([Recommendation::PENDING, Recommendation::APPROVED, Recommendation::REJECTED])],
+            'is_featured'    => ['nullable', 'boolean'],
+            'position'       => ['nullable', 'integer', 'min:0', 'max:999'],
+            'submitted_at'   => ['nullable', 'date'],
+            'approved_at'    => ['nullable', 'date'],
+        ]);
+        if ($data === null) {
+            return;
+        }
+
+        $status = $data['status'] ?? Recommendation::APPROVED;
+        $model = Recommendation::whereRaw('LOWER(author_name) = ?', [mb_strtolower(trim($data['author_name']))])->first() ?? new Recommendation;
+        $model->forceFill([
+            'submitted_at' => $data['submitted_at'] ?? $model->submitted_at,
+            'approved_at'  => $status === Recommendation::APPROVED ? ($data['approved_at'] ?? $model->approved_at ?? now()) : null,
+        ]);
+        $this->save('recommendations', $model, [
+            ...collect($data)->except(['submitted_at', 'approved_at'])->all(),
+            'label'       => $model->label ?? $data['author_name'],
+            'status'      => $status,
+            'is_featured' => (bool) ($data['is_featured'] ?? false),
+            'position'    => (int) ($data['position'] ?? 0),
         ]);
     }
 

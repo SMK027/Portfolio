@@ -184,6 +184,30 @@ class ContentTransferTest extends TestCase
         }
     }
 
+    public function test_recommendations_round_trip_without_invitation_links(): void
+    {
+        $transfer = app(\App\Services\Transfer\ContentTransfer::class);
+        \App\Models\Recommendation::invite('Invitation en attente', null);
+        $published = \App\Models\Recommendation::invite('M. Martin', null);
+        $published->forceFill(['author_name' => 'Claire Martin', 'author_role' => 'Responsable', 'content' => 'Très bon stagiaire.',
+            'status' => \App\Models\Recommendation::APPROVED, 'is_featured' => true, 'approved_at' => now()->subDay()])->save();
+
+        $export = $transfer->export(['recommendations']);
+        $this->assertCount(1, $export['sections']['recommendations']);
+        $this->assertStringNotContainsString($published->token, json_encode($export));
+
+        \App\Models\Recommendation::query()->delete();
+        $transfer->import($export, ['recommendations'], false, $this->admin);
+        $transfer->import($export, ['recommendations'], false, $this->admin); // relancer : pas de doublon
+
+        $imported = \App\Models\Recommendation::sole();
+        $this->assertSame('Claire Martin', $imported->author_name);
+        $this->assertSame(\App\Models\Recommendation::APPROVED, $imported->status);
+        $this->assertTrue($imported->is_featured);
+        $this->assertNotNull($imported->approved_at);
+        $this->assertNull($imported->token);
+    }
+
     public function test_only_admins(): void
     {
         $this->actingAs(User::factory()->create())->get(route('admin.transfer.index'))->assertForbidden();

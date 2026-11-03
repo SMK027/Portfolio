@@ -13,14 +13,14 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Messages reçus** (panel) : recherche (nom, e-mail, objet, contenu), filtres « lus / non lus » et par période, action « Marquer comme non lu » pour garder un message à traiter.
 
 **Import / export** (*Administration → Import / export*) :
-- **Export** : JSON de tout ou partie du contenu (présentation, pages, thèmes, compétences, formations, expériences, diplômes, certifications, loisirs, projets, articles, annonces). Il sert de sauvegarde ou de base de migration.
+- **Export** : JSON de tout ou partie du contenu (présentation, pages, thèmes, compétences, formations, expériences, diplômes, certifications, loisirs, projets, articles, annonces, recommandations rédigées). Il sert de sauvegarde ou de base de migration.
 - **Import** en deux temps : une simulation détaille ce qui sera créé, mis à jour ou ignoré, puis l'import est confirmé. Un élément déjà présent (même slug, même titre…) est mis à jour et non dupliqué ; relancer un import est donc sans risque.
 - **Format souple** (voir le **fichier modèle** téléchargeable) :
   - dates `2024`, `2024-09` ou `2024-09-15`, la précision étant déduite du format ;
   - thèmes et compétences désignés par leur nom, et créés s'ils manquent ;
   - auteurs désignés par leur e-mail ;
   - contenu d'article en HTML (`content_html`) accepté et converti en blocs Editor.js, avec récupération possible des images distantes.
-- **Non inclus** : les fichiers (photos, images de fond, badges, pièces jointes).
+- **Non inclus** : les fichiers (photos, images de fond, badges, pièces jointes), les invitations à recommandation encore en attente (liens personnels), les réactions aux articles, l'historique des téléchargements du CV et les réglages de notifications.
 
 **Éditeur visuel ou Markdown** (articles, projets et missions des expériences) : un sélecteur permet d'écrire avec l'éditeur visuel (Editor.js) ou en Markdown (GitHub Flavored Markdown), avec une barre de mise en forme et un aperçu en direct.
 - Le contenu est converti automatiquement à chaque changement d'éditeur ; le choix d'éditeur et le texte Markdown saisi sont conservés.
