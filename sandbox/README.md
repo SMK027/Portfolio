@@ -33,8 +33,8 @@ docker compose up -d --build
 Côté portfolio (`.env` et `docker-compose.yml`) :
 
 1. Ajoutez le réseau `portfolio-sandbox-control` (externe) au service `app`.
-2. Renseignez `SANDBOX_API_URL=http://sandbox-agent:8080`, `SANDBOX_API_TOKEN` (même valeur que ci-dessus) et `SANDBOX_SSH_HOST` (nom affiché aux visiteurs, ex. le domaine) / `SANDBOX_SSH_PORT=2222`.
-3. Ouvrez le port 2222 dans le pare-feu de l'hôte.
+2. Renseignez `SANDBOX_API_URL=http://sandbox-agent:8080` et `SANDBOX_API_TOKEN` (même valeur que ci-dessus). Le port et l'adresse affichés aux visiteurs viennent de `sandbox/.env` (`SANDBOX_SSH_PUBLIC_PORT`, `SANDBOX_SSH_PUBLIC_HOST`, par défaut `APP_DOMAIN`) : l'agent les transmet au portfolio. `SANDBOX_SSH_PORT` et `SANDBOX_SSH_HOST` dans le `.env` du portfolio ne servent qu'à les forcer.
+3. Ouvrez le port `SANDBOX_SSH_PUBLIC_PORT` (2222 par défaut) dans le pare-feu de l'hôte.
 
 Adresses IP réelles : le journal des connexions et les limites par IP utilisent l'adresse vue par l'agent. Avec le proxy « userland » de Docker (réglage par défaut), toutes les connexions SSH semblent venir de la passerelle Docker. Pour voir les vraies adresses, désactivez-le : `"userland-proxy": false` dans `/etc/docker/daemon.json`, puis redémarrez Docker. Le terminal web, lui, reçoit l'IP réelle par le ticket du portfolio.
 

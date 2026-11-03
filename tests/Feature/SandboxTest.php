@@ -53,6 +53,20 @@ class SandboxTest extends TestCase
             ->assertSee('En marche')->assertSee('203.0.113.5')->assertSee('Avant démo')->assertSee('ssh -p 2222 guest@example.com');
     }
 
+    public function test_ssh_address_comes_from_the_agent_unless_overridden(): void
+    {
+        config(['services.sandbox.ssh_port' => null, 'services.sandbox.ssh_host' => null]);
+        Http::fake(['sandbox-agent:8080/state' => Http::response(['ok' => true, 'last_error' => null, 'ssh' => ['port' => 2223, 'host' => 'ssh.example.org']])]);
+        $sandbox = app(Sandbox::class);
+
+        $this->assertSame('ssh -p 2222 guest@example.com', $sandbox->sshCommand()); // rien de connu : valeurs par défaut
+        $sandbox->sync();
+        $this->assertSame('ssh -p 2223 guest@ssh.example.org', $sandbox->sshCommand());
+
+        config(['services.sandbox.ssh_port' => 22, 'services.sandbox.ssh_host' => 'forced.example.net']);
+        $this->assertSame('ssh guest@forced.example.net', $sandbox->sshCommand());
+    }
+
     public function test_only_super_admins_manage_the_machine(): void
     {
         $this->actingAs(User::factory()->admin()->create())->get(route('admin.sandbox.show'))->assertForbidden();

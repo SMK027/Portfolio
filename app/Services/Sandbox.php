@@ -21,6 +21,11 @@ class Sandbox
 
     public const DEFAULTS = ['public' => false, 'internet' => false, 'auto_backup' => false, 'keep' => 7];
 
+    /** Adresse publique transmise par l'agent (port et hôte de sandbox/.env). */
+    public const SSH_SETTING = 'sandbox.ssh';
+
+    public const DEFAULT_SSH_PORT = 2222;
+
     public function isConfigured(): bool
     {
         return filled(config('services.sandbox.url')) && strlen((string) config('services.sandbox.token')) >= 32;
@@ -66,13 +71,44 @@ class Sandbox
             return null;
         }
         $response = $this->call('put', 'state', $this->desiredState());
+        $this->rememberSsh($response['ssh'] ?? null);
 
         return $response['last_error'] ?? null;
     }
 
     public function status(): array
     {
-        return $this->call('get', 'status');
+        $status = $this->call('get', 'status');
+        $this->rememberSsh($status['ssh'] ?? null);
+
+        return $status;
+    }
+
+    /** Port SSH public : .env du portfolio, sinon valeur transmise par l'agent, sinon 2222. */
+    public function sshPort(): int
+    {
+        return (int) (config('services.sandbox.ssh_port') ?: (Setting::get(self::SSH_SETTING)['port'] ?? null) ?: self::DEFAULT_SSH_PORT);
+    }
+
+    public function sshHost(): string
+    {
+        return config('services.sandbox.ssh_host')
+            ?: (Setting::get(self::SSH_SETTING)['host'] ?? null)
+            ?: (string) parse_url((string) config('app.url'), PHP_URL_HOST);
+    }
+
+    /** Mémorise l'adresse publique annoncée par l'agent (enregistrée seulement si elle change). */
+    protected function rememberSsh(?array $ssh): void
+    {
+        $port = (int) ($ssh['port'] ?? 0);
+        if ($port < 1 || $port > 65535) {
+            return;
+        }
+        $host = isset($ssh['host']) && preg_match('/^[A-Za-z0-9.-]{1,253}$/', (string) $ssh['host']) ? $ssh['host'] : null;
+        $value = ['port' => $port, 'host' => $host];
+        if (Setting::get(self::SSH_SETTING) !== $value) {
+            Setting::set(self::SSH_SETTING, $value);
+        }
     }
 
     public function backups(): array
@@ -154,8 +190,8 @@ class Sandbox
     /** Commande SSH affichée aux visiteurs. */
     public function sshCommand(string $username = 'guest'): string
     {
-        $host = config('services.sandbox.ssh_host') ?: parse_url((string) config('app.url'), PHP_URL_HOST);
-        $port = (int) config('services.sandbox.ssh_port', 2222);
+        $host = $this->sshHost();
+        $port = $this->sshPort();
 
         return 'ssh '.($port !== 22 ? "-p {$port} " : '').$username.'@'.$host;
     }

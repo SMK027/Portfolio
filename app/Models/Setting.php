@@ -51,6 +51,7 @@ class Setting extends Model
             'easter_eggs.settings'      => 'Page d\'easter eggs',
             'notifications.discord'     => 'Notifications Discord',
             'sandbox.settings'          => 'Machine SSH',
+            'sandbox.ssh'               => 'Machine SSH : adresse publique',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

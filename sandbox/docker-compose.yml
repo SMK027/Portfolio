@@ -56,6 +56,9 @@ services:
       - SANDBOX_MAX_SESSIONS=${SANDBOX_MAX_SESSIONS:-10}
       - SANDBOX_MAX_SESSIONS_PER_IP=${SANDBOX_MAX_SESSIONS_PER_IP:-2}
       - SANDBOX_MAX_CONNECTIONS_PER_MINUTE=${SANDBOX_MAX_CONNECTIONS_PER_MINUTE:-10}
+      # Port et adresse publics, communiqués au portfolio pour l'affichage des commandes
+      - SANDBOX_PUBLIC_SSH_PORT=${SANDBOX_SSH_PUBLIC_PORT:-2222}
+      - SANDBOX_PUBLIC_SSH_HOST=${SANDBOX_SSH_PUBLIC_HOST:-${APP_DOMAIN:-}}
     mem_limit: 128m
     cpus: 0.5
     security_opt:

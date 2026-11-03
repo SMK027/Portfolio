@@ -15,6 +15,8 @@ const config = {
     container: env('SANDBOX_CONTAINER', 'portfolio-sandbox-ssh'),
     egressNetwork: env('SANDBOX_EGRESS_NETWORK', 'portfolio-sandbox-egress'),
     dockerUrl: env('SANDBOX_DOCKER_URL', 'http://docker-proxy:2375'),
+    publicSshPort: int('SANDBOX_PUBLIC_SSH_PORT', 2222),
+    publicSshHost: env('SANDBOX_PUBLIC_SSH_HOST', '') || null,
     quotaKb: int('SANDBOX_QUOTA_MB', 512) * 1024,
     maxSessionsPerIp: int('SANDBOX_MAX_SESSIONS_PER_IP', 2),
     maxSessions: int('SANDBOX_MAX_SESSIONS', 10),

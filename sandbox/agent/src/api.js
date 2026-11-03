@@ -16,6 +16,9 @@ import { apply } from './reconcile.js';
 
 const USERNAME = /^[a-z][a-z0-9_-]{2,31}$/;
 
+/** Adresse publique de la machine (affichée par le portfolio). */
+const publicSsh = () => ({ port: config.publicSshPort, host: config.publicSshHost });
+
 const authorized = (request) => {
     const given = Buffer.from(request.headers.authorization?.replace(/^Bearer /, '') ?? '');
     const expected = Buffer.from(config.apiToken);
@@ -65,6 +68,7 @@ const routes = {
         const info = await safe(() => docker.inspect());
         const running = Boolean(info?.State?.Running);
         return {
+            ssh: publicSsh(),
             container: {
                 running,
                 status: info?.State?.Status ?? 'introuvable',
@@ -92,7 +96,7 @@ const routes = {
             await safe(() => sandbox.killSessions());
         }
         await apply();
-        return { ok: true, last_error: runtime.lastError };
+        return { ok: true, last_error: runtime.lastError, ssh: publicSsh() };
     },
     'POST /sessions/kill': async (request) => {
         const { username = null } = await readJson(request);

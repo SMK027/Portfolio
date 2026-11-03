@@ -62,8 +62,9 @@ return [
     'sandbox' => [
         'url'      => env('SANDBOX_API_URL'),
         'token'    => env('SANDBOX_API_TOKEN'),
+        // Facultatifs : par défaut, valeurs transmises par l'agent (sandbox/.env)
         'ssh_host' => env('SANDBOX_SSH_HOST'),
-        'ssh_port' => (int) env('SANDBOX_SSH_PORT', 2222),
+        'ssh_port' => env('SANDBOX_SSH_PORT') ? (int) env('SANDBOX_SSH_PORT') : null,
         // Terminal web : par défaut /ssh-ws sur le domaine du portfolio (routeur Traefik de l'agent)
         'ws_url'   => env('SANDBOX_WS_URL'),
     ],
