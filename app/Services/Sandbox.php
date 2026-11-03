@@ -40,6 +40,8 @@ class Sandbox
         'limits'           => ['nproc' => 24, 'memory_mb' => 192, 'file_mb' => 100, 'user_quota_mb' => 100],
         'connections'      => ['max' => 10, 'per_ip' => 2, 'per_minute' => 10],
         'motd'             => '',
+        // Terminal web : session jetable sans compte (dossier temporaire supprimé à la déconnexion)
+        'ephemeral_sessions' => false,
         // Maintenance automatique
         'reset_frequency'  => 'none', // none | daily | weekly (lundi)
         'reference_backup' => null,
@@ -409,9 +411,10 @@ class Sandbox
     public function terminalTicket(?string $ip): string
     {
         $payload = rtrim(strtr(base64_encode(json_encode([
-            'exp'   => now()->addMinute()->timestamp,
-            'nonce' => Str::random(24),
-            'ip'    => $ip,
+            'exp'       => now()->addMinute()->timestamp,
+            'nonce'     => Str::random(24),
+            'ip'        => $ip,
+            'ephemeral' => (bool) $this->settings()['ephemeral_sessions'],
         ])), '+/', '-_'), '=');
         $key = hash('sha256', 'terminal|'.config('services.sandbox.token'), true);
 

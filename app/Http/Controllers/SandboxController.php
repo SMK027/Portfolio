@@ -23,7 +23,8 @@ class SandboxController extends Controller
             'page'       => $request->attributes->get('page'),
             'open'       => $this->sandbox->isOpen(),
             'schedule'   => $this->sandbox->scheduleLabel(),
-            'internet'   => $this->sandbox->settings()['internet'],
+            'internet'   => $this->sandbox->effectiveInternet(),
+            'ephemeral'  => (bool) $this->sandbox->settings()['ephemeral_sessions'],
             'guest'      => $guest?->isActive() ? $guest : null,
             'sshCommand' => $this->sandbox->sshCommand($guest?->username ?? 'identifiant'),
         ]);

@@ -116,6 +116,7 @@ class SandboxController extends Controller
     {
         $data = $request->validate([
             'motd'             => ['nullable', 'string', 'max:2000'],
+            'ephemeral_sessions' => ['nullable', 'boolean'],
             'auto_backup'      => ['nullable', 'boolean'],
             'keep'             => ['required', 'integer', 'min:1', 'max:60'],
             'reset_frequency'  => ['required', Rule::in(array_keys(Sandbox::FREQUENCIES))],
@@ -126,6 +127,7 @@ class SandboxController extends Controller
             ...$data,
             'motd'             => (string) ($data['motd'] ?? ''),
             'auto_backup'      => $request->boolean('auto_backup'),
+            'ephemeral_sessions' => $request->boolean('ephemeral_sessions'),
             'keep'             => (int) $data['keep'],
             'reference_backup' => $data['reference_backup'] ?? null,
         ]);
@@ -260,7 +262,7 @@ class SandboxController extends Controller
     protected function validatedAccount(Request $request): array
     {
         return $request->validate([
-            'username'   => ['required', 'string', 'regex:'.SandboxAccount::USERNAME_PATTERN, Rule::notIn(SandboxAccount::RESERVED), 'unique:sandbox_accounts,username'],
+            'username'   => ['required', 'string', 'regex:'.SandboxAccount::USERNAME_PATTERN, 'not_regex:/^tmp-/', Rule::notIn(SandboxAccount::RESERVED), 'unique:sandbox_accounts,username'],
             'label'      => ['nullable', 'string', 'max:150'],
             'expires_at' => ['nullable', 'date', 'after:today'],
             'password'   => ['nullable', 'string', 'min:8', 'max:72'],
@@ -268,6 +270,7 @@ class SandboxController extends Controller
         ], [
             'username.regex'  => 'De 3 à 32 caractères : lettres minuscules, chiffres, « - » et « _ », en commençant par une lettre.',
             'username.not_in' => 'Ce nom est réservé par le système.',
+            'username.not_regex' => 'Le préfixe « tmp- » est réservé aux sessions jetables.',
         ]);
     }
 

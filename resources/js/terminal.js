@@ -219,6 +219,12 @@ export function mountTerminal(root) {
                 ]);
             },
         },
+        ...(data.pages['machine-ssh'] ? {
+            ssh: {
+                description: 'se connecter à la vraie machine Linux',
+                run: () => openUrl(`${data.pages['machine-ssh'].url}#terminal`, 'Connexion à la machine SSH…'),
+            },
+        } : {}),
         history: { run: () => printLines(history.map((h, i) => `${dim(String(i + 1).padStart(4))}  ${escape(h)}`)) },
         echo: { run: (args) => print(escape(args.join(' '))) },
         date: { run: () => print(escape(new Date().toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'medium' }))) },

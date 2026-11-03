@@ -323,4 +323,25 @@ class SandboxTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.sandbox.upgrade'))->assertSessionHas('upgrade_output', 'OK: 42 MiB in 80 packages');
         $this->assertDatabaseHas('audit_logs', ['action' => 'sandbox.upgraded']);
     }
+
+    public function test_ephemeral_sessions_are_offered_when_enabled(): void
+    {
+        Page::where('key', 'machine-ssh')->update(['is_public' => true]);
+        Page::flushCache();
+        $sandbox = app(Sandbox::class);
+        $sandbox->saveSettings(['public' => true]);
+        $decode = fn (string $url) => json_decode(base64_decode(strtr(explode('.', substr($url, strpos($url, '=') + 1))[0], '-_', '+/')), true);
+
+        $this->get(route('sandbox.show'))->assertDontSee('Session jetable');
+        $this->assertFalse($decode($this->post(route('sandbox.ticket'))->json('url'))['ephemeral']);
+
+        $sandbox->saveSettings(['ephemeral_sessions' => true]);
+        $this->get(route('sandbox.show'))->assertSee('Session jetable')->assertSee('Plein écran');
+        $this->assertTrue($decode($this->post(route('sandbox.ticket'))->json('url'))['ephemeral']);
+    }
+
+    public function test_tmp_prefix_is_reserved_for_ephemeral_sessions(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.sandbox.accounts.store'), ['username' => 'tmp-abcd1234'])->assertSessionHasErrors('username');
+    }
 }

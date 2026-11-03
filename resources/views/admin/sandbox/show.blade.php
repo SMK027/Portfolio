@@ -115,6 +115,8 @@
         @csrf @method('PUT')
         <x-admin.section title="Maintenance automatique">
             <x-form.textarea name="motd" label="Message d'accueil (affiché à la connexion)" :value="$settings['motd']" rows="4" maxlength="2000" help="Vide : message par défaut." />
+            <x-form.checkbox name="ephemeral_sessions" label="Terminal web : proposer une session jetable sans compte" :checked="$settings['ephemeral_sessions']"
+                             help="Un compte temporaire est créé à la connexion et supprimé, avec son dossier, à la déconnexion." />
             <div class="flex flex-wrap items-end gap-5">
                 <x-form.checkbox name="auto_backup" label="Sauvegarde automatique chaque nuit (4 h 15)" :checked="$settings['auto_backup']" />
                 <x-form.input name="keep" type="number" label="Sauvegardes automatiques conservées" :value="$settings['keep']" min="1" max="60" class="w-56" />

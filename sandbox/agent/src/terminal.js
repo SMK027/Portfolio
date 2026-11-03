@@ -1,15 +1,18 @@
 // Terminal web : websocket ⇄ session SSH sur la machine. Le navigateur présente
 // un ticket signé par le portfolio, puis l'identifiant et le mot de passe du compte.
 //
-// Messages du navigateur : {type:"auth", username, password, cols, rows},
+// Messages du navigateur : {type:"auth", username, password, cols, rows} ou
+// {type:"auth", ephemeral:true, cols, rows} (compte jetable, si le ticket l'autorise),
 // {type:"input", data}, {type:"resize", cols, rows}.
-// Messages de l'agent : {type:"output", data}, {type:"status", message}, {type:"closed", message}.
+// Messages de l'agent : {type:"output", data}, {type:"status", message}, {type:"closed", message},
+// {type:"limits", idle_minutes, max_minutes, username}.
 import { WebSocketServer } from 'ws';
 import ssh2 from 'ssh2';
 import config from './config.js';
 import { acquire, release } from './limits.js';
 import { isBanned, isOpen, logConnection, recordFailure } from './state.js';
 import { verifyTicket } from './tickets.js';
+import { run } from './sandbox.js';
 
 const { Client } = ssh2;
 
@@ -51,6 +54,8 @@ export function startTerminal() {
 
         let ssh = null;
         let shell = null;
+        let ephemeralUser = null;
+        let authenticating = false;
         let idleTimer = null;
         let released = false;
         const close = (message) => {
@@ -64,6 +69,11 @@ export function startTerminal() {
             if (message) send({ type: 'closed', message });
             ssh?.end();
             if (socket.readyState === socket.OPEN) socket.close();
+            if (ephemeralUser) {
+                const user = ephemeralUser;
+                ephemeralUser = null;
+                run(`ephemeral-delete ${user}`).catch(() => {}); // sinon supprimé par le nettoyage périodique
+            }
         };
         const resetIdle = () => {
             clearTimeout(idleTimer);
@@ -73,7 +83,7 @@ export function startTerminal() {
         terminals.add(close);
         resetIdle();
 
-        socket.on('message', (raw) => {
+        socket.on('message', async (raw) => {
             let message;
             try {
                 message = JSON.parse(raw.toString());
@@ -82,8 +92,23 @@ export function startTerminal() {
             }
             resetIdle();
 
-            if (message.type === 'auth' && ! ssh) {
-                const username = String(message.username ?? '');
+            if (message.type === 'auth' && ! ssh && ! authenticating) {
+                authenticating = true; // une seule authentification par websocket
+                let username = String(message.username ?? '');
+                let password = String(message.password ?? '');
+                if (message.ephemeral === true) {
+                    if (! ticket.ephemeral) {
+                        close('sessions jetables désactivées');
+                        return;
+                    }
+                    try {
+                        ({ username, password } = JSON.parse(await run('ephemeral-create')));
+                        ephemeralUser = username;
+                    } catch {
+                        close('impossible de créer la session');
+                        return;
+                    }
+                }
                 if (! /^[a-z][a-z0-9_-]{2,31}$/.test(username)) {
                     close('identifiant invalide');
                     return;
@@ -99,6 +124,7 @@ export function startTerminal() {
                         }
                         shell = stream;
                         send({ type: 'status', message: 'connected' });
+                        send({ type: 'limits', idle_minutes: config.terminalIdleMinutes, max_minutes: config.terminalMaxMinutes, username });
                         stream.on('data', (data) => send({ type: 'output', data: data.toString('utf8') }));
                         stream.stderr.on('data', (data) => send({ type: 'output', data: data.toString('utf8') }));
                         stream.on('close', () => close('session terminée'));
@@ -111,7 +137,7 @@ export function startTerminal() {
                     close(denied ? 'identifiant ou mot de passe incorrect' : 'machine injoignable');
                 });
                 ssh.connect({
-                    host: config.sshHost, port: config.sshPort, username, password: String(message.password ?? ''),
+                    host: config.sshHost, port: config.sshPort, username, password,
                     readyTimeout: 15000, tryKeyboard: false,
                 });
             } else if (message.type === 'input' && shell && typeof message.data === 'string') {

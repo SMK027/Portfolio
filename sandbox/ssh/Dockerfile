@@ -18,6 +18,10 @@ COPY entrypoint.sh /usr/local/sbin/entrypoint.sh
 COPY agent-keys /usr/local/sbin/agent-keys
 COPY session /usr/local/sbin/session
 COPY motd /etc/motd
+# Défis Linux copiés dans le dossier de chaque nouveau compte
+COPY defis/build.sh /tmp/defis-build.sh
+COPY defis/defis /usr/local/bin/defis
+RUN sh /tmp/defis-build.sh && rm /tmp/defis-build.sh && chmod 0755 /usr/local/bin/defis
 RUN chmod 0755 /usr/local/sbin/sandboxctl /usr/local/sbin/entrypoint.sh /usr/local/sbin/agent-keys /usr/local/sbin/session \
     && cp /etc/motd /etc/motd.default \
     && chmod 0644 /etc/motd /etc/motd.default /etc/ssh/sshd_config

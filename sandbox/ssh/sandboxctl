@@ -11,6 +11,8 @@
 #   reap             tue les processus des comptes sans session ouverte
 #   auth-log         journal d'authentification de sshd depuis la dernière lecture
 #   upgrade          mise à jour des paquets (apk upgrade, par le proxy de sortie)
+#   ephemeral-create crée un compte jetable (terminal web) ; renvoie {"username","password"}
+#   ephemeral-delete <user>  supprime un compte jetable et son dossier
 #   backup           archive tar.gz de /home sur la sortie
 #   restore          remplace /home par l'archive lue sur l'entrée
 set -euo pipefail
@@ -31,6 +33,18 @@ sandbox_users() {
 UID_MIN=200000
 next_uid() {
     awk -F: -v min="$UID_MIN" 'BEGIN { max = min - 1 } $3 >= min && $3 > max { max = $3 } END { print max + 1 }' /etc/passwd
+}
+
+# Comptes jetables du terminal web : marqués « ephemeral » (champ GECOS), jamais gérés par le panel
+is_ephemeral() {
+    [ "$(getent passwd "$1" | cut -d: -f5)" = "ephemeral" ]
+}
+
+delete_ephemeral() {
+    is_ephemeral "$1" || return 0
+    kill_user "$1"
+    deluser "$1" >/dev/null 2>&1 || true
+    rm -rf "/home/$1"
 }
 
 kill_user() {
@@ -72,6 +86,7 @@ case "$COMMAND" in
 
         # Comptes retirés : sessions fermées, compte supprimé (dossier conservé jusqu'à restauration ou réinitialisation).
         for user in $(sandbox_users); do
+            is_ephemeral "$user" && continue
             if ! grep -qx "$user" <<< "$wanted"; then
                 kill_user "$user"
                 deluser "$user" >/dev/null 2>&1 || true
@@ -141,7 +156,14 @@ case "$COMMAND" in
         # Processus laissés après la déconnexion (nohup, &…) : supprimés.
         connected="$(connected_users)"
         for user in $(sandbox_users); do
-            if ! grep -qx "$user" <<< "$connected" && pgrep -u "$user" >/dev/null 2>&1; then
+            grep -qx "$user" <<< "$connected" && continue
+            if is_ephemeral "$user"; then
+                # Compte jetable sans session depuis plus de 2 minutes (création récente épargnée)
+                if [ -z "$(find "/home/$user" -maxdepth 0 -mmin -2 2>/dev/null)" ]; then
+                    delete_ephemeral "$user"
+                    echo "$user"
+                fi
+            elif pgrep -u "$user" >/dev/null 2>&1; then
                 kill_user "$user"
                 echo "$user"
             fi
@@ -151,6 +173,26 @@ case "$COMMAND" in
     upgrade)
         export http_proxy=http://sandbox-proxy:3128 https_proxy=http://sandbox-proxy:3128
         apk upgrade --no-cache 2>&1
+        ;;
+
+    ephemeral-create)
+        user="tmp-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
+        password="$(od -An -N18 -tx1 /dev/urandom | tr -d ' \n')"
+        adduser -D -u "$(next_uid)" -G sandbox -g ephemeral -s /bin/bash -h "/home/$user" "$user" >/dev/null
+        echo "$user:$password" | chpasswd -c SHA512 >/dev/null
+        chmod 0700 "/home/$user"
+        jq -n -c --arg u "$user" --arg p "$password" '{username: $u, password: $p}'
+        ;;
+
+    ephemeral-delete)
+        target="${ARGS[1]:-}"
+        [[ "$target" =~ ^tmp-[a-z0-9]{8}$ ]] && delete_ephemeral "$target"
+        echo '{"ok":true}'
+        ;;
+
+    ephemeral-purge)
+        for user in $(sandbox_users); do delete_ephemeral "$user"; done
+        echo '{"ok":true}'
         ;;
 
     backup)

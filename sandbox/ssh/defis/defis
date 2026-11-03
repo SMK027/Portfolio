@@ -1,0 +1,34 @@
+#!/bin/bash
+# Défis Linux : liste et vérification des réponses (progression dans ~/.defis).
+SHARE=/usr/local/share/defis
+PROGRESS="$HOME/.defis"
+TITLES=("" "Fichier caché" "Recherche dans un journal" "Permissions" "Labyrinthe" "Visiteurs uniques")
+touch "$PROGRESS"
+
+case "${1:-}" in
+    verifier)
+        n="${2:-}"; shift 2 2>/dev/null || true
+        reponse="$*"
+        if [[ ! "$n" =~ ^[1-5]$ ]] || [ -z "$reponse" ]; then
+            echo "Usage : defis verifier NUMÉRO RÉPONSE"; exit 1
+        fi
+        if [ "$(printf '%s' "$reponse" | sha256sum | cut -d' ' -f1)" = "$(cat "$SHARE/$n")" ]; then
+            grep -qx "$n" "$PROGRESS" || echo "$n" >> "$PROGRESS"
+            echo "✔ Défi $n réussi : ${TITLES[$n]} !"
+        else
+            echo "✘ Ce n'est pas ça. Persévérez !"; exit 1
+        fi
+        ;;
+    reinitialiser)
+        rm -rf "$HOME/defis" && cp -r /etc/skel/defis "$HOME/defis" && : > "$PROGRESS"
+        echo "Défis réinitialisés dans ~/defis."
+        ;;
+    *)
+        echo "Défis Linux (consignes : ~/defis/LISEZMOI.txt)"
+        for n in 1 2 3 4 5; do
+            mark="  "; grep -qx "$n" "$PROGRESS" && mark="✔ "
+            echo "  $mark$n. ${TITLES[$n]}"
+        done
+        echo "$(sort -u "$PROGRESS" | grep -c .) / 5 réussis — defis verifier N RÉPONSE · defis reinitialiser"
+        ;;
+esac
