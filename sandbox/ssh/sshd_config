@@ -1,12 +1,14 @@
 # Bac à sable : les connexions arrivent toutes par sandbox-agent (relais TCP et
 # terminal web), qui applique l'ouverture au public et les limites par IP.
+# 22 : comptes visiteurs ; 2200 : comptes de gestion (root), relayés par l'agent sur un port public dédié
 Port 22
+Port 2200
 HostKey /etc/ssh/keys/ssh_host_ed25519_key
 HostKey /etc/ssh/keys/ssh_host_rsa_key
 
 # Root : uniquement l'agent, par clé, limité à la commande d'administration.
 PermitRootLogin forced-commands-only
-AllowGroups sandbox root
+AllowGroups sandbox sandboxadm root
 PasswordAuthentication yes
 KbdInteractiveAuthentication no
 PermitEmptyPasswords no
@@ -42,3 +44,19 @@ Match User root
 # Comptes du bac à sable : limites et environnement appliqués à chaque session
 Match Group sandbox
     ForceCommand /usr/local/sbin/session
+
+# Port public : jamais les comptes de gestion
+Match LocalPort 22
+    DenyGroups sandboxadm
+
+# Port de gestion : uniquement les comptes de gestion, par clé
+Match LocalPort 2200
+    DenyGroups sandbox
+    DenyUsers root
+    PasswordAuthentication no
+
+# Comptes de gestion : UID 0, liés à un super-administrateur du portfolio, clé SSH uniquement
+Match Group sandboxadm
+    PermitRootLogin prohibit-password
+    PasswordAuthentication no
+    AuthorizedKeysFile /etc/sandbox/admin-keys/%u

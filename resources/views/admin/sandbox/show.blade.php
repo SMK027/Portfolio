@@ -30,8 +30,8 @@
                 <div><p class="text-xs uppercase tracking-wide text-slate-400">Machine</p>
                     <p class="font-medium"><span @class(['badge-green' => $container['running'] ?? false, 'badge-amber' => ! ($container['running'] ?? false)])>{{ ($container['running'] ?? false) ? 'En marche' : ($container['status'] ?? 'inconnue') }}</span></p></div>
                 <div><p class="text-xs uppercase tracking-wide text-slate-400">Accès public</p>
-                    <p class="font-medium">{{ $status['public'] ? 'Ouvert' : 'Fermé' }}@if ($quota['exceeded'] ?? false) <span class="badge-amber">suspendu (quota)</span>@endif</p></div>
-                <div><p class="text-xs uppercase tracking-wide text-slate-400">Internet</p><p class="font-medium">{{ $status['internet'] ? 'Activé' : 'Coupé' }}</p></div>
+                    <p class="font-medium">{{ ($status['public'] ?? false) ? 'Ouvert' : 'Fermé' }}@if ($quota['exceeded'] ?? false) <span class="badge-amber">suspendu (quota)</span>@endif</p></div>
+                <div><p class="text-xs uppercase tracking-wide text-slate-400">Internet</p><p class="font-medium">{{ ($status['internet'] ?? false) ? 'Activé' : 'Coupé' }}</p></div>
                 <div><p class="text-xs uppercase tracking-wide text-slate-400">Processeur · mémoire</p>
                     <p class="font-medium">{{ $container['cpu_percent'] ?? '—' }} % · {{ $mb($container['memory_bytes'] ?? null) }} / {{ $mb($container['memory_limit_bytes'] ?? null) }}</p></div>
                 <div><p class="text-xs uppercase tracking-wide text-slate-400">Espace /home</p>
@@ -43,7 +43,7 @@
                 </div>
             </div>
             @if (! empty($status['over_quota_users']))<p class="text-sm text-amber-700">Comptes bloqués (quota dépassé) : {{ implode(', ', $status['over_quota_users']) }}</p>@endif
-            @if ($status['last_error'])<p class="form-error">Dernière erreur de l'agent : {{ $status['last_error'] }}</p>@endif
+            @if (! empty($status['last_error']))<p class="form-error">Dernière erreur de l'agent : {{ $status['last_error'] }}</p>@endif
             <div class="flex flex-wrap gap-2">
                 <form method="POST" action="{{ route('admin.sandbox.sessions.kill') }}">@csrf
                     <button class="btn-secondary btn-sm" onclick="return confirm('Fermer toutes les sessions en cours ?')">Fermer toutes les sessions</button></form>
@@ -131,6 +131,87 @@
         </x-admin.section>
     </form>
 
+    <x-admin.section title="Comptes de gestion (root)"
+                     description="Accès root à la machine par clé SSH, sur un port réservé ouvert en permanence (même accès public fermé). Un compte n'est actif que tant que son propriétaire est super-administrateur et que son compte est actif. Chaque connexion est inscrite au journal d'activité et signalée sur Discord.">
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Root dans la machine (conteneur bridé, sans accès à l'hôte ni au portfolio) : il peut lire tous les dossiers des visiteurs, installer des paquets et modifier le système jusqu'au prochain redémarrage.
+        </div>
+
+        @if ($managers->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="admin-table">
+                    <thead><tr><th>Compte</th><th>Super-administrateur</th><th>Clés</th><th></th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach ($managers as $manager)
+                            <tr>
+                                <td>
+                                    <p class="font-mono font-medium text-slate-900">{{ $manager->username }}</p>
+                                    <p class="font-mono text-xs text-slate-500">{{ app(\App\Services\Sandbox::class)->managerCommand($manager->username) }}</p>
+                                </td>
+                                <td class="text-sm">
+                                    {{ $manager->user?->name ?? 'Compte supprimé' }}
+                                    @unless ($manager->isEligible())<span class="badge-amber">Inactif</span>@endunless
+                                </td>
+                                <td class="text-sm text-slate-600">{{ count($manager->public_keys ?? []) }}</td>
+                                <td class="text-right">
+                                    <x-admin.delete-button :action="route('admin.sandbox.managers.destroy', $manager)" label="Révoquer"
+                                                           confirm="Révoquer ce compte de gestion ? Ses sessions root seront fermées." />
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @if ($myManager)
+            <div class="space-y-3">
+                <p class="text-sm font-semibold text-slate-700">Vos clés ({{ $myManager->username }})</p>
+                @forelse ($myManager->public_keys ?? [] as $key)
+                    <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                        <span class="min-w-0">
+                            <span class="font-medium text-slate-900">{{ $key['label'] ?? $key['type'] }}</span>
+                            <span class="block truncate font-mono text-xs text-slate-500">{{ $key['type'] }}@if ($key['bits']) {{ $key['bits'] }} bits @endif · {{ $key['fingerprint'] }}</span>
+                        </span>
+                        <form method="POST" action="{{ route('admin.sandbox.managers.keys.destroy') }}">
+                            @csrf @method('DELETE')
+                            <input type="hidden" name="fingerprint" value="{{ $key['fingerprint'] }}">
+                            <button class="text-xs font-medium text-red-600 hover:underline" onclick="return confirm('Supprimer cette clé ?')">Supprimer</button>
+                        </form>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Aucune clé : le compte n'est pas utilisable.</p>
+                @endforelse
+                <form method="POST" action="{{ route('admin.sandbox.managers.keys.store') }}" class="space-y-3">
+                    @csrf
+                    <x-form.textarea name="public_key" label="Ajouter une clé publique" rows="2" placeholder="ssh-ed25519 AAAA… vous@machine" />
+                    <div class="flex flex-wrap items-end gap-3">
+                        <x-form.input name="key_label" label="Nom de la clé" maxlength="60" placeholder="Ex. : Portable" class="flex-1" />
+                        <button class="btn-secondary">Ajouter la clé</button>
+                    </div>
+                </form>
+            </div>
+        @else
+            <form method="POST" action="{{ route('admin.sandbox.managers.store') }}" class="space-y-4 rounded-xl border border-dashed border-slate-300 p-4">
+                @csrf
+                <p class="text-sm font-semibold text-slate-700">Créer votre compte de gestion</p>
+                <div>
+                    <label for="f-manager_username" class="form-label">Identifiant</label>
+                    <div class="flex items-center gap-1">
+                        <span class="font-mono text-sm text-slate-500">adm-</span>
+                        <input id="f-manager_username" name="manager_username" value="{{ old('manager_username', \Illuminate\Support\Str::slug(auth()->user()->username ?? auth()->user()->name, '')) }}"
+                               maxlength="27" required class="form-input font-mono sm:w-64" autocomplete="off">
+                    </div>
+                    @error('manager_username')<p class="form-error">{{ $message }}</p>@enderror
+                </div>
+                <x-form.textarea name="public_key" label="Clé publique SSH" rows="2" required placeholder="ssh-ed25519 AAAA… vous@machine"
+                                 help="Contenu de ~/.ssh/id_ed25519.pub (ssh-keygen -t ed25519). Jamais la clé privée." />
+                <x-form.input name="key_label" label="Nom de la clé" maxlength="60" placeholder="Ex. : Portable" />
+                <div class="flex justify-end"><button class="btn-primary"><x-icon name="lock" class="h-4 w-4" /> Créer le compte root</button></div>
+            </form>
+        @endif
+    </x-admin.section>
+
     <x-admin.section title="Comptes" description="Le compte invité est affiché avec son mot de passe sur la page publique ; les comptes nominatifs sont à transmettre vous-même.">
         @if ($accounts->isNotEmpty())
             <div class="overflow-x-auto">
@@ -190,9 +271,9 @@
 
     @if ($status)
         <x-admin.section title="Sessions ouvertes">
-            @forelse ($status['sessions'] as $session)
+            @forelse ($status['sessions'] ?? [] as $session)
                 <div class="flex items-center justify-between gap-3 text-sm">
-                    <span><span class="font-mono font-medium">{{ $session['username'] }}</span> · {{ $session['tty'] }} · depuis {{ gmdate($session['seconds'] >= 3600 ? 'G \h i' : 'i \m\i\n', $session['seconds']) }}</span>
+                    <span><span class="font-mono font-medium">{{ $session['username'] }}</span>@if (! empty($session['manager'])) <span class="badge-amber">root</span>@endif · {{ $session['tty'] }} · depuis {{ gmdate($session['seconds'] >= 3600 ? 'G \h i' : 'i \m\i\n', $session['seconds']) }}</span>
                     <form method="POST" action="{{ route('admin.sandbox.sessions.kill') }}">@csrf
                         <input type="hidden" name="username" value="{{ $session['username'] }}">
                         <button class="text-xs font-medium text-red-600 hover:underline">Fermer</button></form>
@@ -226,7 +307,7 @@
                             <tr>
                                 <td class="whitespace-nowrap">{{ $connection->connected_at->format('d/m H:i:s') }}</td>
                                 <td class="font-mono text-xs">@if ($connection->ip_address)<a href="{{ route('admin.ip-history', ['ip' => $connection->ip_address]) }}" class="hover:underline">{{ $connection->ip_address }}</a>@else effacée @endif</td>
-                                <td>{{ $connection->channel === 'web' ? 'Terminal web' : 'SSH' }}@if ($connection->username) · {{ $connection->username }}@endif</td>
+                                <td>{{ ['web' => 'Terminal web', 'gestion' => 'Gestion (root)'][$connection->channel] ?? 'SSH' }}@if ($connection->username) · {{ $connection->username }}@endif</td>
                                 <td @class(['text-red-600' => $connection->isRefused()])>{{ $connection->result }}</td>
                             </tr>
                         @endforeach

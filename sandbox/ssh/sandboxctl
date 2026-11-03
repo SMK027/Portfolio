@@ -10,6 +10,7 @@
 #   usage-users      espace occupé par compte, en Ko (JSON)
 #   reap             tue les processus des comptes sans session ouverte
 #   auth-log         journal d'authentification de sshd depuis la dernière lecture
+#   managers         JSON sur l'entrée : {"managers":[{"username","keys":[…]}]} (comptes de gestion, UID 0)
 #   upgrade          mise à jour des paquets (apk upgrade, par le proxy de sortie)
 #   ephemeral-create crée un compte jetable (terminal web) ; renvoie {"username","password"}
 #   ephemeral-delete <user>  supprime un compte jetable et son dossier
@@ -33,6 +34,20 @@ sandbox_users() {
 UID_MIN=200000
 next_uid() {
     awk -F: -v min="$UID_MIN" 'BEGIN { max = min - 1 } $3 >= min && $3 > max { max = $3 } END { print max + 1 }' /etc/passwd
+}
+
+ADMIN_GID="$(getent group sandboxadm | cut -d: -f3)"
+MANAGER_RE='^adm-[a-z0-9_-]{2,27}$'
+
+# Comptes de gestion : UID 0, groupe « sandboxadm »
+manager_users() {
+    awk -F: -v gid="$ADMIN_GID" '$4 == gid { print $1 }' /etc/passwd
+}
+
+# Ferme les sessions d'un compte de gestion. pkill -u viserait l'UID 0, donc tous les
+# processus root (sshd compris) : on ne cible que les sessions sshd de ce compte.
+kill_manager() {
+    pkill -KILL -f "^sshd(-session)?: $1@" 2>/dev/null || true
 }
 
 # Comptes jetables du terminal web : marqués « ephemeral » (champ GECOS), jamais gérés par le panel
@@ -120,13 +135,15 @@ case "$COMMAND" in
 
     sessions)
         ps -eo pid=,etimes=,args= | awk '$3 ~ /^sshd(-session)?:$/ && $4 ~ /@/ && $4 !~ /^root@/ { split($4, a, "@"); printf "%s %s %s %s\n", $1, $2, a[1], a[2] }' \
-            | jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ") | {pid: (.[0]|tonumber), seconds: (.[1]|tonumber), username: .[2], tty: .[3]})'
+            | jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ") | {pid: (.[0]|tonumber), seconds: (.[1]|tonumber), username: .[2], tty: .[3], manager: (.[2] | startswith("adm-"))})'
         ;;
 
     kill)
         target="${ARGS[1]:-}"
         if [ -z "$target" ]; then
             for user in $(sandbox_users); do kill_user "$user"; done
+        elif [[ "$target" =~ $MANAGER_RE ]]; then
+            kill_manager "$target"
         elif [[ "$target" =~ $USERNAME_RE ]]; then
             kill_user "$target"
         fi
@@ -168,6 +185,36 @@ case "$COMMAND" in
                 echo "$user"
             fi
         done
+        ;;
+
+    managers)
+        desired="$(cat)"
+        wanted="$(jq -r '.managers[].username' <<< "$desired")"
+
+        for user in $(manager_users); do
+            if ! grep -qx "$user" <<< "$wanted"; then
+                kill_manager "$user"
+                sed -i "/^$user:/d" /etc/passwd /etc/shadow
+                rm -f "/etc/sandbox/admin-keys/$user"
+            fi
+        done
+
+        jq -c '.managers[]' <<< "$desired" | while read -r manager; do
+            user="$(jq -r '.username' <<< "$manager")"
+            [[ "$user" =~ $MANAGER_RE ]] || { echo "nom invalide : $user" >&2; continue; }
+            if ! grep -q "^$user:" /etc/passwd; then
+                # adduser refuse un UID déjà utilisé : ligne écrite directement. « * » : pas de
+                # mot de passe, mais compte non verrouillé (sshd refuse les comptes « ! » même par clé).
+                echo "$user:x:0:$ADMIN_GID:gestion:/root:/bin/bash" >> /etc/passwd
+                echo "$user:*:$(( $(date +%s) / 86400 )):0:99999:7:::" >> /etc/shadow
+            fi
+            # Clés : une par ligne, sans options (les tunnels restent interdits globalement)
+            jq -r '.keys[]' <<< "$manager" | grep -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+/=]+( .*)?$' \
+                > "/etc/sandbox/admin-keys/$user.tmp" || true
+            chmod 0644 "/etc/sandbox/admin-keys/$user.tmp"
+            mv "/etc/sandbox/admin-keys/$user.tmp" "/etc/sandbox/admin-keys/$user"
+        done
+        echo '{"ok":true}'
         ;;
 
     upgrade)

@@ -212,6 +212,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/invite/mot-de-passe', 'rotateGuest')->name('guest.rotate');
         Route::post('/mise-a-jour', 'upgrade')->middleware('throttle:3,10')->name('upgrade');
         Route::post('/comptes', 'storeAccount')->name('accounts.store');
+        // Comptes de gestion (root) : mot de passe reconfirmé pour créer un accès ou ajouter une clé
+        Route::post('/gestion', 'storeManager')->middleware('password.confirm')->name('managers.store');
+        Route::post('/gestion/cles', 'storeManagerKey')->middleware('password.confirm')->name('managers.keys.store');
+        Route::delete('/gestion/cles', 'destroyManagerKey')->name('managers.keys.destroy');
+        Route::delete('/gestion/{manager}', 'destroyManager')->name('managers.destroy');
         Route::put('/comptes/{account}', 'updateAccount')->name('accounts.update');
         Route::delete('/comptes/{account}', 'destroyAccount')->name('accounts.destroy');
         Route::post('/sessions/fermer', 'killSessions')->name('sessions.kill');

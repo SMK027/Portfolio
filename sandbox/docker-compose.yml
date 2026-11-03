@@ -84,6 +84,7 @@ services:
       - SANDBOX_S3_PREFIX=${SANDBOX_S3_PREFIX:-portfolio-sandbox/}
       # Port et adresse publics, communiqués au portfolio pour l'affichage des commandes
       - SANDBOX_PUBLIC_SSH_PORT=${SANDBOX_SSH_PUBLIC_PORT:-2222}
+      - SANDBOX_PUBLIC_MANAGER_PORT=${SANDBOX_SSH_MANAGER_PORT:-2224}
       - SANDBOX_PUBLIC_SSH_HOST=${SANDBOX_SSH_PUBLIC_HOST:-${APP_DOMAIN:-}}
     mem_limit: 128m
     cpus: 0.5
@@ -97,6 +98,8 @@ services:
     ports:
       # Port SSH public (relais vers la machine) : ouvrez-le dans le pare-feu.
       - "${SANDBOX_SSH_PUBLIC_PORT:-2222}:2222"
+      # Port SSH de gestion (comptes root des super-administrateurs, par clé), toujours ouvert
+      - "${SANDBOX_SSH_MANAGER_PORT:-2224}:2224"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.portfolio-sandbox-ws.rule=Host(`${APP_DOMAIN:-app.example.com}`) && PathPrefix(`/ssh-ws`)"

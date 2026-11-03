@@ -82,6 +82,11 @@ export async function upgrade() {
     return (await run('upgrade')).split('\n').slice(-40).join('\n');
 }
 
+/** Comptes de gestion (UID 0, clé SSH) liés aux super-administrateurs du portfolio. */
+export async function applyManagers(managers) {
+    await run('managers', { input: JSON.stringify({ managers }) });
+}
+
 /** Espace occupé par compte (Ko). */
 export async function usageByUser() {
     return JSON.parse((await run('usage-users')).trim() || '{}');

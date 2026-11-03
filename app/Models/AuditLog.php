@@ -69,6 +69,7 @@ class AuditLog extends Model
         'sandbox.scheduled_reset' => 'Machine SSH : réinitialisation planifiée',
         'sandbox.upgraded'        => 'Machine SSH : mise à jour des paquets',
         'sandbox.guest_rotated'   => 'Machine SSH : nouveau mot de passe invité',
+        'sandbox.manager_login'   => 'Machine SSH : connexion root (compte de gestion)',
         'ip_ban.updated'    => 'Bannissement IP modifié',
         'ip_ban.lifted'     => 'Bannissement IP levé',
         'ip_history.viewed' => 'Historique d\'une IP consulté',

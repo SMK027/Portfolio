@@ -19,6 +19,7 @@ export async function apply() {
         const accounts = state.accounts.map((a) => ({ ...a, enabled: a.enabled && ! runtime.overUsers.includes(a.username) }));
         const { user_quota_mb: _, ...limits } = { ...DEFAULT_LIMITS, ...state.limits };
         await sandbox.applyAccounts(accounts, limits, state.motd);
+        await sandbox.applyManagers(state.managers ?? []);
         runtime.lastApplied = new Date().toISOString();
         runtime.lastError = null;
     } catch (error) {

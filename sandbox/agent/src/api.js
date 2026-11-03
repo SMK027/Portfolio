@@ -17,9 +17,11 @@ import { DEFAULT_LIMITS, pendingFailures, runtime, saveState, state } from './st
 import { apply } from './reconcile.js';
 
 const USERNAME = /^[a-z][a-z0-9_-]{2,31}$/;
+const MANAGER = /^adm-[a-z0-9_-]{2,27}$/;
+const PUBLIC_KEY = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+/=]{40,16384}( [^\n]{0,200})?$/;
 
 /** Adresse publique de la machine (affichée par le portfolio). */
-const publicSsh = () => ({ port: config.publicSshPort, host: config.publicSshHost });
+const publicSsh = () => ({ port: config.publicSshPort, host: config.publicSshHost, manager_port: config.publicManagerPort });
 
 const authorized = (request) => {
     const given = Buffer.from(request.headers.authorization?.replace(/^Bearer /, '') ?? '');
@@ -55,8 +57,13 @@ const safe = async (fn, fallback = null) => {
 
 function validateState(body) {
     const accounts = Array.isArray(body.accounts) ? body.accounts : [];
-    if (accounts.length > 200 || accounts.some((a) => ! USERNAME.test(a?.username ?? '') || ! String(a?.hash ?? '').startsWith('$6$'))) {
+    if (accounts.length > 200 || accounts.some((a) => ! USERNAME.test(a?.username ?? '') || a.username.startsWith('adm-') || ! String(a?.hash ?? '').startsWith('$6$'))) {
         throw Object.assign(new Error('Comptes invalides'), { status: 422 });
+    }
+    const managers = Array.isArray(body.managers) ? body.managers : [];
+    if (managers.length > 50 || managers.some((m) => ! MANAGER.test(m?.username ?? '') || ! Array.isArray(m.keys) || m.keys.length > 20
+        || m.keys.some((k) => ! PUBLIC_KEY.test(String(k))))) {
+        throw Object.assign(new Error('Comptes de gestion invalides'), { status: 422 });
     }
     const limits = body.limits ?? {};
     const bounded = (value, min, max, fallback) => (Number.isInteger(value) && value >= min && value <= max ? value : fallback);
@@ -81,6 +88,7 @@ function validateState(body) {
         public: body.public === true,
         internet: body.internet === true,
         accounts: accounts.map((a) => ({ username: a.username, hash: a.hash, enabled: a.enabled !== false })),
+        managers: managers.map((m) => ({ username: m.username, keys: m.keys.map(String) })),
         banned_ips: (Array.isArray(body.banned_ips) ? body.banned_ips : [])
             .filter((ip) => typeof ip === 'string' && net.isIP(ip)).slice(0, 10000),
     };
@@ -129,7 +137,7 @@ const routes = {
     },
     'POST /sessions/kill': async (request) => {
         const { username = null } = await readJson(request);
-        if (username !== null && ! USERNAME.test(username)) {
+        if (username !== null && ! USERNAME.test(username) && ! MANAGER.test(username)) {
             throw Object.assign(new Error('Identifiant invalide'), { status: 422 });
         }
         if (username === null) {

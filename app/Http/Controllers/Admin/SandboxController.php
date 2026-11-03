@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SandboxAccount;
+use App\Models\SandboxManager;
 use App\Services\AuditTrail;
 use App\Services\Sandbox;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,8 @@ class SandboxController extends Controller
             'sshCommand' => $this->sandbox->sshCommand(),
             'effectivePublic' => $this->sandbox->effectivePublic(),
             'connections' => \App\Models\SandboxConnection::latest('connected_at')->paginate(30, pageName: 'connexions'),
+            'managers'   => SandboxManager::with('user')->orderBy('username')->get(),
+            'myManager'  => SandboxManager::where('user_id', auth()->id())->first(),
         ]);
     }
 
@@ -198,6 +201,77 @@ class SandboxController extends Controller
         return $this->pushed("Compte « {$account->username} » mis à jour.".($password ? " Nouveau mot de passe : {$password}" : ''));
     }
 
+    /** Compte de gestion (root) du super-administrateur connecté, avec sa première clé. */
+    public function storeManager(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (SandboxManager::where('user_id', $user->id)->exists()) {
+            return back()->with('error', 'Vous avez déjà un compte de gestion.');
+        }
+        $data = $request->validate([
+            'manager_username' => ['required', 'string', 'regex:/^[a-z0-9_-]{2,27}$/'],
+            'public_key'       => ['required', 'string', 'max:16000'],
+            'key_label'        => ['nullable', 'string', 'max:60'],
+        ], ['manager_username.regex' => 'De 2 à 27 caractères : lettres minuscules, chiffres, « - » et « _ ».']);
+
+        $username = 'adm-'.$data['manager_username'];
+        if (SandboxManager::where('username', $username)->exists()) {
+            return back()->withErrors(['manager_username' => 'Ce nom est déjà pris.'])->withInput();
+        }
+        $key = $this->parsedKey($data['public_key'], $data['key_label'] ?? null);
+
+        SandboxManager::create(['user_id' => $user->id, 'username' => $username, 'public_keys' => [$key]]);
+
+        return $this->pushed("Compte de gestion « {$username} » créé.");
+    }
+
+    public function storeManagerKey(Request $request): RedirectResponse
+    {
+        $manager = SandboxManager::where('user_id', $request->user()->id)->firstOrFail();
+        $data = $request->validate(['public_key' => ['required', 'string', 'max:16000'], 'key_label' => ['nullable', 'string', 'max:60']]);
+        $key = $this->parsedKey($data['public_key'], $data['key_label'] ?? null);
+
+        $keys = $manager->public_keys ?? [];
+        if (collect($keys)->contains('fingerprint', $key['fingerprint'])) {
+            return back()->withErrors(['public_key' => 'Cette clé est déjà enregistrée.']);
+        }
+        if (count($keys) >= SandboxManager::MAX_KEYS) {
+            return back()->withErrors(['public_key' => SandboxManager::MAX_KEYS.' clés au plus.']);
+        }
+        $manager->update(['public_keys' => [...$keys, $key]]);
+
+        return $this->pushed('Clé ajoutée.');
+    }
+
+    public function destroyManagerKey(Request $request): RedirectResponse
+    {
+        $fingerprint = $request->validate(['fingerprint' => ['required', 'string', 'regex:#^SHA256:[A-Za-z0-9+/]{43}$#']])['fingerprint'];
+        $manager = SandboxManager::where('user_id', $request->user()->id)->firstOrFail();
+        $keys = array_values(array_filter($manager->public_keys ?? [], fn ($k) => $k['fingerprint'] !== $fingerprint));
+        $manager->update(['public_keys' => $keys]);
+
+        return $this->pushed($keys ? 'Clé supprimée.' : 'Dernière clé supprimée : le compte de gestion n\'est plus utilisable.');
+    }
+
+    /** Révocation d'un compte de gestion (par n'importe quel super-administrateur) : sessions fermées. */
+    public function destroyManager(SandboxManager $manager): RedirectResponse
+    {
+        $manager->delete();
+
+        return $this->pushed("Compte de gestion « {$manager->username} » révoqué : ses sessions sont fermées.");
+    }
+
+    /** @return array{type: string, key: string, comment: string, fingerprint: string, bits: ?int, label: ?string, added_at: string} */
+    protected function parsedKey(string $line, ?string $label): array
+    {
+        $key = SandboxManager::parseKey($line);
+        if (! $key) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['public_key' => 'Clé publique invalide ou refusée : collez le contenu d\'un fichier .pub (ed25519 recommandé ; RSA de 2048 bits au moins ; DSA refusé).']);
+        }
+
+        return [...$key, 'label' => $label ?: ($key['comment'] ?: null), 'added_at' => now()->toIso8601String()];
+    }
+
     public function destroyAccount(SandboxAccount $account): RedirectResponse
     {
         $account->delete();
@@ -262,7 +336,7 @@ class SandboxController extends Controller
     protected function validatedAccount(Request $request): array
     {
         return $request->validate([
-            'username'   => ['required', 'string', 'regex:'.SandboxAccount::USERNAME_PATTERN, 'not_regex:/^tmp-/', Rule::notIn(SandboxAccount::RESERVED), 'unique:sandbox_accounts,username'],
+            'username'   => ['required', 'string', 'regex:'.SandboxAccount::USERNAME_PATTERN, 'not_regex:/^(tmp|adm)-/', Rule::notIn(SandboxAccount::RESERVED), 'unique:sandbox_accounts,username'],
             'label'      => ['nullable', 'string', 'max:150'],
             'expires_at' => ['nullable', 'date', 'after:today'],
             'password'   => ['nullable', 'string', 'min:8', 'max:72'],
@@ -270,7 +344,7 @@ class SandboxController extends Controller
         ], [
             'username.regex'  => 'De 3 à 32 caractères : lettres minuscules, chiffres, « - » et « _ », en commençant par une lettre.',
             'username.not_in' => 'Ce nom est réservé par le système.',
-            'username.not_regex' => 'Le préfixe « tmp- » est réservé aux sessions jetables.',
+            'username.not_regex' => 'Les préfixes « tmp- » (sessions jetables) et « adm- » (comptes de gestion) sont réservés.',
         ]);
     }
 

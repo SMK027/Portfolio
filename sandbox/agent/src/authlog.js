@@ -30,11 +30,12 @@ export async function collect() {
         if (! relayed || event.username === 'root') {
             continue; // terminal web (géré à part) ou administration par l'agent
         }
+        const channel = relayed.channel ?? 'ssh';
         if (event.type === 'failed') {
-            recordFailure({ ip: relayed.ip, channel: 'ssh', username: event.username });
-            logConnection({ ip: relayed.ip, channel: 'ssh', username: event.username, result: 'refusée (identifiants)' });
+            recordFailure({ ip: relayed.ip, channel, username: event.username });
+            logConnection({ ip: relayed.ip, channel, username: event.username, result: 'refusée (identifiants)' });
         } else {
-            logConnection({ ip: relayed.ip, channel: 'ssh', username: event.username, result: 'authentifiée' });
+            logConnection({ ip: relayed.ip, channel, username: event.username, result: 'authentifiée' });
         }
     }
     // Correspondances de plus de 10 minutes : oubliées.

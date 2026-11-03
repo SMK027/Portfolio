@@ -153,6 +153,11 @@ class Sandbox
             'motd'     => (string) $settings['motd'],
             // Adresses bannies par le portfolio : refusées aussi par la machine
             'banned_ips' => \App\Models\IpBan::active()->limit(10000)->pluck('ip_address')->unique()->values()->all(),
+            // Comptes de gestion (root) : seulement ceux des super-administrateurs actifs
+            'managers' => \App\Models\SandboxManager::with('user')->orderBy('username')->get()
+                ->filter(fn (\App\Models\SandboxManager $m) => $m->isEligible())
+                ->map(fn (\App\Models\SandboxManager $m) => ['username' => $m->username, 'keys' => $m->keyLines()])
+                ->values()->all(),
             'accounts' => SandboxAccount::ordered()->get()->map(fn (SandboxAccount $a) => [
                 'username' => $a->username,
                 'hash'     => $a->password_hash,
@@ -225,7 +230,8 @@ class Sandbox
             return;
         }
         $host = isset($ssh['host']) && preg_match('/^[A-Za-z0-9.-]{1,253}$/', (string) $ssh['host']) ? $ssh['host'] : null;
-        $value = ['port' => $port, 'host' => $host];
+        $managerPort = (int) ($ssh['manager_port'] ?? 0);
+        $value = ['port' => $port, 'host' => $host, 'manager_port' => $managerPort >= 1 && $managerPort <= 65535 ? $managerPort : null];
         if (Setting::get(self::SSH_SETTING) !== $value) {
             Setting::set(self::SSH_SETTING, $value);
         }
@@ -315,8 +321,8 @@ class Sandbox
             ->map(fn ($c) => [
                 'connected_at' => \Illuminate\Support\Carbon::parse($c['at'])->setTimezone(config('app.timezone')),
                 'ip_address'   => filter_var($c['ip'] ?? null, FILTER_VALIDATE_IP) ?: null,
-                'channel'      => ($c['channel'] ?? 'ssh') === 'web' ? 'web' : 'ssh',
-                'username'     => isset($c['username']) && preg_match(SandboxAccount::USERNAME_PATTERN, $c['username']) ? $c['username'] : null,
+                'channel'      => in_array($c['channel'] ?? 'ssh', ['web', 'gestion'], true) ? $c['channel'] : 'ssh',
+                'username'     => isset($c['username']) && (preg_match(SandboxAccount::USERNAME_PATTERN, $c['username']) || preg_match(\App\Models\SandboxManager::USERNAME_PATTERN, $c['username'])) ? $c['username'] : null,
                 'result'       => \Illuminate\Support\Str::limit((string) $c['result'], 80, ''),
             ])
             ->filter(fn ($row) => $last === null || $row['connected_at']->gt(\Illuminate\Support\Carbon::parse($last)))
@@ -325,6 +331,17 @@ class Sandbox
 
         if ($rows->isNotEmpty()) {
             SandboxConnection::insert($rows->all());
+        }
+
+        // Accès root : journal d'activité et alerte Discord
+        foreach ($rows->where('channel', 'gestion')->where('result', 'authentifiée') as $row) {
+            $manager = \App\Models\SandboxManager::with('user')->where('username', $row['username'])->first();
+            app(AuditTrail::class)->record('sandbox.manager_login', $manager, meta: [
+                'compte' => $row['username'], 'ip' => $row['ip_address'], 'le' => $row['connected_at']->format('d/m/Y H:i:s'),
+            ], force: true, label: $row['username']);
+            app(DiscordNotifier::class)->notify('sandbox', 'Machine SSH : connexion root de '.$row['username'], null, [
+                'Super-administrateur' => $manager?->user?->name, 'Adresse IP' => $row['ip_address'],
+            ], route('admin.sandbox.show'));
         }
 
         return $rows->count();
@@ -425,6 +442,18 @@ class Sandbox
     public function terminalUrl(): string
     {
         return config('services.sandbox.ws_url') ?: preg_replace('#^http#', 'ws', rtrim(config('app.url'), '/')).'/ssh-ws';
+    }
+
+    /** Port SSH de gestion : .env du portfolio, sinon valeur transmise par l'agent, sinon 2224. */
+    public function managerPort(): int
+    {
+        return (int) (config('services.sandbox.ssh_manager_port') ?: (Setting::get(self::SSH_SETTING)['manager_port'] ?? null) ?: 2224);
+    }
+
+    /** Commande SSH d'un compte de gestion (clé). */
+    public function managerCommand(string $username): string
+    {
+        return "ssh -p {$this->managerPort()} {$username}@{$this->sshHost()}";
     }
 
     /** Commande SSH affichée aux visiteurs. */
