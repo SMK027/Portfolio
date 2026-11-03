@@ -28,6 +28,9 @@ class HomeController extends Controller
             'articles' => $canSee('veille')
                 ? Article::with('author', 'themes')->published()->forListing()->limit(3)->get()
                 : collect(),
+            'recommendations' => $canSee('recommandations')
+                ? \App\Models\Recommendation::published()->where('is_featured', true)->ordered()->limit(3)->get()
+                : collect(),
             'skills'   => $canSee('competences')
                 ? Skill::groupByCategory(Skill::ordered()->get())
                 : collect(),

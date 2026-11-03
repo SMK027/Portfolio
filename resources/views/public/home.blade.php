@@ -153,6 +153,20 @@
         </section>
     @endif
 
+    @if ($recommendations->isNotEmpty())
+        <section class="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
+            <div class="mb-6 flex items-end justify-between gap-4">
+                <h2 class="font-display text-2xl font-bold text-slate-900">Ils me recommandent</h2>
+                <a href="{{ route('recommendations.index') }}" class="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700">Toutes les recommandations <x-icon name="arrow-right" class="h-4 w-4" /></a>
+            </div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                @foreach ($recommendations as $recommendation)
+                    <x-recommendation-card :recommendation="$recommendation" />
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if ($canSee('contact'))
         <section class="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
             <div class="flex flex-col items-start justify-between gap-6 rounded-3xl bg-gradient-to-r from-primary-600 to-accent-600 p-8 text-white sm:flex-row sm:items-center sm:p-12">

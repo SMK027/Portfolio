@@ -57,6 +57,11 @@ final class ServicePermissions
             'messages.read'   => 'Lire les messages de contact (données personnelles)',
             'messages.delete' => 'Supprimer des messages de contact',
         ],
+        'Recommandations' => [
+            'recommendations.read'   => 'Consulter les recommandations et les invitations (liens compris)',
+            'recommendations.write'  => 'Créer des invitations, modérer et modifier les recommandations',
+            'recommendations.delete' => 'Supprimer des recommandations',
+        ],
         'Rendez-vous' => [
             'appointments.read'   => 'Consulter les rendez-vous (données personnelles) et les disponibilités',
             'appointments.write'  => 'Confirmer ou refuser les rendez-vous, modifier les disponibilités',

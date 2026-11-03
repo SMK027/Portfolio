@@ -4,6 +4,8 @@
     $maintenanceActive = $user->can('panel', 'maintenance.read|maintenance.manage') && app(\App\Services\Maintenance::class)->isActive();
 
     $activeBans = $user->isSuperAdmin() ? \App\Models\IpBan::active()->count() : 0;
+    $pendingRecommendations = $user->can('panel', 'recommendations.read|recommendations.write')
+        ? \App\Models\Recommendation::where('status', \App\Models\Recommendation::PENDING)->count() : 0;
     $pendingArticles = $user->isAdmin() ? \App\Models\Article::pendingReview()->count() : 0;
     $pendingAppointments = $user->can('panel', 'appointments.read|appointments.write')
         ? \App\Models\Appointment::where('status', 'pending')->where('starts_at', '>=', now())->count() : 0;
@@ -36,6 +38,7 @@
     $badges = array_filter([
         'admin.articles.index'     => $pendingArticles ? [$pendingArticles, 'bg-amber-400 text-amber-950', 'Articles à valider'] : null,
         'admin.appointments.index' => $pendingAppointments ? [$pendingAppointments, 'bg-amber-400 text-amber-950', 'Demandes à confirmer'] : null,
+        'admin.recommendations.index' => $pendingRecommendations ? [$pendingRecommendations, 'bg-amber-400 text-amber-950', 'Recommandations à modérer'] : null,
         'admin.messages.index'     => $unread ? [$unread, 'bg-primary-500 text-white', 'Messages non lus'] : null,
         'admin.ip-bans.index'      => $activeBans ? [$activeBans, 'bg-red-500 text-white', 'Adresses IP bannies'] : null,
         'admin.maintenance.edit'   => $maintenanceActive ? ['Active', 'bg-amber-400 text-amber-950', 'Maintenance active'] : null,

@@ -28,6 +28,7 @@ class Page extends Model
         'loisirs'        => 'loisirs',
         'contact'        => 'contact.show',
         'rendez-vous'    => 'appointments.show',
+        'recommandations' => 'recommendations.index',
     ];
 
     /**
@@ -35,7 +36,7 @@ class Page extends Model
      * Un groupe dont une seule page est visible s'affiche comme un lien simple.
      */
     public const NAV_GROUPS = [
-        'Parcours' => ['formations', 'experiences', 'diplomes', 'certifications', 'competences', 'loisirs'],
+        'Parcours' => ['formations', 'experiences', 'diplomes', 'certifications', 'competences', 'recommandations', 'loisirs'],
         'Projets'  => ['projets'],
         'Veille'   => ['veille'],
         'Contact'  => ['contact', 'rendez-vous'],

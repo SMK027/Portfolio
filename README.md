@@ -39,6 +39,12 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - période de diffusion (début et fin programmables) et ordre d'affichage ;
 - masquage possible par le visiteur. Une annonce masquée réapparaît si vous la modifiez.
 
+**Recommandations** (*Échanges → Recommandations*) : créez une invitation par personne sollicitée (tuteur, enseignant, collègue…) et transmettez-lui le lien personnel `/recommandation/…`, qui peut avoir une date d'expiration.
+- L'auteur rédige sa recommandation (nom, poste, entreprise, relation, lien, texte) et donne son accord de publication. Il peut la modifier tant qu'elle n'est pas publiée.
+- Vous relisez puis publiez ou refusez. Une recommandation « mise en avant » apparaît aussi sur l'accueil (trois au plus).
+- La page publique `/recommandations` est privée par défaut : rendez-la publique dans *Pages & visibilité*.
+- Chaque envoi peut être notifié sur Discord. Autorisations bot : `recommendations.read|write|delete`.
+
 **Visibilité des pages** : chaque page peut être rendue privée depuis *Administration → Pages & visibilité*. Une page privée :
 - disparaît du menu et renvoie une erreur 404 aux visiteurs ;
 - reste visible, avec un cadenas, pour les administrateurs connectés.

@@ -82,6 +82,13 @@ Route::get('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentCon
 Route::post('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentController::class, 'cancel'])
     ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1');
 
+Route::get('/recommandations', [\App\Http\Controllers\RecommendationController::class, 'index'])->middleware('page:recommandations')->name('recommendations.index');
+// Rédaction par l'auteur invité : lien personnel (indépendant de la visibilité de la page)
+Route::get('/recommandation/{token}', [\App\Http\Controllers\RecommendationController::class, 'invite'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('recommendations.invite');
+Route::post('/recommandation/{token}', [\App\Http\Controllers\RecommendationController::class, 'submit'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:5,10')->name('recommendations.submit');
+
 Route::middleware('page:contact')->group(function () {
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
     Route::post('/contact', [ContactController::class, 'store'])
@@ -260,6 +267,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/messages/{message}', [Admin\ContactMessageController::class, 'show'])->middleware($panel('messages.read'))->name('messages.show');
     Route::patch('/messages/{message}/non-lu', [Admin\ContactMessageController::class, 'markUnread'])->middleware($panel('messages.read'))->name('messages.unread');
     Route::delete('/messages/{message}', [Admin\ContactMessageController::class, 'destroy'])->middleware($panel('messages.delete'))->name('messages.destroy');
+
+    Route::get('/recommandations', [Admin\RecommendationController::class, 'index'])->middleware($panel('recommendations.read|recommendations.write|recommendations.delete'))->name('recommendations.index');
+    Route::post('/recommandations', [Admin\RecommendationController::class, 'store'])->middleware($panel('recommendations.write'))->name('recommendations.store');
+    Route::get('/recommandations/{recommendation}/modifier', [Admin\RecommendationController::class, 'edit'])->middleware($panel('recommendations.read|recommendations.write|recommendations.delete'))->name('recommendations.edit');
+    Route::put('/recommandations/{recommendation}', [Admin\RecommendationController::class, 'update'])->middleware($panel('recommendations.write'))->name('recommendations.update');
+    Route::delete('/recommandations/{recommendation}', [Admin\RecommendationController::class, 'destroy'])->middleware($panel('recommendations.delete'))->name('recommendations.destroy');
 
     Route::get('/rendez-vous', [Admin\AppointmentController::class, 'index'])->middleware($panel('appointments.read|appointments.write'))->name('appointments.index');
     // Avant « /rendez-vous/{appointment} », qui capturerait « google-agenda ».

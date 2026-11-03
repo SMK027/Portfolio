@@ -31,6 +31,7 @@ final class PanelSections
         'Échanges' => [
             ['admin.messages.index', 'Messages', 'inbox', 'admin.messages.*', 'messages.read'],
             ['admin.appointments.index', 'Rendez-vous', 'calendar', 'admin.appointments.*', 'appointments.read|appointments.write|appointments.delete'],
+            ['admin.recommendations.index', 'Recommandations', 'badge', 'admin.recommendations.*', 'recommendations.read|recommendations.write|recommendations.delete'],
             ['admin.annonces.index', 'Annonces', 'megaphone', 'admin.annonces.*', 'announcements.read|announcements.write|announcements.delete'],
         ],
         'Recherche de stage' => [
