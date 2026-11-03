@@ -1,0 +1,41 @@
+# Proxy de sortie de la machine bac à sable : HTTP et HTTPS uniquement, aucune
+# destination privée (hôte, réseaux Docker, réseau local), débit limité, sans cache.
+http_port 3128
+pid_filename /run/squid/squid.pid
+cache deny all
+cache_mem 0 MB
+# Journal sur la sortie d'erreur héritée (squid -d 1, voir entrypoint.sh) : pas de fichier à rouvrir
+access_log none
+cache_log /dev/null
+logfile_rotate 0
+coredump_dir /tmp
+forwarded_for delete
+via off
+visible_hostname sandbox-egress
+shutdown_lifetime 1 seconds
+# Empreinte mémoire réduite (conteneur limité à 96 Mo)
+max_filedescriptors 1024
+memory_pools off
+ipcache_size 256
+fqdncache_size 256
+
+acl web_ports port 80 443
+acl tls_port port 443
+acl CONNECT method CONNECT
+# Destinations interdites : boucle locale, réseaux privés et Docker, lien local, multidiffusion…
+acl private_dst dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.168.0.0/16 198.18.0.0/15 224.0.0.0/3
+acl private_dst dst ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+acl too_many maxconn ${SANDBOX_EGRESS_MAX_CONNECTIONS}
+
+http_access deny !web_ports
+http_access deny CONNECT !tls_port
+http_access deny private_dst
+http_access deny to_localhost
+http_access deny too_many
+http_access allow all
+
+# Débit global limité
+delay_pools 1
+delay_class 1 1
+delay_parameters 1 ${SANDBOX_EGRESS_RATE}/${SANDBOX_EGRESS_RATE}
+delay_access 1 allow all

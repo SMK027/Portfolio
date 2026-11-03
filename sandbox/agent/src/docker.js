@@ -1,5 +1,5 @@
 // Accès minimal à l'API Docker, via docker-socket-proxy (jamais le socket brut) :
-// état du conteneur, redémarrage et réseau de sortie vers internet.
+// état du conteneur, redémarrage et rattachement du proxy de sortie à internet.
 import config from './config.js';
 
 async function call(method, path, body) {
@@ -40,8 +40,16 @@ export async function restart() {
 }
 
 export async function hasInternet() {
-    const info = await inspect();
+    const info = await call('GET', `/containers/${encodeURIComponent(config.egressContainer)}/json`);
     return Object.keys(info.NetworkSettings?.Networks ?? {}).includes(config.egressNetwork);
+}
+
+/** La machine n'est jamais rattachée au réseau de sortie (ancien fonctionnement, avant le proxy). */
+export async function isolateSandbox() {
+    const info = await inspect();
+    if (Object.keys(info.NetworkSettings?.Networks ?? {}).includes(config.egressNetwork)) {
+        await call('POST', `/networks/${encodeURIComponent(config.egressNetwork)}/disconnect`, { Container: config.container, Force: true });
+    }
 }
 
 export async function setInternet(enabled) {
@@ -52,7 +60,8 @@ export async function setInternet(enabled) {
         await ensureEgressNetwork();
     }
     const path = `/networks/${encodeURIComponent(config.egressNetwork)}/${enabled ? 'connect' : 'disconnect'}`;
-    await call('POST', path, enabled ? { Container: config.container } : { Container: config.container, Force: true });
+    // Le proxy de sortie est rattaché au réseau internet, jamais la machine elle-même.
+    await call('POST', path, enabled ? { Container: config.egressContainer } : { Container: config.egressContainer, Force: true });
 }
 
 /** Réseau de sortie vers internet, créé au besoin (sans communication entre conteneurs). */

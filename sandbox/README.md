@@ -5,14 +5,18 @@ Une machine Linux minimale, ouverte au public par SSH (port 2222) et par un term
 ## Architecture
 
 ```
-Internet ──2222──▶ sandbox-agent ──(réseau interne isolé)──▶ sandbox-ssh
+Internet ──2222──▶ sandbox-agent ──(réseau interne isolé)──▶ sandbox-ssh ──http(s)──▶ sandbox-egress ──▶ Internet (si activé)
 Navigateur ─wss /ssh-ws (Traefik)─▶ sandbox-agent              │
 Portfolio ──API (réseau interne « portfolio-sandbox-control »)─▶ sandbox-agent
 sandbox-agent ──▶ docker-socket-proxy ──▶ Docker (conteneurs + réseaux uniquement)
 ```
 
 - **sandbox-ssh** : Alpine, 0,25 CPU, 128 Mo de RAM sans swap, 64 processus, fichiers de 100 Mo au plus. Toutes les capacités sont retirées sauf celles dont sshd a besoin, avec `no-new-privileges`. Aucun binaire setuid, donc ni `su` ni `sudo`. Tunnels et transferts de ports sont désactivés.
-- **Internet** : la machine n'est que sur un réseau `internal`. Activer internet depuis le panel la rattache au réseau `portfolio-sandbox-egress` (créé par l'agent, sans communication entre conteneurs). Elle n'est jamais sur les réseaux du portfolio ni de la base.
+- **Internet** : la machine n'est que sur un réseau `internal` et n'a aucune route vers l'extérieur. Elle sort uniquement par le proxy **sandbox-egress** (Squid), que l'agent rattache au réseau `portfolio-sandbox-egress` quand internet est activé depuis le panel. Les variables `http_proxy` et `https_proxy` sont définies dans chaque session : `curl`, `git`, `pip` et `apk` fonctionnent.
+  - Seuls HTTP (80) et HTTPS (443) sont autorisés. SMTP, SSH sortant et connexions TCP directes sont impossibles, ce qui empêche spam et scans.
+  - Destinations interdites : hôte, réseaux Docker et privés, métadonnées cloud (169.254.169.254).
+  - Débit global limité (`SANDBOX_EGRESS_RATE`, 256 Ko/s par défaut), connexions simultanées limitées, aucun cache.
+  - La machine n'est jamais sur les réseaux du portfolio ni de la base.
 - **sandbox-agent** (Node) : seul point d'entrée.
   - Il relaie le port SSH public. Quand l'accès public est coupé, il ferme le relais et les sessions en cours.
   - Il limite les connexions : 2 sessions par IP, 10 au total, 10 connexions par minute et par IP.

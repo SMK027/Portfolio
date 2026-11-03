@@ -7,8 +7,9 @@
 #   - sandbox-isolated (interne, sans internet) : machine ⇄ agent ;
 #   - portfolio-sandbox-control (interne) : agent ⇄ portfolio (API de contrôle) ;
 #   - sandbox-docker (interne) : agent ⇄ docker-socket-proxy ;
-#   - portfolio-sandbox-egress : créé et rattaché à la machine par l'agent quand
-#     l'accès internet est activé depuis le panel ;
+#   - portfolio-sandbox-egress : créé et rattaché au proxy de sortie (sandbox-egress)
+#     par l'agent quand l'accès internet est activé depuis le panel. La machine
+#     n'y est jamais rattachée : elle ne sort que par le proxy (HTTP/HTTPS filtrés) ;
 #   - proxy (Traefik) : terminal web de l'agent uniquement.
 # La machine n'est jamais sur les réseaux du portfolio ni de la base de données.
 
@@ -44,13 +45,31 @@ services:
       isolated:
         aliases: [sandbox-ssh]
 
+  # Sortie internet filtrée (Squid) : HTTP/HTTPS uniquement, destinations privées interdites, débit limité.
+  sandbox-egress:
+    build: ./egress
+    container_name: ${SANDBOX_EGRESS_CONTAINER:-portfolio-sandbox-egress-proxy}
+    restart: unless-stopped
+    environment:
+      - SANDBOX_EGRESS_RATE=${SANDBOX_EGRESS_RATE:-262144}
+      - SANDBOX_EGRESS_MAX_CONNECTIONS=${SANDBOX_EGRESS_MAX_CONNECTIONS:-20}
+    mem_limit: 96m
+    cpus: 0.25
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      isolated:
+        aliases: [sandbox-proxy]
+
   sandbox-agent:
     build: ./agent
     restart: unless-stopped
-    depends_on: [sandbox-ssh, docker-proxy]
+    depends_on: [sandbox-ssh, sandbox-egress, docker-proxy]
     environment:
       - SANDBOX_API_TOKEN=${SANDBOX_API_TOKEN:?SANDBOX_API_TOKEN doit être défini (32 caractères au moins)}
       - SANDBOX_CONTAINER=${SANDBOX_CONTAINER:-portfolio-sandbox-ssh}
+      - SANDBOX_EGRESS_CONTAINER=${SANDBOX_EGRESS_CONTAINER:-portfolio-sandbox-egress-proxy}
       - SANDBOX_EGRESS_NETWORK=portfolio-sandbox-egress
       - SANDBOX_QUOTA_MB=${SANDBOX_QUOTA_MB:-512}
       - SANDBOX_MAX_SESSIONS=${SANDBOX_MAX_SESSIONS:-10}

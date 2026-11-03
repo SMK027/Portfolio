@@ -9,6 +9,7 @@ import { DEFAULT_LIMITS, runtime, state } from './state.js';
 
 export async function apply() {
     try {
+        await docker.isolateSandbox();
         await docker.setInternet(state.internet);
         // Compte au-delà de son quota : désactivé jusqu'à ce que l'espace soit libéré.
         const accounts = state.accounts.map((a) => ({ ...a, enabled: a.enabled && ! runtime.overUsers.includes(a.username) }));

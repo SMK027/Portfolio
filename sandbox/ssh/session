@@ -10,6 +10,10 @@ ulimit -v "$MEMORY_KB" 2>/dev/null  # mémoire virtuelle par processus
 ulimit -f "$FILE_KB" 2>/dev/null    # taille maximale d'un fichier
 ulimit -c 0 2>/dev/null
 
+# Sortie internet uniquement par le proxy filtré (sans effet quand internet est coupé)
+export http_proxy=http://sandbox-proxy:3128 https_proxy=http://sandbox-proxy:3128
+export HTTP_PROXY="$http_proxy" HTTPS_PROXY="$https_proxy" no_proxy=localhost,127.0.0.1
+
 umask 077
 export TMPDIR="$HOME/.tmp"
 mkdir -p "$TMPDIR" 2>/dev/null && chmod 700 "$TMPDIR"

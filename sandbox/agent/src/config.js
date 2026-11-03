@@ -13,6 +13,7 @@ const config = {
     sshHost: env('SANDBOX_SSH_HOST', 'sandbox-ssh'),
     sshPort: int('SANDBOX_SSH_PORT', 22),
     container: env('SANDBOX_CONTAINER', 'portfolio-sandbox-ssh'),
+    egressContainer: env('SANDBOX_EGRESS_CONTAINER', 'portfolio-sandbox-egress-proxy'),
     egressNetwork: env('SANDBOX_EGRESS_NETWORK', 'portfolio-sandbox-egress'),
     dockerUrl: env('SANDBOX_DOCKER_URL', 'http://docker-proxy:2375'),
     publicSshPort: int('SANDBOX_PUBLIC_SSH_PORT', 2222),
