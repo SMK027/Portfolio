@@ -48,7 +48,7 @@ class CvController extends Controller
             return back()->withErrors(['code' => 'Ce code est invalide, a expiré ou a déjà été utilisé le nombre de fois prévu.'])->withInput();
         }
 
-        $code->markUsed();
+        $code->markUsed($request);
 
         return $this->serve($profile);
     }

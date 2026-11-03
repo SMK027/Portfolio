@@ -208,6 +208,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/presentation/cv', [\App\Http\Controllers\CvController::class, 'preview'])->middleware($panel('profile.read|profile.write'))->name('profile.cv');
     Route::get('/presentation/cv/codes', [Admin\CvAccessCodeController::class, 'index'])->middleware($panel('profile.read|profile.write'))->name('profile.cv-codes.index');
+    Route::get('/presentation/cv/codes/{code}', [Admin\CvAccessCodeController::class, 'show'])->middleware($panel('profile.read|profile.write'))->name('profile.cv-codes.show');
     Route::post('/presentation/cv/codes', [Admin\CvAccessCodeController::class, 'store'])->middleware($panel('profile.write'))->name('profile.cv-codes.store');
     Route::delete('/presentation/cv/codes/{code}', [Admin\CvAccessCodeController::class, 'destroy'])->middleware($panel('profile.write'))->name('profile.cv-codes.destroy');
     Route::get('/presentation', [Admin\ProfileController::class, 'edit'])->middleware($panel('profile.read|profile.write'))->name('profile.edit');

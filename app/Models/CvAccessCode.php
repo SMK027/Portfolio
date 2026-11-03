@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Request;
 
 /**
  * Code d'accès au CV, remis à un destinataire (candidature, recruteur…) :
@@ -71,10 +73,33 @@ class CvAccessCode extends Model
         return ! $this->isExpired() && ! $this->isExhausted();
     }
 
-    /** Comptabilise une utilisation, sans passer par l'historique des modifications. */
-    public function markUsed(): void
+    public function usesLog(): HasMany
+    {
+        return $this->hasMany(CvAccessCodeUse::class)->latest('used_at');
+    }
+
+    /**
+     * Comptabilise une utilisation, sans passer par l'historique des modifications,
+     * et la consigne avec sa provenance approximative (pays, ville, appareil).
+     */
+    public function markUsed(?Request $request = null): CvAccessCodeUse
     {
         static::whereKey($this->id)->increment('uses', 1, ['last_used_at' => now()]);
+        $this->refresh();
+
+        $request ??= request();
+        $location = app(\App\Services\GeoIp::class)->locate($request->ip(), $request->header('CF-IPCountry'));
+        $agent = \App\Support\UserAgent::parse($request->userAgent());
+
+        return $this->usesLog()->create([
+            'ip_address' => $request->ip(),
+            'country'    => $location['country'],
+            'city'       => $location['city'],
+            'device'     => $agent['device'],
+            'browser'    => $agent['browser'],
+            'os'         => $agent['os'],
+            'used_at'    => now(),
+        ]);
     }
 
     /** Code affiché par groupes de 4 (ABCD-EFGH). */

@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Statistiques de visite : données de plus de 13 mois supprimées chaque nuit.
 Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dailyAt('03:30')->name('statistiques:purge');
 
+// Téléchargements du CV par code : IP effacées après 3 mois.
+Schedule::call(fn () => \App\Models\CvAccessCodeUse::prune())->dailyAt('03:35')->name('cv:purge-ip');
+
 // Rappels des rendez-vous confirmés (la veille et 1 h avant).
 Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())->everyFiveMinutes()->name('rendez-vous:rappels');
 

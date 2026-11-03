@@ -14,8 +14,17 @@ class CvAccessCodeController extends Controller
     public function index(): View
     {
         return view('admin.profile.cv-codes', [
-            'codes'   => CvAccessCode::latest()->get(),
+            'codes'   => CvAccessCode::latest()->with(['usesLog' => fn ($q) => $q->limit(1)])->get(),
             'profile' => Profile::current(),
+        ]);
+    }
+
+    /** Historique des téléchargements : date, provenance approximative, appareil. */
+    public function show(CvAccessCode $code): View
+    {
+        return view('admin.profile.cv-code', [
+            'code' => $code,
+            'uses' => $code->usesLog()->paginate(50),
         ]);
     }
 

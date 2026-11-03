@@ -8,7 +8,7 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Accueil** : présentation (photo, accroche, texte « À propos », liens, CV), aperçus des compétences, projets et articles
 - **Formations**, **Diplômes**, **Certifications**, **Compétences**
 - **Projets** classés par thèmes (cartes avec image de fond). Chaque projet a un titre, une date, une description mise en forme avec l'éditeur de texte (comme les articles), des liens et dépôts GitHub, des fichiers (images en carrousel, PDF, Word, Excel, PowerPoint, LibreOffice, ZIP), une miniature, des compétences et des thèmes
-- **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature, des pièces jointes (images en carrousel, documents à télécharger, comme pour les projets) et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement)
+- **Veille technologique** : articles épinglés en tête, puis triés du plus récent au plus ancien. Chaque article a un auteur, des co-auteurs, des thèmes, une miniature, des pièces jointes (images en carrousel, documents à télécharger, comme pour les projets) et un contenu mis en forme avec [Editor.js](https://github.com/codex-team/editor.js) (titres, listes, citations, code, tableaux, images, vidéos, couleurs, surlignage, alignement). Un article publié affiche une barre de progression de lecture et propose des réactions emoji anonymes (👍 ❤️ 🔥 💡 🎉) : une par emoji et par visiteur, reconnu par une empreinte hachée (IP + navigateur), sans cookie.
 - **Contact** : nom, prénom, e-mail, objet, message et consentement obligatoire. Le formulaire est protégé par Google reCAPTCHA v3, un champ piège et une limite de débit. Chaque message est enregistré en base et notifié par e-mail
 - **Messages reçus** (panel) : recherche (nom, e-mail, objet, contenu), filtres « lus / non lus » et par période, action « Marquer comme non lu » pour garder un message à traiter.
 
@@ -56,6 +56,8 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 **Recherche** : bouton loupe, Ctrl+K / ⌘K ou « / » sur le site public ; articles publiés, projets, thèmes, compétences, parcours et certifications. Seules les pages publiques sont fouillées, pour tout le monde (administrateurs compris).
 
 **CV** (*Présentation*) : le fichier PDF est stocké hors du dossier public et servi par `/cv`. La case « Autoriser le téléchargement du CV » permet de le bloquer : le bouton disparaît et le lien ne répond plus ; l'aperçu reste disponible dans le panel. Page de résultats : `/recherche?q=…`.
+
+**Codes d'accès au CV** : chaque téléchargement avec un code est consigné (date, pays et ville approximatifs, appareil, navigateur). Le lien « Historique » de la liste des codes l'affiche. Vous savez ainsi quel destinataire a ouvert le CV, et quand. Les IP, visibles des seuls administrateurs, sont effacées après 3 mois.
 
 **Menus** : le site public regroupe ses pages en sous-menus (*Parcours* : formations, expériences, diplômes, certifications, compétences, loisirs ; *Contact* : contact, rendez-vous ; Projets et Veille en accès direct), à modifier dans `Page::NAV_GROUPS`. Le panel range ses sections en groupes repliables (Parcours, Réalisations, Veille, Échanges, Site, Comptes et sécurité) définis dans `PanelSections::GROUPS` ; le groupe de la page en cours s'ouvre et l'état est mémorisé.
 

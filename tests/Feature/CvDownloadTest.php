@@ -147,4 +147,39 @@ class CvDownloadTest extends TestCase
         }
         $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertStatus(429);
     }
+    public function test_each_code_use_is_logged_with_its_origin(): void
+    {
+        $this->upload();
+        $code = CvAccessCode::create(['label' => 'Société X', 'code' => CvAccessCode::generate()]);
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7', 'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36'])
+            ->withHeader('CF-IPCountry', 'BE')
+            ->post(route('cv.download.submit'), ['code' => $code->formatted()])->assertOk();
+
+        $use = $code->usesLog()->sole();
+        $this->assertSame('203.0.113.7', $use->ip_address);
+        $this->assertSame('BE', $use->country);
+        $this->assertSame('desktop', $use->device);
+        $this->assertSame('Chrome', $use->browser);
+        $this->assertSame(1, $code->fresh()->uses);
+
+        $this->actingAs($this->admin)->get(route('admin.profile.cv-codes.index'))->assertOk()->assertSee('Historique');
+        $this->actingAs($this->admin)->get(route('admin.profile.cv-codes.show', $code))
+            ->assertOk()->assertSee('Société X')->assertSee('Chrome')->assertSee('203.0.113.7');
+    }
+
+    public function test_code_use_ips_are_erased_after_three_months(): void
+    {
+        $code = CvAccessCode::create(['label' => 'Ancien', 'code' => CvAccessCode::generate()]);
+        $old = $code->usesLog()->create(['ip_address' => '203.0.113.8', 'used_at' => now()->subMonths(4)]);
+        $recent = $code->usesLog()->create(['ip_address' => '203.0.113.9', 'used_at' => now()->subMonth()]);
+
+        \App\Models\CvAccessCodeUse::prune();
+
+        $this->assertNull($old->fresh()->ip_address);
+        $this->assertSame('203.0.113.9', $recent->fresh()->ip_address);
+
+        $code->delete();
+        $this->assertDatabaseCount('cv_access_code_uses', 0);
+    }
 }

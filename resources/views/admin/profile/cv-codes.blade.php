@@ -55,7 +55,11 @@
                             </td>
                             <td class="hidden text-sm text-slate-600 md:table-cell">
                                 {{ $code->uses }}{{ $code->max_uses ? ' / '.$code->max_uses : '' }}
-                                @if ($code->last_used_at)<span class="block text-xs text-slate-400">Dernière : {{ $code->last_used_at->format('d/m/Y H:i') }}</span>@endif
+                                @if ($code->last_used_at)
+                                    @php $lastUse = $code->usesLog->first(); @endphp
+                                    <span class="block text-xs text-slate-400">Dernière : {{ $code->last_used_at->format('d/m/Y H:i') }}@if ($lastUse?->country) · {{ \App\Services\GeoIp::label($lastUse->country) }}@endif</span>
+                                @endif
+                                @if ($code->uses)<a href="{{ route('admin.profile.cv-codes.show', $code) }}" class="text-xs font-medium text-primary-600 hover:underline">Historique</a>@endif
                             </td>
                             <td class="hidden text-sm text-slate-600 md:table-cell">{{ $code->expires_at?->format('d/m/Y') ?? 'Jamais' }}</td>
                             <td class="w-12 text-right">
