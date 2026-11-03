@@ -27,6 +27,11 @@ Route::post('/stats/duree', \App\Http\Controllers\PageViewDurationController::cl
 Route::get('/cv', \App\Http\Controllers\CvController::class)->middleware('throttle:30,1')->name('cv.download');
 Route::post('/cv', [\App\Http\Controllers\CvController::class, 'download'])->middleware('throttle:5,1')->name('cv.download.submit');
 
+// Application installable (PWA) : manifeste, icônes et page hors connexion (service worker : public/sw.js)
+Route::get('/manifest.webmanifest', [\App\Http\Controllers\PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/pwa/icone-{size}.png', [\App\Http\Controllers\PwaController::class, 'icon'])->whereNumber('size')->name('pwa.icon');
+Route::get('/hors-ligne', [\App\Http\Controllers\PwaController::class, 'offline'])->name('pwa.offline');
+
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 
 // Page d'easter eggs : accessible uniquement via un déclencheur caché (lien signé, puis session).

@@ -33,6 +33,10 @@
     <meta name="twitter:card" content="{{ $image ? 'summary_large_image' : 'summary' }}">
     @if ($image)<meta property="og:image" content="{{ url($image) }}">@endif
     <link rel="canonical" href="{{ $canonical }}">
+    {{-- Application installable --}}
+    <link rel="manifest" href="{{ route('pwa.manifest') }}">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="{{ route('pwa.icon', ['size' => 192]) }}">
     @if (! $indexable || ($page && ! $page->is_public))<meta name="robots" content="noindex, nofollow">@endif
 
     {{-- Polices chargées sans bloquer l'affichage (font-display: swap) --}}
@@ -45,7 +49,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased" data-terminal-url="{{ route('terminal') }}"
+<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased" data-terminal-url="{{ route('terminal') }}" @guest data-service-worker="{{ asset('sw.js') }}" @endguest
       @if ($pageViewId = request()->attributes->get('page_view_uuid')) data-page-view="{{ $pageViewId }}" data-page-view-url="{{ route('stats.duration') }}" @endif>
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">Aller au contenu</a>
 

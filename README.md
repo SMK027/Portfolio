@@ -39,6 +39,13 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - période de diffusion (début et fin programmables) et ordre d'affichage ;
 - masquage possible par le visiteur. Une annonce masquée réapparaît si vous la modifiez.
 
+**Application installable (PWA)** : le site peut être installé sur mobile ou ordinateur. Le manifeste est `/manifest.webmanifest`. Les icônes sont générées à partir de la photo de présentation, ou à défaut des initiales.
+- Le service worker (`public/sw.js`) charge les pages depuis le réseau d'abord. Une page déjà lue, un article de veille notamment, reste consultable hors connexion. Sinon, la page `/hors-ligne` liste les pages disponibles.
+- Les fichiers compilés et les images sont mis en cache.
+- Ne sont jamais mis en cache : administration, connexion, CV, formulaires et liens personnels.
+- Les personnes connectées n'utilisent pas le service worker, et leur cache est vidé : aucune page privée ne reste sur l'appareil.
+- Pour forcer le renouvellement des caches, changez `VERSION` dans `public/sw.js`.
+
 **Mode terminal** (`/terminal`) : le portfolio parcouru en ligne de commande. On l'ouvre par le lien « >_ terminal » du pied de page, ou par la touche ² (ou `) sur une page publique, hors champ de saisie.
 - Commandes : `help`, `ls`, `cd`, `cat`, `open`, `whoami`, `contact`, `cv`, `neofetch`… avec complétion par Tab et historique (↑/↓).
 - Le contenu suit la visibilité des pages. La page n'est pas indexée.

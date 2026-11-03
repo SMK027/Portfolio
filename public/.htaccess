@@ -6,6 +6,10 @@
     <ElseIf "%{REQUEST_URI} =~ m#^/storage/#">
         Header set Cache-Control "public, max-age=604800"
     </ElseIf>
+    <ElseIf "%{REQUEST_URI} == '/sw.js'">
+        # Service worker : toujours revalidé, pour que ses mises à jour soient prises en compte
+        Header set Cache-Control "no-cache"
+    </ElseIf>
 </IfModule>
 
 # Compression des réponses texte

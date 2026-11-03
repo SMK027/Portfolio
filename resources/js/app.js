@@ -40,6 +40,15 @@ if (document.querySelector('[data-easter-eggs]')) {
     import('./easter-eggs/page').then(({ default: start }) => start());
 }
 
+// Application installable : service worker (visiteurs) et page hors connexion.
+import('./pwa').then(({ default: startPwa, listOfflinePages }) => {
+    startPwa();
+    const offlineList = document.querySelector('[data-offline-list]');
+    if (offlineList) {
+        listOfflinePages(offlineList);
+    }
+});
+
 // Mode terminal : la page /terminal, et le raccourci ² (ou `) depuis les pages publiques.
 const terminal = document.querySelector('[data-terminal]');
 if (terminal) {
