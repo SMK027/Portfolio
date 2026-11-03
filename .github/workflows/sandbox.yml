@@ -1,0 +1,28 @@
+# Machine SSH bac à sable : tests unitaires de l'agent et test d'intégration
+# (pile Docker réelle, voir sandbox/tests/integration.sh).
+name: Machine SSH
+
+on:
+  push:
+    paths: ['sandbox/**', '.github/workflows/sandbox.yml']
+  pull_request:
+    paths: ['sandbox/**', '.github/workflows/sandbox.yml']
+  workflow_dispatch:
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dépendances
+        run: |
+          sudo apt-get update && sudo apt-get install -y sshpass
+          cd sandbox/agent && npm ci --ignore-scripts
+      - name: Tests unitaires de l'agent
+        run: cd sandbox/agent && npm test
+      - name: Test d'intégration
+        run: sandbox/tests/integration.sh

@@ -252,7 +252,10 @@
                             @foreach ($backups as $backup)
                                 <tr>
                                     <td>
-                                        <p class="font-medium text-slate-900">{{ $backup['label'] }} @if ($backup['automatic'])<span class="badge-slate">Auto</span>@endif</p>
+                                        <p class="font-medium text-slate-900">{{ $backup['label'] }} @if ($backup['automatic'])<span class="badge-slate">Auto</span>@endif
+                                            @if (($backup['offsite'] ?? null) === 'ok')<span class="badge-green">Copie hors serveur</span>
+                                            @elseif (! empty($backup['offsite']))<span class="badge-amber" title="{{ $backup['offsite'] }}">Copie hors serveur en échec</span>@endif
+                                        </p>
                                         <p class="text-xs text-slate-500">{{ \Illuminate\Support\Carbon::parse($backup['created_at'])->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
                                     </td>
                                     <td class="hidden text-sm text-slate-600 md:table-cell">{{ $mb($backup['size']) }}</td>

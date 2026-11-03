@@ -9,6 +9,7 @@ import config from './config.js';
 import * as backups from './backups.js';
 import * as docker from './docker.js';
 import * as sandbox from './sandbox.js';
+import * as s3 from './s3.js';
 import { closeAll } from './gateway.js';
 import { closeAllTerminals } from './terminal.js';
 import { totalSessions } from './limits.js';
@@ -109,6 +110,7 @@ const routes = {
             sessions: running ? await safe(() => sandbox.sessions(), []) : [],
             relayed_sessions: totalSessions(),
             connections: runtime.connections.slice(0, 50),
+            offsite_backups: s3.isEnabled(),
             last_applied: runtime.lastApplied,
             last_error: runtime.lastError,
         };
@@ -189,6 +191,12 @@ export function startApi() {
             response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
             response.end(JSON.stringify(body));
         };
+        // Sonde de santé (Docker HEALTHCHECK), sans jeton : aucune information sensible.
+        if (request.method === 'GET' && request.url === '/healthz') {
+            send(200, { ok: true });
+            return;
+        }
+
         // La machine partage un réseau avec l'agent : elle n'a jamais accès à l'API.
         const sandboxIp = await dns.lookup(config.sshHost).then((r) => r.address).catch(() => null);
         if (sandboxIp && request.socket.remoteAddress?.replace(/^::ffff:/, '') === sandboxIp) {

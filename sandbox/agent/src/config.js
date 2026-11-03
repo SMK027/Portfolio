@@ -22,6 +22,15 @@ const config = {
     maxSessionsPerIp: int('SANDBOX_MAX_SESSIONS_PER_IP', 2),
     maxSessions: int('SANDBOX_MAX_SESSIONS', 10),
     maxConnectionsPerMinute: int('SANDBOX_MAX_CONNECTIONS_PER_MINUTE', 10),
+    // Copie hors serveur des sauvegardes (facultative), stockage compatible S3
+    s3: {
+        endpoint: env('SANDBOX_S3_ENDPOINT', ''),
+        region: env('SANDBOX_S3_REGION', 'us-east-1'),
+        bucket: env('SANDBOX_S3_BUCKET', ''),
+        accessKey: env('SANDBOX_S3_ACCESS_KEY', ''),
+        secretKey: env('SANDBOX_S3_SECRET_KEY', ''),
+        prefix: env('SANDBOX_S3_PREFIX', 'portfolio-sandbox/'),
+    },
     terminalIdleMinutes: int('SANDBOX_TERMINAL_IDLE_MINUTES', 15),
     terminalMaxMinutes: int('SANDBOX_TERMINAL_MAX_MINUTES', 60),
 };

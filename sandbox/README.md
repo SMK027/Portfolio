@@ -53,10 +53,18 @@ Le terminal web passe par `https://APP_DOMAIN/ssh-ws` (routeur Traefik de l'agen
 
 ## Sauvegardes
 
-Une sauvegarde est une archive des dossiers personnels (`/home`), stockée dans le volume de l'agent. Le système est reconstruit depuis l'image, et les comptes depuis le panel. Une restauration ferme les sessions, remplace `/home` puis réapplique les comptes. Des sauvegardes automatiques quotidiennes peuvent être activées dans le panel.
+Une sauvegarde est une archive des dossiers personnels (`/home`), stockée dans le volume de l'agent. Avec `SANDBOX_S3_*` (fournisseur compatible S3 : AWS, Backblaze B2, Scaleway, OVH, MinIO), chaque sauvegarde est aussi copiée hors du serveur. La copie distante est supprimée avec la sauvegarde. Un échec d'envoi est signalé dans le panel, sans annuler la sauvegarde locale. Le système est reconstruit depuis l'image, et les comptes depuis le panel. Une restauration ferme les sessions, remplace `/home` puis réapplique les comptes. Des sauvegardes automatiques quotidiennes peuvent être activées dans le panel.
 
-## Tests de l'agent
+## Surveillance
+
+L'agent expose `GET /healthz` (sans jeton), utilisé par le `HEALTHCHECK` Docker. La machine a aussi le sien. Le portfolio relève l'état chaque minute et alerte sur Discord quand l'agent devient injoignable ou que la machine s'arrête.
+
+## Tests
 
 ```sh
-cd sandbox/agent && npm test
+cd sandbox/agent && npm ci && npm test   # tests unitaires (tickets, limites, journal sshd, signature S3)
+sandbox/tests/integration.sh             # pile Docker réelle : accès, isolation, internet filtré,
+                                         # sauvegarde/restauration, quotas, bannissement, terminal web
 ```
+
+Le test d'intégration démarre une pile dédiée sur des ports locaux (`SANDBOX_TEST_PORT_BASE`, 23000 par défaut), puis la supprime. Il nécessite docker, sshpass, node 22, openssl et curl. Le workflow GitHub `.github/workflows/sandbox.yml` lance les deux à chaque modification de `sandbox/`.

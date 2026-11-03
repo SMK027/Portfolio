@@ -6,6 +6,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import config from './config.js';
 import { run } from './sandbox.js';
+import * as s3 from './s3.js';
 
 const dir = path.join(config.dataDir, 'backups');
 const indexFile = path.join(dir, 'index.json');
@@ -38,6 +39,16 @@ export async function create(label, automatic = false, keep = null) {
     }
 
     const backup = { id, label: String(label || 'Sauvegarde').slice(0, 120), automatic, size: fs.statSync(file).size, created_at: new Date().toISOString() };
+
+    // Copie hors serveur : un échec n'annule pas la sauvegarde locale, il est signalé.
+    if (s3.isEnabled()) {
+        try {
+            await s3.upload(file, `${id}.tar.gz`);
+            backup.offsite = 'ok';
+        } catch (error) {
+            backup.offsite = `erreur : ${error.message}`.slice(0, 200);
+        }
+    }
     writeIndex([...readIndex(), backup]);
 
     if (automatic && keep) {
@@ -74,6 +85,9 @@ export function remove(id) {
     }
     fs.rmSync(fileFor(id), { force: true });
     writeIndex(readIndex().filter((b) => b.id !== id));
+    if (backup.offsite === 'ok') {
+        s3.remove(`${id}.tar.gz`).catch((error) => console.error('Suppression S3 :', error.message));
+    }
     return true;
 }
 
