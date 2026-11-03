@@ -1,0 +1,10 @@
+# Quota disque strict : /home de la machine sur une image ext4 de taille fixe
+# (voir init-home-image.sh). À utiliser avec docker-compose.yml :
+#   docker compose -f docker-compose.yml -f docker-compose.quota.yml up -d
+volumes:
+  home:
+    driver: local
+    driver_opts:
+      type: ext4
+      device: ${SANDBOX_HOME_IMAGE:?SANDBOX_HOME_IMAGE doit désigner l'image créée par init-home-image.sh}
+      o: loop,nosuid,nodev

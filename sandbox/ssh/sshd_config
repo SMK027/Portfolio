@@ -30,7 +30,7 @@ X11Forwarding no
 PermitUserEnvironment no
 PrintMotd yes
 Banner none
-Subsystem sftp internal-sftp
+Subsystem sftp /usr/lib/ssh/sftp-server
 
 Match User root
     # Clé publique de l'agent (volume partagé, lu par une commande : pas d'exigence de propriétaire)
@@ -38,3 +38,7 @@ Match User root
     AuthorizedKeysCommand /usr/local/sbin/agent-keys
     AuthorizedKeysCommandUser nobody
     PasswordAuthentication no
+
+# Comptes du bac à sable : limites et environnement appliqués à chaque session
+Match Group sandbox
+    ForceCommand /usr/local/sbin/session

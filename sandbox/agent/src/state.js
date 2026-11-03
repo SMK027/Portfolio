@@ -7,10 +7,14 @@ import config from './config.js';
 const file = path.join(config.dataDir, 'state.json');
 const LOG_SIZE = 200;
 
+/** Limites par défaut (réglables depuis le panel). */
+export const DEFAULT_LIMITS = { nproc: 24, memory_kb: 196608, file_kb: 102400, user_quota_mb: 100 };
+
 export const state = {
     public: false,
     internet: false,
     accounts: [],
+    limits: { ...DEFAULT_LIMITS },
     ...(fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}),
 };
 
@@ -18,6 +22,8 @@ export const state = {
 export const runtime = {
     overQuota: false,
     usageKb: null,
+    usageByUser: {},
+    overUsers: [], // comptes dépassant leur quota : bloqués jusqu'à libération de l'espace
     lastApplied: null,
     lastError: null,
     containerStartedAt: null,

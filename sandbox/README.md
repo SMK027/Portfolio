@@ -20,6 +20,11 @@ sandbox-agent ──▶ docker-socket-proxy ──▶ Docker (conteneurs + rése
   - Il expose l'API de contrôle, protégée par jeton et refusée à la machine elle-même.
   - Il administre la machine en SSH avec sa propre clé : root est limité à la commande forcée `sandboxctl`.
 - **Le panel est la source de vérité** (accès public, internet, comptes). L'agent conserve le dernier état et le réapplique dès que la machine redémarre.
+- **Limites par compte** (réglables depuis le panel) : nombre de processus (`ulimit -u`), mémoire virtuelle par processus, taille des fichiers. Un visiteur qui sature ses ressources ne bloque pas les autres. Les comptes reçoivent des UID à partir de 200 000, car la limite de processus compte tous les processus de l'UID sur l'hôte.
+- **Confidentialité** : dossiers personnels en 0700, `umask 077` et dossier temporaire personnel (`$TMPDIR`). En revanche, la liste des processus reste visible de tous : masquer `/proc` (`hidepid`) exigerait de donner `CAP_SYS_ADMIN` à la machine.
+- **Nettoyage** : les processus laissés par un compte déconnecté (`nohup`, `&`) sont tués automatiquement.
+- **Quota par compte** : un compte qui dépasse son quota est bloqué (sessions fermées, connexion refusée) jusqu'à ce que son espace redescende sous la limite.
+- **Quota strict (facultatif)** : `/home` sur une image ext4 de taille fixe (`init-home-image.sh` + `docker-compose.quota.yml`). Le noyau refuse alors toute écriture au-delà.
 - **Quota** : au-delà de `SANDBOX_QUOTA_MB` dans `/home`, l'accès public est suspendu jusqu'à ce que l'espace soit libéré (réinitialisation ou restauration depuis le panel).
 
 ## Installation (production, derrière Traefik)

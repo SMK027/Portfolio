@@ -1,0 +1,20 @@
+#!/bin/sh
+# Ouverture de session d'un compte du bac à sable (ForceCommand) : limites par
+# compte, fichiers privés par défaut, dossier temporaire personnel.
+# Les limites sont réglées depuis le panel (fichier écrit par sandboxctl apply).
+NPROC=24 MEMORY_KB=196608 FILE_KB=102400
+[ -r /etc/sandbox/limits ] && . /etc/sandbox/limits
+
+ulimit -u "$NPROC" 2>/dev/null   # processus du compte (empêche les « fork bombs » de bloquer les autres)
+ulimit -v "$MEMORY_KB" 2>/dev/null  # mémoire virtuelle par processus
+ulimit -f "$FILE_KB" 2>/dev/null    # taille maximale d'un fichier
+ulimit -c 0 2>/dev/null
+
+umask 077
+export TMPDIR="$HOME/.tmp"
+mkdir -p "$TMPDIR" 2>/dev/null && chmod 700 "$TMPDIR"
+
+if [ -n "$SSH_ORIGINAL_COMMAND" ]; then
+    exec /bin/bash -c "$SSH_ORIGINAL_COMMAND"
+fi
+exec /bin/bash -l

@@ -73,8 +73,18 @@ export async function run(command, { input = null, output = null } = {}) {
     }
 }
 
-export async function applyAccounts(accounts) {
-    await run('apply', { input: JSON.stringify({ accounts }) });
+export async function applyAccounts(accounts, limits = {}) {
+    await run('apply', { input: JSON.stringify({ accounts, limits }) });
+}
+
+/** Espace occupé par compte (Ko). */
+export async function usageByUser() {
+    return JSON.parse((await run('usage-users')).trim() || '{}');
+}
+
+/** Processus laissés par des comptes déconnectés : tués ; renvoie les comptes concernés. */
+export async function reap() {
+    return (await run('reap')).split('\n').filter(Boolean);
 }
 
 export async function sessions() {

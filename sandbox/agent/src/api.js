@@ -11,7 +11,7 @@ import * as sandbox from './sandbox.js';
 import { closeAll } from './gateway.js';
 import { closeAllTerminals } from './terminal.js';
 import { totalSessions } from './limits.js';
-import { runtime, saveState, state } from './state.js';
+import { DEFAULT_LIMITS, runtime, saveState, state } from './state.js';
 import { apply } from './reconcile.js';
 
 const USERNAME = /^[a-z][a-z0-9_-]{2,31}$/;
@@ -56,7 +56,15 @@ function validateState(body) {
     if (accounts.length > 200 || accounts.some((a) => ! USERNAME.test(a?.username ?? '') || ! String(a?.hash ?? '').startsWith('$6$'))) {
         throw Object.assign(new Error('Comptes invalides'), { status: 422 });
     }
+    const limits = body.limits ?? {};
+    const bounded = (value, min, max, fallback) => (Number.isInteger(value) && value >= min && value <= max ? value : fallback);
     return {
+        limits: {
+            nproc: bounded(limits.nproc, 4, 256, DEFAULT_LIMITS.nproc),
+            memory_kb: bounded(limits.memory_kb, 32768, 1048576, DEFAULT_LIMITS.memory_kb),
+            file_kb: bounded(limits.file_kb, 1024, 1048576, DEFAULT_LIMITS.file_kb),
+            user_quota_mb: bounded(limits.user_quota_mb, 1, 4096, DEFAULT_LIMITS.user_quota_mb),
+        },
         public: body.public === true,
         internet: body.internet === true,
         accounts: accounts.map((a) => ({ username: a.username, hash: a.hash, enabled: a.enabled !== false })),
@@ -79,6 +87,9 @@ const routes = {
             internet: running ? await safe(() => docker.hasInternet(), state.internet) : state.internet,
             accounts: state.accounts.map((a) => a.username),
             quota: { used_kb: runtime.usageKb, limit_kb: config.quotaKb, exceeded: runtime.overQuota },
+            usage_by_user: runtime.usageByUser,
+            over_quota_users: runtime.overUsers,
+            limits: state.limits,
             sessions: running ? await safe(() => sandbox.sessions(), []) : [],
             relayed_sessions: totalSessions(),
             connections: runtime.connections.slice(0, 50),

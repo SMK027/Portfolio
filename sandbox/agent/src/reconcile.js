@@ -5,12 +5,15 @@ import * as docker from './docker.js';
 import * as sandbox from './sandbox.js';
 import { closeAll } from './gateway.js';
 import { closeAllTerminals } from './terminal.js';
-import { runtime, state } from './state.js';
+import { DEFAULT_LIMITS, runtime, state } from './state.js';
 
 export async function apply() {
     try {
         await docker.setInternet(state.internet);
-        await sandbox.applyAccounts(state.accounts);
+        // Compte au-delà de son quota : désactivé jusqu'à ce que l'espace soit libéré.
+        const accounts = state.accounts.map((a) => ({ ...a, enabled: a.enabled && ! runtime.overUsers.includes(a.username) }));
+        const { user_quota_mb: _, ...limits } = { ...DEFAULT_LIMITS, ...state.limits };
+        await sandbox.applyAccounts(accounts, limits);
         runtime.lastApplied = new Date().toISOString();
         runtime.lastError = null;
     } catch (error) {
@@ -40,6 +43,17 @@ export async function watch() {
                 await sandbox.killSessions().catch(() => {});
             }
             runtime.overQuota = over;
+
+            // Quota par compte
+            runtime.usageByUser = await sandbox.usageByUser();
+            const quotaKb = (state.limits?.user_quota_mb ?? DEFAULT_LIMITS.user_quota_mb) * 1024;
+            const overUsers = Object.entries(runtime.usageByUser).filter(([, kb]) => kb > quotaKb).map(([user]) => user).sort();
+            if (overUsers.join() !== runtime.overUsers.join()) {
+                runtime.overUsers = overUsers;
+                await apply();
+            }
+
+            await sandbox.reap();
         }
     } catch (error) {
         runtime.lastError = error.message;
