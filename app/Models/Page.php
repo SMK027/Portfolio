@@ -29,6 +29,7 @@ class Page extends Model
         'contact'        => 'contact.show',
         'rendez-vous'    => 'appointments.show',
         'recommandations' => 'recommendations.index',
+        'machine-ssh'    => 'sandbox.show',
     ];
 
     /**
@@ -37,7 +38,7 @@ class Page extends Model
      */
     public const NAV_GROUPS = [
         'Parcours' => ['formations', 'experiences', 'diplomes', 'certifications', 'competences', 'recommandations', 'loisirs'],
-        'Projets'  => ['projets'],
+        'Projets'  => ['projets', 'machine-ssh'],
         'Veille'   => ['veille'],
         'Contact'  => ['contact', 'rendez-vous'],
     ];

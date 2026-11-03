@@ -10,6 +10,15 @@ Schedule::call(fn () => app(\App\Services\SiteStatistics::class)->prune())->dail
 // Téléchargements du CV par code : IP effacées après 3 mois.
 Schedule::call(fn () => \App\Models\CvAccessCodeUse::prune())->dailyAt('03:35')->name('cv:purge-ip');
 
+// Machine SSH : état (expirations des comptes) réappliqué, sauvegarde automatique quotidienne.
+Schedule::call(function () {
+    $sandbox = app(\App\Services\Sandbox::class);
+    if ($sandbox->isConfigured()) {
+        $sandbox->sync();
+    }
+})->everyTenMinutes()->name('machine-ssh:synchroniser');
+Schedule::call(fn () => app(\App\Services\Sandbox::class)->automaticBackup())->dailyAt('04:15')->name('machine-ssh:sauvegarde');
+
 // Rappels des rendez-vous confirmés (la veille et 1 h avant).
 Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())->everyFiveMinutes()->name('rendez-vous:rappels');
 

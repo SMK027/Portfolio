@@ -75,6 +75,11 @@ Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class
     ->scopeBindings()
     ->name('articles.files.show');
 
+Route::middleware('page:machine-ssh')->prefix('machine-ssh')->name('sandbox.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\SandboxController::class, 'show'])->name('show');
+    Route::post('/ticket', [\App\Http\Controllers\SandboxController::class, 'ticket'])->middleware('throttle:10,1')->name('ticket');
+});
+
 Route::get('/terminal', \App\Http\Controllers\TerminalController::class)->name('terminal');
 
 Route::get('/recherche', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
@@ -195,6 +200,22 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/', 'edit')->name('edit');
         Route::put('/', 'update')->name('update');
         Route::post('/test', 'test')->middleware('throttle:5,1')->name('test');
+    });
+
+    // Machine SSH bac à sable : super-administrateurs uniquement (voir sandbox/README.md)
+    Route::middleware('can:manage-sandbox')->controller(Admin\SandboxController::class)->prefix('machine-ssh')->name('sandbox.')->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::put('/reglages', 'updateSettings')->name('settings');
+        Route::post('/comptes', 'storeAccount')->name('accounts.store');
+        Route::put('/comptes/{account}', 'updateAccount')->name('accounts.update');
+        Route::delete('/comptes/{account}', 'destroyAccount')->name('accounts.destroy');
+        Route::post('/sessions/fermer', 'killSessions')->name('sessions.kill');
+        Route::post('/redemarrer', 'restart')->middleware('throttle:5,1')->name('restart');
+        Route::post('/reinitialiser', 'reset')->middleware('throttle:5,1')->name('reset');
+        Route::post('/sauvegardes', 'storeBackup')->middleware('throttle:10,1')->name('backups.store');
+        Route::post('/sauvegardes/{backup}/restaurer', 'restoreBackup')->where('backup', '[a-f0-9]{16}')->middleware('throttle:5,1')->name('backups.restore');
+        Route::get('/sauvegardes/{backup}/telecharger', 'downloadBackup')->where('backup', '[a-f0-9]{16}')->name('backups.download');
+        Route::delete('/sauvegardes/{backup}', 'destroyBackup')->where('backup', '[a-f0-9]{16}')->name('backups.destroy');
     });
 
     // Superviseurs : super-administrateurs uniquement

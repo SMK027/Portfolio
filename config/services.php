@@ -58,4 +58,14 @@ return [
         'token' => env('GITHUB_TOKEN'),
     ],
 
+    // Machine SSH bac à sable (voir sandbox/README.md) : API de l'agent sur le réseau interne
+    'sandbox' => [
+        'url'      => env('SANDBOX_API_URL'),
+        'token'    => env('SANDBOX_API_TOKEN'),
+        'ssh_host' => env('SANDBOX_SSH_HOST'),
+        'ssh_port' => (int) env('SANDBOX_SSH_PORT', 2222),
+        // Terminal web : par défaut /ssh-ws sur le domaine du portfolio (routeur Traefik de l'agent)
+        'ws_url'   => env('SANDBOX_WS_URL'),
+    ],
+
 ];

@@ -36,6 +36,8 @@ Côté portfolio (`.env` et `docker-compose.yml`) :
 2. Renseignez `SANDBOX_API_URL=http://sandbox-agent:8080`, `SANDBOX_API_TOKEN` (même valeur que ci-dessus) et `SANDBOX_SSH_HOST` (nom affiché aux visiteurs, ex. le domaine) / `SANDBOX_SSH_PORT=2222`.
 3. Ouvrez le port 2222 dans le pare-feu de l'hôte.
 
+Adresses IP réelles : le journal des connexions et les limites par IP utilisent l'adresse vue par l'agent. Avec le proxy « userland » de Docker (réglage par défaut), toutes les connexions SSH semblent venir de la passerelle Docker. Pour voir les vraies adresses, désactivez-le : `"userland-proxy": false` dans `/etc/docker/daemon.json`, puis redémarrez Docker. Le terminal web, lui, reçoit l'IP réelle par le ticket du portfolio.
+
 Le terminal web passe par `https://APP_DOMAIN/ssh-ws` (routeur Traefik de l'agent, prioritaire sur le portfolio).
 
 ## Sauvegardes

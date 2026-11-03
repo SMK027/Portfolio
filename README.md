@@ -46,6 +46,12 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - Les personnes connectées n'utilisent pas le service worker, et leur cache est vidé : aucune page privée ne reste sur l'appareil.
 - Pour forcer le renouvellement des caches, changez `VERSION` dans `public/sw.js`.
 
+**Machine SSH** (*Comptes et sécurité → Machine SSH*, super-administrateurs) : une machine Linux bac à sable, isolée et bridée, déployée à part (`sandbox/`, voir [sandbox/README.md](sandbox/README.md)).
+- Le panel règle l'accès public (port SSH et terminal web) et l'accès internet. Il gère un compte invité, dont le mot de passe est affiché sur la page publique, et des comptes nominatifs avec expiration.
+- Il affiche l'état (processeur, mémoire, espace disque, sessions, connexions récentes) et permet de fermer des sessions, de redémarrer et de réinitialiser la machine.
+- Sauvegardes et restaurations des dossiers personnels : manuelles ou automatiques chaque nuit, téléchargeables.
+- La page publique `/machine-ssh` est privée par défaut. Elle donne la commande SSH et un terminal dans le navigateur.
+
 **Mode terminal** (`/terminal`) : le portfolio parcouru en ligne de commande. On l'ouvre par le lien « >_ terminal » du pied de page, ou par la touche ² (ou `) sur une page publique, hors champ de saisie.
 - Commandes : `help`, `ls`, `cd`, `cat`, `open`, `whoami`, `contact`, `cv`, `neofetch`… avec complétion par Tab et historique (↑/↓).
 - Le contenu suit la visibilité des pages. La page n'est pas indexée.

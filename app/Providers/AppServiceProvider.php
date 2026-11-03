@@ -106,6 +106,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-login-path', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-ip-bans', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-notifications', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('manage-sandbox', fn (User $user) => $user->isSuperAdmin());
 
         // API : 120 requêtes par minute et par code d'application (ou par IP sans code).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by(

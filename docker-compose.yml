@@ -62,6 +62,12 @@ services:
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - GOOGLE_CALENDAR_CLIENT_ID=${GOOGLE_CALENDAR_CLIENT_ID:-}
       - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-}
+      # Machine SSH bac à sable (facultatif, voir sandbox/README.md)
+      - SANDBOX_API_URL=${SANDBOX_API_URL:-}
+      - SANDBOX_API_TOKEN=${SANDBOX_API_TOKEN:-}
+      - SANDBOX_SSH_HOST=${SANDBOX_SSH_HOST:-}
+      - SANDBOX_SSH_PORT=${SANDBOX_SSH_PORT:-2222}
+      - SANDBOX_WS_URL=${SANDBOX_WS_URL:-}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${APP_DOMAIN:-app.example.com}`)"
@@ -72,6 +78,8 @@ services:
     networks:
       - proxy
       - db_internal
+      # Machine SSH : décommentez (ici et plus bas) une fois sandbox/ déployé.
+      # - sandbox_control
     restart: unless-stopped
 
 networks:
@@ -79,3 +87,6 @@ networks:
     external: true
   db_internal:
     external: true
+  # sandbox_control:
+  #   name: portfolio-sandbox-control
+  #   external: true

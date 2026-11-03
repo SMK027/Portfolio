@@ -50,6 +50,7 @@ class Setting extends Model
             'appointments.google'       => 'Google Agenda',
             'easter_eggs.settings'      => 'Page d\'easter eggs',
             'notifications.discord'     => 'Notifications Discord',
+            'sandbox.settings'          => 'Machine SSH',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

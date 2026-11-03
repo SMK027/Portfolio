@@ -32,6 +32,18 @@ class AddSecurityHeaders
         'frame-ancestors' => "'self'",
     ];
 
+    /** Directives, avec l'origine du terminal web de la machine SSH (websocket) si elle est configurée. */
+    protected function policy(): array
+    {
+        $policy = self::CSP;
+        $sandbox = app(\App\Services\Sandbox::class);
+        if ($sandbox->isConfigured() && preg_match('#^wss?://[^/]+#', $sandbox->terminalUrl(), $origin)) {
+            $policy['connect-src'] .= ' '.$origin[0];
+        }
+
+        return $policy;
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
@@ -46,7 +58,7 @@ class AddSecurityHeaders
             'Referrer-Policy'        => 'strict-origin-when-cross-origin',
             'Permissions-Policy'     => 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
             'Cross-Origin-Opener-Policy' => 'same-origin',
-            'Content-Security-Policy' => collect(self::CSP)->map(fn ($value, $directive) => "{$directive} {$value}")->implode('; '),
+            'Content-Security-Policy' => collect($this->policy())->map(fn ($value, $directive) => "{$directive} {$value}")->implode('; '),
         ];
 
         // HTTPS uniquement (derrière Traefik, l'en-tête X-Forwarded-Proto est pris en compte).
