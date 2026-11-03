@@ -10,17 +10,29 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'first_name', 'last_name', 'headline', 'location', 'email', 'phone',
-    'photo_path', 'cv_path', 'cv_downloadable', 'about', 'social_links',
+    'photo_path', 'cv_path', 'cv_access', 'about', 'social_links',
 ])]
 class Profile extends Model
 {
     use Auditable;
 
+    /** Politiques de téléchargement du CV. */
+    public const CV_PUBLIC = 'public';
+
+    public const CV_RESTRICTED = 'restricted';
+
+    public const CV_PRIVATE = 'private';
+
+    public const CV_ACCESS = [
+        self::CV_PUBLIC     => 'Public : téléchargement libre, sans code',
+        self::CV_RESTRICTED => "Restreint : sur code d'accès",
+        self::CV_PRIVATE    => 'Privé : téléchargement désactivé',
+    ];
+
     protected function casts(): array
     {
         return [
             'about'        => 'array',
-            'cv_downloadable' => 'boolean',
             'social_links' => 'array',
         ];
     }
@@ -89,7 +101,17 @@ class Profile extends Model
 
     public function cvAvailable(): bool
     {
-        return $this->cv_path && $this->cv_downloadable && Storage::disk('local')->exists($this->cv_path);
+        return $this->cv_path && $this->cvAccess() !== self::CV_PRIVATE && Storage::disk('local')->exists($this->cv_path);
+    }
+
+    public function cvAccess(): string
+    {
+        return array_key_exists((string) $this->cv_access, self::CV_ACCESS) ? $this->cv_access : self::CV_RESTRICTED;
+    }
+
+    public function cvRequiresCode(): bool
+    {
+        return $this->cvAccess() === self::CV_RESTRICTED;
     }
 
     /** Nom du fichier proposé au téléchargement. */

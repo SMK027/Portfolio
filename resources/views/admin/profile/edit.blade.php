@@ -30,11 +30,11 @@
             </div>
             <div>
                 <x-form.input name="cv" type="file" label="CV (PDF)" accept="application/pdf" help="10 Mo max." />
-                <x-form.checkbox name="cv_downloadable" label="Autoriser le téléchargement du CV" :checked="$profile->cv_downloadable ?? true" class="mt-3"
-                                 help="Le CV n'est remis qu'avec un code d'accès. Décoché : le bouton « Mon CV » disparaît du site et aucun code ne fonctionne." />
+                <x-form.select name="cv_access" label="Téléchargement du CV" :options="\App\Models\Profile::CV_ACCESS" :value="$profile->cvAccess()" required class="mt-3"
+                               help="Privé : le bouton « Mon CV » disparaît du site et aucun code ne fonctionne. Changer de mode ne révoque pas les codes existants, qui resservent dès le retour en mode restreint." />
                 @if ($profile->cv_path)
                     <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                        @unless ($profile->cv_downloadable)<span class="badge-amber">Téléchargement bloqué</span>@endunless
+                        @if ($profile->cvAccess() === \App\Models\Profile::CV_PRIVATE)<span class="badge-amber">Téléchargement bloqué</span>@elseif ($profile->cvAccess() === \App\Models\Profile::CV_PUBLIC)<span class="badge-amber">Téléchargement libre</span>@endif
                         <a href="{{ route('admin.profile.cv') }}" target="_blank" class="inline-flex items-center gap-1 font-medium text-primary-600"><x-icon name="document" class="h-4 w-4" /> CV actuel</a>
                         <a href="{{ route('admin.profile.cv-codes.index') }}" class="inline-flex items-center gap-1 font-medium text-primary-600"><x-icon name="lock" class="h-4 w-4" /> Codes d'accès</a>
                         <label class="inline-flex items-center gap-2 text-slate-600">

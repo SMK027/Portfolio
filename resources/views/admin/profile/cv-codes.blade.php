@@ -10,7 +10,11 @@
         et transmettez-lui le code ou le lien, qui ouvre le formulaire avec le code prérempli. Révoquer un code coupe aussitôt l'accès.
     </p>
     @unless ($profile->cvAvailable())
-        <p class="badge-amber">Aucun CV téléchargeable : déposez un CV et autorisez son téléchargement dans la présentation.</p>
+        <p class="badge-amber">Aucun CV téléchargeable : déposez un CV et choisissez un mode de téléchargement public ou restreint dans la présentation.</p>
+    @else
+        @unless ($profile->cvRequiresCode())
+            <p class="badge-amber">Le CV est en accès libre : les codes ne sont pas demandés, mais restent valides pour un retour en mode restreint.</p>
+        @endunless
     @endunless
 
     @can('panel', 'profile.write')

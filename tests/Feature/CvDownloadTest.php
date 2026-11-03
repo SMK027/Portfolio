@@ -27,7 +27,7 @@ class CvDownloadTest extends TestCase
     protected function upload(array $extra = []): void
     {
         $this->actingAs($this->admin)->put(route('admin.profile.update'), [
-            'first_name' => 'Léo', 'last_name' => 'Franz', 'cv_downloadable' => '1',
+            'first_name' => 'Léo', 'last_name' => 'Franz', 'cv_access' => 'restricted',
             'cv' => UploadedFile::fake()->create('cv.pdf', 100, 'application/pdf'), ...$extra,
         ])->assertSessionHasNoErrors();
         auth()->logout();
@@ -54,16 +54,45 @@ class CvDownloadTest extends TestCase
     public function test_blocking_hides_the_button_and_the_route(): void
     {
         $this->upload();
-        $this->actingAs($this->admin)->put(route('admin.profile.update'), ['first_name' => 'Léo', 'last_name' => 'Franz'])->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->put(route('admin.profile.update'), ['first_name' => 'Léo', 'last_name' => 'Franz', 'cv_access' => 'private'])->assertSessionHasNoErrors();
         auth()->logout();
 
-        $this->assertFalse(Profile::current()->fresh()->cv_downloadable);
+        $this->assertSame('private', Profile::current()->fresh()->cv_access);
         $this->get(route('home'))->assertDontSee('Mon CV');
         $this->get(route('cv.download'))->assertNotFound();
 
         // Le panel garde l'aperçu.
         $this->actingAs($this->admin)->get(route('admin.profile.cv'))->assertOk();
         $this->get(route('admin.profile.edit'))->assertSee('Téléchargement bloqué');
+    }
+
+    public function test_public_cv_is_served_without_code(): void
+    {
+        $this->upload(['cv_access' => 'public']);
+
+        $this->get(route('home'))->assertSee(route('cv.download'));
+        $this->get(route('cv.download'))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->post(route('cv.download.submit'))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_changing_the_policy_keeps_existing_codes(): void
+    {
+        $this->upload();
+        $code = CvAccessCode::create(['label' => 'Test', 'code' => CvAccessCode::generate()]);
+
+        $this->upload(['cv' => null, 'cv_access' => 'private']);
+        $this->post(route('cv.download.submit'), ['code' => $code->code])->assertNotFound();
+        $this->upload(['cv' => null, 'cv_access' => 'public']);
+        $this->upload(['cv' => null, 'cv_access' => 'restricted']);
+
+        $this->assertModelExists($code);
+        $this->post(route('cv.download.submit'), ['code' => $code->code])->assertOk();
+    }
+
+    public function test_invalid_policy_is_rejected(): void
+    {
+        $this->actingAs($this->admin)->put(route('admin.profile.update'), ['first_name' => 'Léo', 'cv_access' => 'everyone'])
+            ->assertSessionHasErrors('cv_access');
     }
 
     public function test_removing_the_cv_deletes_the_file(): void

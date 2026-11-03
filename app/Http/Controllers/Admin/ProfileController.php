@@ -8,6 +8,7 @@ use App\Models\Profile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -39,7 +40,7 @@ class ProfileController extends Controller
             'about'        => ['nullable', 'string', 'max:500000'],
             'photo'        => $this->imageRules(),
             'cv'           => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
-            'cv_downloadable' => ['nullable', 'boolean'],
+            'cv_access'    => ['nullable', Rule::in(array_keys(Profile::CV_ACCESS))],
         ]);
 
         $data['about'] = $this->editorContent($request, 'about');
@@ -51,7 +52,8 @@ class ProfileController extends Controller
             ->all();
         $data['photo_path'] = $this->syncPublicFile($request, 'photo', $profile->photo_path, 'profile');
         $data['cv_path'] = $this->syncCv($request, $profile->cv_path);
-        $data['cv_downloadable'] = $request->boolean('cv_downloadable');
+        // Sans choix explicite, la politique de téléchargement reste inchangée.
+        $data['cv_access'] ??= $profile->cvAccess();
         unset($data['photo'], $data['cv']);
 
         $profile->update($data);

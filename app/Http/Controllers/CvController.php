@@ -11,15 +11,20 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * CV public : servi seulement si son téléchargement est autorisé et sur
- * présentation d'un code d'accès valide (voir CvAccessCode).
+ * CV public, selon la politique choisie dans la présentation : libre (public),
+ * sur code d'accès valide (restreint, voir CvAccessCode) ou indisponible (privé).
  */
 class CvController extends Controller
 {
-    /** Formulaire de saisie du code (prérempli par le lien partagé). */
-    public function __invoke(Request $request): View
+    /** CV en accès libre, sinon formulaire de saisie du code (prérempli par le lien partagé). */
+    public function __invoke(Request $request): View|StreamedResponse
     {
-        abort_unless(Profile::current()->cvAvailable(), 404);
+        $profile = Profile::current();
+        abort_unless($profile->cvAvailable(), 404);
+
+        if (! $profile->cvRequiresCode()) {
+            return $this->serve($profile);
+        }
 
         return view('public.cv', ['code' => substr((string) $request->query('code'), 0, 32)]);
     }
@@ -28,6 +33,10 @@ class CvController extends Controller
     {
         $profile = Profile::current();
         abort_unless($profile->cvAvailable(), 404);
+
+        if (! $profile->cvRequiresCode()) {
+            return $this->serve($profile);
+        }
 
         $request->validate([
             'code'    => ['required', 'string', 'max:32'],
@@ -41,6 +50,11 @@ class CvController extends Controller
 
         $code->markUsed();
 
+        return $this->serve($profile);
+    }
+
+    protected function serve(Profile $profile): StreamedResponse
+    {
         return Storage::disk('local')->response($profile->cv_path, $profile->cvFilename(), [
             'Content-Type'  => 'application/pdf',
             'Cache-Control' => 'no-store, private',
