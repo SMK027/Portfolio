@@ -1,0 +1,40 @@
+# Bac à sable : les connexions arrivent toutes par sandbox-agent (relais TCP et
+# terminal web), qui applique l'ouverture au public et les limites par IP.
+Port 22
+HostKey /etc/ssh/keys/ssh_host_ed25519_key
+HostKey /etc/ssh/keys/ssh_host_rsa_key
+
+# Root : uniquement l'agent, par clé, limité à la commande d'administration.
+PermitRootLogin forced-commands-only
+AllowGroups sandbox root
+PasswordAuthentication yes
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+MaxAuthTries 3
+MaxSessions 2
+MaxStartups 5:50:10
+LoginGraceTime 30
+ClientAliveInterval 60
+ClientAliveCountMax 3
+
+# Aucun tunnel ni transfert : la machine ne sert pas de rebond.
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+AllowAgentForwarding no
+GatewayPorts no
+PermitTunnel no
+X11Forwarding no
+PermitUserEnvironment no
+PrintMotd yes
+Banner none
+Subsystem sftp internal-sftp
+
+Match User root
+    # Clé publique de l'agent (volume partagé, lu par une commande : pas d'exigence de propriétaire)
+    AuthorizedKeysFile none
+    AuthorizedKeysCommand /usr/local/sbin/agent-keys
+    AuthorizedKeysCommandUser nobody
+    PasswordAuthentication no

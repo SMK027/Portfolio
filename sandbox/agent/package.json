@@ -1,0 +1,17 @@
+{
+  "name": "portfolio-sandbox-agent",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Agent de contrôle de la machine SSH bac à sable du portfolio",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "ssh2": "1.17.0",
+    "ws": "8.18.3"
+  }
+}

@@ -1,0 +1,109 @@
+#!/bin/bash
+# Administration de la machine, appelée uniquement par sandbox-agent (clé root
+# à commande forcée) : la sous-commande arrive dans SSH_ORIGINAL_COMMAND.
+#
+#   apply            JSON sur l'entrée : {"accounts":[{"username","hash","enabled"}]}
+#   sessions         sessions ouvertes (JSON)
+#   kill [user]      ferme les sessions d'un compte, ou de tous
+#   usage            espace occupé par /home, en Ko
+#   backup           archive tar.gz de /home sur la sortie
+#   restore          remplace /home par l'archive lue sur l'entrée
+set -euo pipefail
+
+read -r -a ARGS <<< "${SSH_ORIGINAL_COMMAND:-${*:-}}"
+COMMAND="${ARGS[0]:-}"
+USERNAME_RE='^[a-z][a-z0-9_-]{2,31}$'
+
+sandbox_users() {
+    getent group sandbox | cut -d: -f4 | tr ',' '\n' | sed '/^$/d'
+}
+
+kill_user() {
+    pkill -KILL -u "$1" 2>/dev/null || true
+}
+
+fix_owners() {
+    for dir in /home/*/; do
+        user="$(basename "$dir")"
+        if id "$user" >/dev/null 2>&1; then
+            chown -R "$user:sandbox" "$dir"
+            chmod 0750 "$dir"
+        fi
+    done
+}
+
+case "$COMMAND" in
+    apply)
+        desired="$(cat)"
+        wanted="$(jq -r '.accounts[].username' <<< "$desired")"
+
+        # Comptes retirés : sessions fermées, compte supprimé (dossier conservé jusqu'à restauration ou réinitialisation).
+        for user in $(sandbox_users); do
+            if ! grep -qx "$user" <<< "$wanted"; then
+                kill_user "$user"
+                deluser "$user" >/dev/null 2>&1 || true
+            fi
+        done
+
+        jq -c '.accounts[]' <<< "$desired" | while read -r account; do
+            user="$(jq -r '.username' <<< "$account")"
+            hash="$(jq -r '.hash' <<< "$account")"
+            enabled="$(jq -r '.enabled' <<< "$account")"
+            [[ "$user" =~ $USERNAME_RE ]] || { echo "nom invalide : $user" >&2; continue; }
+            [[ "$hash" == \$6\$* ]] || { echo "empreinte invalide pour $user" >&2; continue; }
+
+            if ! id "$user" >/dev/null 2>&1; then
+                adduser -D -G sandbox -s /bin/bash -h "/home/$user" "$user" >/dev/null
+            elif ! id -nG "$user" | tr ' ' '\n' | grep -qx sandbox; then
+                echo "compte système, ignoré : $user" >&2
+                continue
+            fi
+            echo "$user:$hash" | chpasswd -e
+            if [ "$enabled" = "true" ]; then
+                usermod -U "$user" >/dev/null 2>&1 || true
+            else
+                usermod -L "$user" >/dev/null 2>&1 || true
+                kill_user "$user"
+            fi
+        done
+        fix_owners
+        echo '{"ok":true}'
+        ;;
+
+    sessions)
+        # « sshd-session: guest@pts/0 » (OpenSSH ≥ 9.8) ou « sshd: guest@pts/0 »
+        ps -eo pid=,etimes=,args= | awk '$3 ~ /^sshd(-session)?:$/ && $4 ~ /@/ && $4 !~ /^root@/ { split($4, a, "@"); printf "%s %s %s %s\n", $1, $2, a[1], a[2] }' \
+            | jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ") | {pid: (.[0]|tonumber), seconds: (.[1]|tonumber), username: .[2], tty: .[3]})'
+        ;;
+
+    kill)
+        target="${ARGS[1]:-}"
+        if [ -z "$target" ]; then
+            for user in $(sandbox_users); do kill_user "$user"; done
+        elif [[ "$target" =~ $USERNAME_RE ]]; then
+            kill_user "$target"
+        fi
+        echo '{"ok":true}'
+        ;;
+
+    usage)
+        du -sk /home | cut -f1
+        ;;
+
+    backup)
+        tar -czf - -C /home .
+        ;;
+
+    restore)
+        for user in $(sandbox_users); do kill_user "$user"; done
+        find /home -mindepth 1 -delete
+        tar -xzf - -C /home --no-same-owner
+        fix_owners
+        echo '{"ok":true}'
+        ;;
+
+    *)
+        echo "commande inconnue" >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Clé publique de sandbox-agent (avec commande forcée), pour le seul compte root.
+[ "$1" = "root" ] && cat /etc/sandbox-agent/authorized_keys 2>/dev/null
+exit 0

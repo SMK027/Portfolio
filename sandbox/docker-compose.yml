@@ -1,0 +1,113 @@
+# Machine SSH « bac à sable » du portfolio — projet Compose distinct de l'application.
+#
+#   cd sandbox && cp .env.example .env   (renseigner SANDBOX_API_TOKEN, APP_DOMAIN…)
+#   docker compose up -d --build
+#
+# Réseaux :
+#   - sandbox-isolated (interne, sans internet) : machine ⇄ agent ;
+#   - portfolio-sandbox-control (interne) : agent ⇄ portfolio (API de contrôle) ;
+#   - sandbox-docker (interne) : agent ⇄ docker-socket-proxy ;
+#   - portfolio-sandbox-egress : créé et rattaché à la machine par l'agent quand
+#     l'accès internet est activé depuis le panel ;
+#   - proxy (Traefik) : terminal web de l'agent uniquement.
+# La machine n'est jamais sur les réseaux du portfolio ni de la base de données.
+
+name: portfolio-sandbox
+
+services:
+  sandbox-ssh:
+    build: ./ssh
+    container_name: ${SANDBOX_CONTAINER:-portfolio-sandbox-ssh}
+    hostname: sandbox
+    restart: unless-stopped
+    # Performances volontairement très limitées
+    cpus: ${SANDBOX_CPUS:-0.25}
+    mem_limit: ${SANDBOX_MEMORY:-128m}
+    memswap_limit: ${SANDBOX_MEMORY:-128m}
+    pids_limit: ${SANDBOX_PIDS:-64}
+    ulimits:
+      nofile: { soft: 256, hard: 512 }
+      fsize: 104857600 # 100 Mo par fichier
+    # Capacités strictement nécessaires à sshd et à la gestion des comptes
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, KILL, SYS_CHROOT, AUDIT_WRITE, NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /run:size=8m
+    volumes:
+      - home:/home
+      - hostkeys:/etc/ssh/keys
+      - agent-keys:/etc/sandbox-agent:ro
+    networks:
+      isolated:
+        aliases: [sandbox-ssh]
+
+  sandbox-agent:
+    build: ./agent
+    restart: unless-stopped
+    depends_on: [sandbox-ssh, docker-proxy]
+    environment:
+      - SANDBOX_API_TOKEN=${SANDBOX_API_TOKEN:?SANDBOX_API_TOKEN doit être défini (32 caractères au moins)}
+      - SANDBOX_CONTAINER=${SANDBOX_CONTAINER:-portfolio-sandbox-ssh}
+      - SANDBOX_EGRESS_NETWORK=portfolio-sandbox-egress
+      - SANDBOX_QUOTA_MB=${SANDBOX_QUOTA_MB:-512}
+      - SANDBOX_MAX_SESSIONS=${SANDBOX_MAX_SESSIONS:-10}
+      - SANDBOX_MAX_SESSIONS_PER_IP=${SANDBOX_MAX_SESSIONS_PER_IP:-2}
+      - SANDBOX_MAX_CONNECTIONS_PER_MINUTE=${SANDBOX_MAX_CONNECTIONS_PER_MINUTE:-10}
+    mem_limit: 128m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    volumes:
+      - agent-data:/data
+      - agent-keys:/keys
+    ports:
+      # Port SSH public (relais vers la machine) : ouvrez-le dans le pare-feu.
+      - "${SANDBOX_SSH_PUBLIC_PORT:-2222}:2222"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio-sandbox-ws.rule=Host(`${APP_DOMAIN:-app.example.com}`) && PathPrefix(`/ssh-ws`)"
+      - "traefik.http.routers.portfolio-sandbox-ws.priority=100"
+      - "traefik.http.routers.portfolio-sandbox-ws.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-sandbox-ws.tls.certresolver=le"
+      - "traefik.http.services.portfolio-sandbox-ws.loadbalancer.server.port=8081"
+      - "traefik.docker.network=proxy"
+    networks:
+      - isolated
+      - control
+      - docker
+      - proxy
+
+  # Accès Docker restreint : état des conteneurs, redémarrage, réseaux. Ni images, ni volumes, ni exec.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+      - POST=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker
+
+volumes:
+  home:
+  hostkeys:
+  agent-data:
+  agent-keys:
+
+networks:
+  isolated:
+    internal: true
+  docker:
+    internal: true
+  control:
+    name: portfolio-sandbox-control
+    internal: true
+  proxy:
+    external: true

@@ -1,0 +1,70 @@
+// Accès minimal à l'API Docker, via docker-socket-proxy (jamais le socket brut) :
+// état du conteneur, redémarrage et réseau de sortie vers internet.
+import config from './config.js';
+
+async function call(method, path, body) {
+    const response = await fetch(config.dockerUrl + path, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(15000),
+    });
+    if (! response.ok && response.status !== 304) {
+        throw new Error(`Docker ${method} ${path} : ${response.status} ${await response.text()}`);
+    }
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+}
+
+const container = () => `/containers/${encodeURIComponent(config.container)}`;
+
+export async function inspect() {
+    return call('GET', `${container()}/json`);
+}
+
+export async function stats() {
+    const s = await call('GET', `${container()}/stats?stream=false`);
+    const cpuDelta = s.cpu_stats.cpu_usage.total_usage - (s.precpu_stats.cpu_usage?.total_usage ?? 0);
+    const systemDelta = (s.cpu_stats.system_cpu_usage ?? 0) - (s.precpu_stats.system_cpu_usage ?? 0);
+    const cpus = s.cpu_stats.online_cpus || 1;
+    return {
+        cpu_percent: systemDelta > 0 ? Math.round((cpuDelta / systemDelta) * cpus * 1000) / 10 : 0,
+        memory_bytes: (s.memory_stats.usage ?? 0) - (s.memory_stats.stats?.inactive_file ?? 0),
+        memory_limit_bytes: s.memory_stats.limit ?? null,
+        pids: s.pids_stats?.current ?? null,
+    };
+}
+
+export async function restart() {
+    await call('POST', `${container()}/restart?t=5`);
+}
+
+export async function hasInternet() {
+    const info = await inspect();
+    return Object.keys(info.NetworkSettings?.Networks ?? {}).includes(config.egressNetwork);
+}
+
+export async function setInternet(enabled) {
+    if (enabled === await hasInternet()) {
+        return;
+    }
+    if (enabled) {
+        await ensureEgressNetwork();
+    }
+    const path = `/networks/${encodeURIComponent(config.egressNetwork)}/${enabled ? 'connect' : 'disconnect'}`;
+    await call('POST', path, enabled ? { Container: config.container } : { Container: config.container, Force: true });
+}
+
+/** Réseau de sortie vers internet, créé au besoin (sans communication entre conteneurs). */
+async function ensureEgressNetwork() {
+    try {
+        await call('GET', `/networks/${encodeURIComponent(config.egressNetwork)}`);
+    } catch {
+        await call('POST', '/networks/create', {
+            Name: config.egressNetwork,
+            Driver: 'bridge',
+            Options: { 'com.docker.network.bridge.enable_icc': 'false' },
+            Labels: { 'portfolio.sandbox': 'egress' },
+        });
+    }
+}
