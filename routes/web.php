@@ -70,6 +70,8 @@ Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class
     ->scopeBindings()
     ->name('articles.files.show');
 
+Route::get('/terminal', \App\Http\Controllers\TerminalController::class)->name('terminal');
+
 Route::get('/recherche', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
 
 Route::middleware('page:rendez-vous')->prefix('rendez-vous')->name('appointments.')->group(function () {

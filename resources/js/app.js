@@ -40,6 +40,21 @@ if (document.querySelector('[data-easter-eggs]')) {
     import('./easter-eggs/page').then(({ default: start }) => start());
 }
 
+// Mode terminal : la page /terminal, et le raccourci ² (ou `) depuis les pages publiques.
+const terminal = document.querySelector('[data-terminal]');
+if (terminal) {
+    import('./terminal').then(({ mountTerminal }) => mountTerminal(terminal));
+}
+const terminalUrl = document.body.dataset.terminalUrl;
+if (terminalUrl) {
+    document.addEventListener('keydown', (event) => {
+        const typing = event.target.closest?.('input, textarea, select, [contenteditable]');
+        if (! typing && ! event.ctrlKey && ! event.metaKey && ! event.altKey && (event.key === '²' || event.key === '`')) {
+            window.location.href = terminalUrl;
+        }
+    });
+}
+
 // FullCalendar n'est chargé que sur la page des disponibilités.
 const availability = document.querySelector('[data-availability-calendar]');
 if (availability) {

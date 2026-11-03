@@ -39,6 +39,11 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - période de diffusion (début et fin programmables) et ordre d'affichage ;
 - masquage possible par le visiteur. Une annonce masquée réapparaît si vous la modifiez.
 
+**Mode terminal** (`/terminal`) : le portfolio parcouru en ligne de commande. On l'ouvre par le lien « >_ terminal » du pied de page, ou par la touche ² (ou `) sur une page publique, hors champ de saisie.
+- Commandes : `help`, `ls`, `cd`, `cat`, `open`, `whoami`, `contact`, `cv`, `neofetch`… avec complétion par Tab et historique (↑/↓).
+- Le contenu suit la visibilité des pages. La page n'est pas indexée.
+- Évitez ² et ` dans les combinaisons d'easter eggs : ces touches ouvrent le terminal.
+
 **Recommandations** (*Échanges → Recommandations*) : créez une invitation par personne sollicitée (tuteur, enseignant, collègue…) et transmettez-lui le lien personnel `/recommandation/…`, qui peut avoir une date d'expiration.
 - L'auteur rédige sa recommandation (nom, poste, entreprise, relation, lien, texte) et donne son accord de publication. Il peut la modifier tant qu'elle n'est pas publiée.
 - Vous relisez puis publiez ou refusez. Une recommandation « mise en avant » apparaît aussi sur l'accueil (trois au plus).

@@ -45,7 +45,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased"
+<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased" data-terminal-url="{{ route('terminal') }}"
       @if ($pageViewId = request()->attributes->get('page_view_uuid')) data-page-view="{{ $pageViewId }}" data-page-view-url="{{ route('stats.duration') }}" @endif>
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">Aller au contenu</a>
 
@@ -210,6 +210,7 @@
         <div class="border-t border-slate-100">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-slate-400 sm:px-6">
                 <span>© {{ now()->year }} {{ $siteName }}</span>
+                <a href="{{ route('terminal') }}" class="font-mono hover:text-slate-600" title="Mode terminal (touche ² ou `)">&gt;_ terminal</a>
                 <button type="button" class="hover:text-slate-600" @click="$dispatch('cookie-consent-open')" x-data>Gérer les cookies</button>
                 {{-- Masqué quand l'adresse de connexion est personnalisée (App\Services\LoginPath) --}}
                 @if (auth()->guest() && ! \App\Services\LoginPath::isCustom())
