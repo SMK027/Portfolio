@@ -26,6 +26,7 @@ class DiscordNotifier
         'easter_egg'     => ['Page d\'easter eggs découverte ou élément déverrouillé', 0xEC4899],
         'ip_ban'         => ['Adresse IP bannie (échecs de connexion ou manuel)', 0xEF4444],
         'admin_login'    => ['Connexion à l\'administration', 0x64748B],
+        'sandbox'        => ['Machine SSH : arrêt, agent injoignable, quota, connexions refusées, réinitialisations', 0x0F766E],
     ];
 
     /** Adresses de webhook acceptées (empêche d'envoyer des requêtes ailleurs). */

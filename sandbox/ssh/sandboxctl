@@ -10,6 +10,7 @@
 #   usage-users      espace occupé par compte, en Ko (JSON)
 #   reap             tue les processus des comptes sans session ouverte
 #   auth-log         journal d'authentification de sshd depuis la dernière lecture
+#   upgrade          mise à jour des paquets (apk upgrade, par le proxy de sortie)
 #   backup           archive tar.gz de /home sur la sortie
 #   restore          remplace /home par l'archive lue sur l'entrée
 set -euo pipefail
@@ -60,6 +61,14 @@ case "$COMMAND" in
 
         # Limites par compte, lues par /usr/local/sbin/session à chaque connexion
         jq -r '.limits // {} | "NPROC=\(.nproc // 24)\nMEMORY_KB=\(.memory_kb // 196608)\nFILE_KB=\(.file_kb // 102400)"' <<< "$desired" > /etc/sandbox/limits
+
+        # Message d'accueil (panel) ; vide : message par défaut de l'image
+        motd="$(jq -r '.motd // empty' <<< "$desired")"
+        if [ -n "$motd" ]; then
+            printf '\n%s\n\n' "$motd" > /etc/motd
+        elif [ -f /etc/motd.default ]; then
+            cp /etc/motd.default /etc/motd
+        fi
 
         # Comptes retirés : sessions fermées, compte supprimé (dossier conservé jusqu'à restauration ou réinitialisation).
         for user in $(sandbox_users); do
@@ -137,6 +146,11 @@ case "$COMMAND" in
                 echo "$user"
             fi
         done
+        ;;
+
+    upgrade)
+        export http_proxy=http://sandbox-proxy:3128 https_proxy=http://sandbox-proxy:3128
+        apk upgrade --no-cache 2>&1
         ;;
 
     backup)

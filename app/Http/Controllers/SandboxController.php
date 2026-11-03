@@ -22,6 +22,7 @@ class SandboxController extends Controller
         return view('public.sandbox', [
             'page'       => $request->attributes->get('page'),
             'open'       => $this->sandbox->isOpen(),
+            'schedule'   => $this->sandbox->scheduleLabel(),
             'internet'   => $this->sandbox->settings()['internet'],
             'guest'      => $guest?->isActive() ? $guest : null,
             'sshCommand' => $this->sandbox->sshCommand($guest?->username ?? 'identifiant'),

@@ -17,9 +17,14 @@ Schedule::call(function () {
     if ($sandbox->isConfigured()) {
         $sandbox->processAuthFailures();
         $sandbox->sync();
+        $sandbox->monitor();
     }
 })->everyMinute()->name('machine-ssh:synchroniser')->withoutOverlapping();
+// … sauvegarde automatique, puis réinitialisation planifiée et rotation du mot de passe invité.
 Schedule::call(fn () => app(\App\Services\Sandbox::class)->automaticBackup())->dailyAt('04:15')->name('machine-ssh:sauvegarde');
+Schedule::call(fn () => app(\App\Services\Sandbox::class)->scheduledReset())->dailyAt('04:30')->name('machine-ssh:reinitialisation');
+Schedule::call(fn () => app(\App\Services\Sandbox::class)->rotateGuestPassword())->dailyAt('04:45')->name('machine-ssh:mot-de-passe-invite');
+Schedule::call(fn () => \App\Models\SandboxConnection::prune())->dailyAt('03:45')->name('machine-ssh:purge');
 
 // Rappels des rendez-vous confirmés (la veille et 1 h avant).
 Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())->everyFiveMinutes()->name('rendez-vous:rappels');

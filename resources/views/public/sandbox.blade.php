@@ -3,7 +3,7 @@
 
     <div class="mx-auto max-w-5xl space-y-8 px-4 py-12 sm:px-6">
         @unless ($open)
-            <x-empty-state icon="lock" message="La machine est actuellement fermée au public. Revenez un peu plus tard !" />
+            <x-empty-state icon="lock" :message="'La machine est actuellement fermée au public. '.($schedule ?? 'Revenez un peu plus tard !')" />
         @else
             <div class="grid gap-6 md:grid-cols-2">
                 <section class="card space-y-3 p-6">

@@ -48,7 +48,15 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 
 **Machine SSH** (*Comptes et sécurité → Machine SSH*, super-administrateurs) : une machine Linux bac à sable, isolée et bridée, déployée à part (`sandbox/`, voir [sandbox/README.md](sandbox/README.md)).
 - Le panel règle l'accès public (port SSH et terminal web) et l'accès internet. Il gère un compte invité, dont le mot de passe est affiché sur la page publique, et des comptes nominatifs avec expiration.
-- Il affiche l'état (processeur, mémoire, espace disque, sessions, connexions récentes) et permet de fermer des sessions, de redémarrer et de réinitialiser la machine.
+- Il affiche l'état (processeur, mémoire, espace disque par compte, sessions) et permet de fermer des sessions, de redémarrer et de réinitialiser la machine, ainsi que de mettre à jour ses paquets.
+- **Accès** : horaires d'ouverture (jours et plage horaire, y compris à cheval sur minuit) et ouverture temporaire pour une démo. Internet peut se couper automatiquement après N minutes.
+- **Ressources et limites**, appliquées sans redémarrage : processeur, mémoire et processus de la machine ; par compte, processus, mémoire, taille des fichiers et quota disque ; nombre de connexions.
+- **Maintenance automatique** :
+  - message d'accueil modifiable ;
+  - réinitialisation chaque nuit ou chaque lundi, en restaurant une sauvegarde de référence ;
+  - nouveau mot de passe invité chaque nuit ou chaque lundi.
+- **Historique des connexions** relevé chaque minute. Les IP sont effacées après 3 mois et les lignes supprimées après 13 mois.
+- **Alertes Discord** (événement « Machine SSH ») : machine arrêtée, agent injoignable, quota saturé, rafale de connexions refusées, réinitialisation planifiée.
 - Sauvegardes et restaurations des dossiers personnels : manuelles ou automatiques chaque nuit, téléchargeables.
 - La page publique `/machine-ssh` est privée par défaut. Elle donne la commande SSH et un terminal dans le navigateur.
 

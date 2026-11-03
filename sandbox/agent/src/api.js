@@ -66,6 +66,17 @@ function validateState(body) {
             file_kb: bounded(limits.file_kb, 1024, 1048576, DEFAULT_LIMITS.file_kb),
             user_quota_mb: bounded(limits.user_quota_mb, 1, 4096, DEFAULT_LIMITS.user_quota_mb),
         },
+        resources: body.resources ? {
+            cpus: Math.min(4, Math.max(0.05, Number(body.resources.cpus) || 0.25)),
+            memory_mb: bounded(body.resources.memory_mb, 32, 4096, 128),
+            pids: bounded(body.resources.pids, 16, 4096, 64),
+        } : null,
+        connections: body.connections ? {
+            max: bounded(body.connections.max, 1, 200, config.maxSessions),
+            per_ip: bounded(body.connections.per_ip, 1, 20, config.maxSessionsPerIp),
+            per_minute: bounded(body.connections.per_minute, 1, 120, config.maxConnectionsPerMinute),
+        } : null,
+        motd: typeof body.motd === 'string' ? body.motd.slice(0, 4000) : null,
         public: body.public === true,
         internet: body.internet === true,
         accounts: accounts.map((a) => ({ username: a.username, hash: a.hash, enabled: a.enabled !== false })),
@@ -93,6 +104,8 @@ const routes = {
             usage_by_user: runtime.usageByUser,
             over_quota_users: runtime.overUsers,
             limits: state.limits,
+            resources: state.resources,
+            connections_limits: state.connections,
             sessions: running ? await safe(() => sandbox.sessions(), []) : [],
             relayed_sessions: totalSessions(),
             connections: runtime.connections.slice(0, 50),
@@ -123,6 +136,15 @@ const routes = {
         }
         await sandbox.killSessions(username);
         return { ok: true };
+    },
+    // Paquets de la machine mis à jour (nécessite temporairement la sortie internet)
+    'POST /upgrade': async () => {
+        await docker.setInternet(true);
+        try {
+            return { ok: true, output: await sandbox.upgrade() };
+        } finally {
+            await docker.setInternet(state.internet);
+        }
     },
     'POST /restart': async () => {
         closeAll();

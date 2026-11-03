@@ -42,26 +42,118 @@ class SandboxController extends Controller
             'backups'    => $backups,
             'error'      => $error,
             'sshCommand' => $this->sandbox->sshCommand(),
+            'effectivePublic' => $this->sandbox->effectivePublic(),
+            'connections' => \App\Models\SandboxConnection::latest('connected_at')->paginate(30, pageName: 'connexions'),
         ]);
     }
 
+    /** Accès, horaires et internet. */
     public function updateSettings(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'public'      => ['nullable', 'boolean'],
-            'internet'    => ['nullable', 'boolean'],
-            'auto_backup' => ['nullable', 'boolean'],
-            'keep'        => ['required', 'integer', 'min:1', 'max:60'],
+            'public'           => ['nullable', 'boolean'],
+            'internet'         => ['nullable', 'boolean'],
+            'internet_minutes' => ['required', 'integer', 'min:0', 'max:10080'],
+            'schedule_enabled' => ['nullable', 'boolean'],
+            'schedule_days'    => ['array'],
+            'schedule_days.*'  => ['integer', 'between:1,7'],
+            'schedule_start'   => ['required', 'date_format:H:i'],
+            'schedule_end'     => ['required', 'date_format:H:i', 'different:schedule_start'],
         ]);
+
+        $settings = $this->sandbox->settings();
+        $internet = $request->boolean('internet');
+        $minutes = (int) $data['internet_minutes'];
+        // Minuteur d'internet relancé à chaque activation (ou changement de durée)
+        $restartTimer = $internet && (! $settings['internet'] || $minutes !== (int) $settings['internet_minutes']);
 
         $this->sandbox->saveSettings([
-            'public'      => $request->boolean('public'),
-            'internet'    => $request->boolean('internet'),
-            'auto_backup' => $request->boolean('auto_backup'),
-            'keep'        => (int) $data['keep'],
+            'public'           => $request->boolean('public'),
+            'internet'         => $internet,
+            'internet_minutes' => $minutes,
+            'internet_until'   => ! $internet || $minutes === 0 ? null
+                : ($restartTimer ? now()->addMinutes($minutes)->toIso8601String() : $settings['internet_until']),
+            'schedule_enabled' => $request->boolean('schedule_enabled'),
+            'schedule_days'    => array_values(array_unique(array_map('intval', $data['schedule_days'] ?? []))),
+            'schedule_start'   => $data['schedule_start'],
+            'schedule_end'     => $data['schedule_end'],
         ]);
 
-        return $this->pushed('Réglages enregistrés.');
+        return $this->pushed('Réglages d\'accès enregistrés.');
+    }
+
+    /** Ouverture temporaire (démo), même hors horaires ou accès fermé. */
+    public function openTemporarily(Request $request): RedirectResponse
+    {
+        $minutes = (int) $request->validate(['minutes' => ['required', 'integer', 'min:0', 'max:1440']])['minutes'];
+        $this->sandbox->saveSettings(['open_until' => $minutes ? now()->addMinutes($minutes)->toIso8601String() : null]);
+
+        return $this->pushed($minutes ? 'Machine ouverte jusqu\'à '.now()->addMinutes($minutes)->format('H:i').'.' : 'Ouverture temporaire annulée.');
+    }
+
+    /** Ressources de la machine, limites par compte et de connexion. */
+    public function updateResources(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'resources.cpus'            => ['required', 'numeric', 'min:0.05', 'max:4'],
+            'resources.memory_mb'       => ['required', 'integer', 'min:32', 'max:4096'],
+            'resources.pids'            => ['required', 'integer', 'min:16', 'max:4096'],
+            'limits.nproc'              => ['required', 'integer', 'min:4', 'max:256'],
+            'limits.memory_mb'          => ['required', 'integer', 'min:32', 'max:1024'],
+            'limits.file_mb'            => ['required', 'integer', 'min:1', 'max:1024'],
+            'limits.user_quota_mb'      => ['required', 'integer', 'min:1', 'max:4096'],
+            'connections.max'           => ['required', 'integer', 'min:1', 'max:200'],
+            'connections.per_ip'        => ['required', 'integer', 'min:1', 'max:20'],
+            'connections.per_minute'    => ['required', 'integer', 'min:1', 'max:120'],
+        ]);
+        $this->sandbox->saveSettings($data);
+
+        return $this->pushed('Ressources et limites enregistrées.');
+    }
+
+    /** Message d'accueil, sauvegardes et maintenance automatiques. */
+    public function updateMaintenance(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'motd'             => ['nullable', 'string', 'max:2000'],
+            'auto_backup'      => ['nullable', 'boolean'],
+            'keep'             => ['required', 'integer', 'min:1', 'max:60'],
+            'reset_frequency'  => ['required', Rule::in(array_keys(Sandbox::FREQUENCIES))],
+            'reference_backup' => ['nullable', 'regex:/^[a-f0-9]{16}$/'],
+            'guest_rotation'   => ['required', Rule::in(array_keys(Sandbox::FREQUENCIES))],
+        ]);
+        $this->sandbox->saveSettings([
+            ...$data,
+            'motd'             => (string) ($data['motd'] ?? ''),
+            'auto_backup'      => $request->boolean('auto_backup'),
+            'keep'             => (int) $data['keep'],
+            'reference_backup' => $data['reference_backup'] ?? null,
+        ]);
+
+        return $this->pushed('Réglages de maintenance enregistrés.');
+    }
+
+    public function rotateGuest(): RedirectResponse
+    {
+        $password = $this->sandbox->rotateGuestPassword(force: true);
+        if (! $password) {
+            return back()->with('error', 'Aucun compte invité.');
+        }
+        $this->audit->record('sandbox.guest_rotated', force: true);
+
+        return back()->with('success', "Nouveau mot de passe invité : {$password}");
+    }
+
+    public function upgrade(): RedirectResponse
+    {
+        try {
+            $output = $this->sandbox->upgrade();
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        $this->audit->record('sandbox.upgraded', force: true);
+
+        return back()->with('success', 'Paquets mis à jour.')->with('upgrade_output', $output);
     }
 
     public function storeAccount(Request $request): RedirectResponse

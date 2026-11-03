@@ -26,6 +26,11 @@ class SandboxTest extends TestCase
         $this->admin = User::factory()->superAdmin()->create();
     }
 
+    protected function access(array $values = []): array
+    {
+        return $values + ['internet_minutes' => 0, 'schedule_start' => '09:00', 'schedule_end' => '20:00', 'schedule_days' => [1, 2, 3, 4, 5]];
+    }
+
     protected function fakeAgent(): void
     {
         Http::fake([
@@ -50,7 +55,7 @@ class SandboxTest extends TestCase
         $this->fakeAgent();
 
         $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertOk()
-            ->assertSee('En marche')->assertSee('203.0.113.5')->assertSee('Avant démo')->assertSee('ssh -p 2222 guest@example.com');
+            ->assertSee('En marche')->assertSee('1,0 Mo')->assertSee('Avant démo')->assertSee('ssh -p 2222 guest@example.com');
     }
 
     public function test_ssh_address_comes_from_the_agent_unless_overridden(): void
@@ -136,7 +141,7 @@ class SandboxTest extends TestCase
     {
         $this->fakeAgent();
 
-        $this->actingAs($this->admin)->put(route('admin.sandbox.settings'), ['public' => '1', 'internet' => '1', 'keep' => 5])->assertSessionHas('success');
+        $this->actingAs($this->admin)->put(route('admin.sandbox.settings'), $this->access(['public' => '1', 'internet' => '1']))->assertSessionHas('success');
 
         Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/state') && $r['public'] === true && $r['internet'] === true);
         $this->assertTrue(app(Sandbox::class)->isOpen());
@@ -160,7 +165,7 @@ class SandboxTest extends TestCase
     {
         Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('refused'));
 
-        $this->actingAs($this->admin)->put(route('admin.sandbox.settings'), ['public' => '1', 'keep' => 7])
+        $this->actingAs($this->admin)->put(route('admin.sandbox.settings'), $this->access(['public' => '1']))
             ->assertSessionHas('warning', fn ($m) => str_contains($m, 'injoignable'));
         $this->assertTrue(app(Sandbox::class)->settings()['public']);
         $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertOk()->assertSee('injoignable');
@@ -192,5 +197,130 @@ class SandboxTest extends TestCase
     {
         $this->get(route('sandbox.show'))->assertNotFound();
         $this->post(route('sandbox.ticket'))->assertNotFound();
+    }
+
+    public function test_schedule_and_temporary_opening(): void
+    {
+        $sandbox = app(Sandbox::class);
+        $sandbox->saveSettings(['public' => true, 'schedule_enabled' => true, 'schedule_days' => [1, 2, 3, 4, 5], 'schedule_start' => '09:00', 'schedule_end' => '18:00']);
+
+        $this->assertTrue($sandbox->effectivePublic(\Illuminate\Support\Carbon::parse('2026-11-02 10:00', 'Europe/Paris'))); // lundi
+        $this->assertFalse($sandbox->effectivePublic(\Illuminate\Support\Carbon::parse('2026-11-02 19:00', 'Europe/Paris')));
+        $this->assertFalse($sandbox->effectivePublic(\Illuminate\Support\Carbon::parse('2026-11-07 10:00', 'Europe/Paris'))); // samedi
+        $this->assertSame('Ouverte le lundi, mardi, mercredi, jeudi et vendredi de 09:00 à 18:00.', $sandbox->scheduleLabel());
+
+        // Plage sur minuit
+        $sandbox->saveSettings(['schedule_start' => '22:00', 'schedule_end' => '02:00', 'schedule_days' => [1, 2, 3, 4, 5, 6, 7]]);
+        $this->assertTrue($sandbox->effectivePublic(\Illuminate\Support\Carbon::parse('2026-11-07 23:30', 'Europe/Paris')));
+        $this->assertFalse($sandbox->effectivePublic(\Illuminate\Support\Carbon::parse('2026-11-07 12:00', 'Europe/Paris')));
+
+        // Ouverture temporaire : même accès fermé
+        $this->fakeAgent();
+        $sandbox->saveSettings(['public' => false]);
+        $this->actingAs($this->admin)->post(route('admin.sandbox.open'), ['minutes' => 60])->assertSessionHas('success');
+        $this->assertTrue($sandbox->effectivePublic());
+        $this->travel(61)->minutes();
+        $this->assertFalse($sandbox->effectivePublic());
+    }
+
+    public function test_internet_is_cut_automatically(): void
+    {
+        $this->fakeAgent();
+        $this->actingAs($this->admin)->put(route('admin.sandbox.settings'), $this->access(['internet' => '1', 'internet_minutes' => 30]))->assertSessionHas('success');
+        $sandbox = app(Sandbox::class);
+        $this->assertTrue($sandbox->effectiveInternet());
+
+        $this->travel(31)->minutes();
+        $sandbox->sync();
+
+        $this->assertFalse($sandbox->settings()['internet']);
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/state') && $r['internet'] === false);
+    }
+
+    public function test_resources_limits_and_motd_are_pushed(): void
+    {
+        $this->fakeAgent();
+        $this->actingAs($this->admin)->put(route('admin.sandbox.resources'), [
+            'resources' => ['cpus' => 0.5, 'memory_mb' => 256, 'pids' => 96],
+            'limits' => ['nproc' => 30, 'memory_mb' => 256, 'file_mb' => 50, 'user_quota_mb' => 200],
+            'connections' => ['max' => 20, 'per_ip' => 3, 'per_minute' => 15],
+        ])->assertSessionHas('success');
+        $this->actingAs($this->admin)->put(route('admin.sandbox.maintenance'), [
+            'motd' => 'Bienvenue !', 'keep' => 5, 'reset_frequency' => 'daily', 'guest_rotation' => 'weekly',
+        ])->assertSessionHas('success');
+
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/state')
+            && $r['resources'] === ['cpus' => 0.5, 'memory_mb' => 256, 'pids' => 96]
+            && $r['limits'] === ['nproc' => 30, 'memory_kb' => 262144, 'file_kb' => 51200, 'user_quota_mb' => 200]
+            && $r['connections'] === ['max' => 20, 'per_ip' => 3, 'per_minute' => 15]
+            && $r['motd'] === 'Bienvenue !');
+
+        $this->actingAs($this->admin)->put(route('admin.sandbox.resources'), [
+            'resources' => ['cpus' => 99, 'memory_mb' => 1, 'pids' => 1], 'limits' => [], 'connections' => [],
+        ])->assertSessionHasErrors(['resources.cpus', 'resources.memory_mb', 'limits.nproc']);
+    }
+
+    public function test_monitor_records_history_and_alerts_on_changes(): void
+    {
+        config(['services.sandbox.url' => 'http://sandbox-agent:8080']);
+        app(\App\Services\DiscordNotifier::class)->save('https://discord.com/api/webhooks/1/abc', ['sandbox']);
+        $status = fn (bool $running) => [
+            'container' => ['running' => $running, 'status' => $running ? 'running' : 'exited'],
+            'quota' => ['exceeded' => false],
+            'connections' => [
+                ['at' => '2026-11-03T10:00:01.000Z', 'ip' => '203.0.113.5', 'channel' => 'ssh', 'username' => 'guest', 'result' => 'authentifiée'],
+                ['at' => '2026-11-03T10:00:00.000Z', 'ip' => '203.0.113.5', 'channel' => 'ssh', 'result' => 'ouverte'],
+            ],
+        ];
+        Http::fake(['sandbox-agent:8080/status' => Http::sequence()->push($status(true))->push($status(false))->push($status(false)), 'discord.com/*' => Http::response(null, 204)]);
+        $sandbox = app(Sandbox::class);
+
+        $sandbox->monitor();
+        $sandbox->monitor();
+        $sandbox->monitor();
+
+        $this->assertSame(2, \App\Models\SandboxConnection::count()); // pas de doublon
+        $this->assertSame('guest', \App\Models\SandboxConnection::latest('connected_at')->first()->username);
+        $alerts = collect(Http::recorded())->filter(fn ($pair) => str_contains($pair[0]->url(), 'discord.com'));
+        $this->assertCount(1, $alerts); // une seule alerte pour l'arrêt
+        $this->assertStringContainsString('arrêtée', $alerts->first()[0]['embeds'][0]['title']);
+        $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertSee('Historique des connexions');
+    }
+
+    public function test_scheduled_reset_restores_the_reference_backup(): void
+    {
+        $this->fakeAgent();
+        $sandbox = app(Sandbox::class);
+        $sandbox->saveSettings(['reset_frequency' => 'weekly', 'reference_backup' => 'abcdef0123456789']);
+
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-03 04:30')); // mardi
+        $this->assertNull($sandbox->scheduledReset());
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-09 04:30')); // lundi
+        $this->assertNotNull($sandbox->scheduledReset());
+
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/backups/abcdef0123456789/restore'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'sandbox.scheduled_reset']);
+    }
+
+    public function test_guest_password_rotation(): void
+    {
+        $this->fakeAgent();
+        $guest = new SandboxAccount(['username' => 'guest', 'is_guest' => true]);
+        $guest->setPassword('Ancien-mdp');
+        $guest->save();
+
+        $this->assertNull(app(Sandbox::class)->rotateGuestPassword()); // fréquence « jamais »
+        $this->actingAs($this->admin)->post(route('admin.sandbox.guest.rotate'))->assertSessionHas('success');
+
+        $this->assertNotSame('Ancien-mdp', $guest->fresh()->guestPassword());
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/state'));
+    }
+
+    public function test_package_upgrade_shows_the_output(): void
+    {
+        Http::fake(['sandbox-agent:8080/upgrade' => Http::response(['ok' => true, 'output' => 'OK: 42 MiB in 80 packages'])]);
+
+        $this->actingAs($this->admin)->post(route('admin.sandbox.upgrade'))->assertSessionHas('upgrade_output', 'OK: 42 MiB in 80 packages');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'sandbox.upgraded']);
     }
 }

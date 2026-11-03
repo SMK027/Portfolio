@@ -19,7 +19,8 @@ COPY agent-keys /usr/local/sbin/agent-keys
 COPY session /usr/local/sbin/session
 COPY motd /etc/motd
 RUN chmod 0755 /usr/local/sbin/sandboxctl /usr/local/sbin/entrypoint.sh /usr/local/sbin/agent-keys /usr/local/sbin/session \
-    && chmod 0644 /etc/motd /etc/ssh/sshd_config
+    && cp /etc/motd /etc/motd.default \
+    && chmod 0644 /etc/motd /etc/motd.default /etc/ssh/sshd_config
 
 EXPOSE 22
 HEALTHCHECK --interval=30s --timeout=5s CMD nc -z 127.0.0.1 22 || exit 1

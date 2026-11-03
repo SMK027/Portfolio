@@ -77,3 +77,18 @@ async function ensureEgressNetwork() {
         });
     }
 }
+
+/** Ressources de la machine (processeur, mémoire, processus), appliquées sans redémarrage. */
+export async function updateResources({ cpus, memory_mb: memoryMb, pids }) {
+    const host = (await inspect()).HostConfig ?? {};
+    const wanted = {
+        NanoCpus: Math.round(cpus * 1e9),
+        Memory: memoryMb * 1048576,
+        MemorySwap: memoryMb * 1048576,
+        PidsLimit: pids,
+    };
+    if (host.NanoCpus === wanted.NanoCpus && host.Memory === wanted.Memory && host.PidsLimit === wanted.PidsLimit) {
+        return;
+    }
+    await call('POST', `${container()}/update`, wanted);
+}

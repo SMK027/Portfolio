@@ -15,6 +15,9 @@ export const state = {
     internet: false,
     accounts: [],
     banned_ips: [],
+    resources: null, // {cpus, memory_mb, pids} ; null : valeurs du docker-compose
+    connections: null, // {max, per_ip, per_minute}
+    motd: null,
     limits: { ...DEFAULT_LIMITS },
     ...(fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}),
 };

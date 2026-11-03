@@ -42,6 +42,7 @@
                     @else <p class="font-medium">—</p> @endif
                 </div>
             </div>
+            @if (! empty($status['over_quota_users']))<p class="text-sm text-amber-700">Comptes bloqués (quota dépassé) : {{ implode(', ', $status['over_quota_users']) }}</p>@endif
             @if ($status['last_error'])<p class="form-error">Dernière erreur de l'agent : {{ $status['last_error'] }}</p>@endif
             <div class="flex flex-wrap gap-2">
                 <form method="POST" action="{{ route('admin.sandbox.sessions.kill') }}">@csrf
@@ -52,16 +53,77 @@
         </x-admin.section>
     @endif
 
+    @php $days = [1 => 'Lun', 2 => 'Mar', 3 => 'Mer', 4 => 'Jeu', 5 => 'Ven', 6 => 'Sam', 7 => 'Dim']; @endphp
     <form method="POST" action="{{ route('admin.sandbox.settings') }}">
         @csrf @method('PUT')
-        <x-admin.section title="Accès">
+        <x-admin.section title="Accès" :description="'Actuellement : '.($effectivePublic ? 'ouverte au public' : 'fermée au public').($settings['open_until'] && now()->lt(\Illuminate\Support\Carbon::parse($settings['open_until'])) ? ' (ouverture temporaire jusqu\'à '.\Illuminate\Support\Carbon::parse($settings['open_until'])->timezone(config('app.timezone'))->format('H:i').')' : '').'.'">
             <x-form.checkbox name="public" label="Accès ouvert au public (port SSH et terminal web)" :checked="$settings['public']"
                              help="Fermer l'accès coupe immédiatement toutes les sessions en cours." />
-            <x-form.checkbox name="internet" label="Accès internet depuis la machine" :checked="$settings['internet']"
-                             help="Coupé, la machine ne joint que son agent. Ouvert, elle sort sur internet (jamais vers les réseaux du portfolio)." />
+            <x-form.checkbox name="schedule_enabled" label="Seulement aux horaires suivants" :checked="$settings['schedule_enabled']" />
+            <div class="flex flex-wrap items-end gap-4 ps-6">
+                <div class="flex flex-wrap gap-1">
+                    @foreach ($days as $value => $label)
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="schedule_days[]" value="{{ $value }}" @checked(in_array($value, $settings['schedule_days'])) class="peer sr-only">
+                            <span class="block rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-700">{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <x-form.input name="schedule_start" type="time" label="De" :value="$settings['schedule_start']" class="w-32" />
+                <x-form.input name="schedule_end" type="time" label="À" :value="$settings['schedule_end']" class="w-32" />
+            </div>
+            <x-form.checkbox name="internet" label="Accès internet depuis la machine (HTTP/HTTPS filtrés, débit limité)" :checked="$settings['internet']" />
+            <x-form.input name="internet_minutes" type="number" label="Couper internet automatiquement après (minutes, 0 : jamais)" :value="$settings['internet_minutes']" min="0" max="10080" class="w-72"
+                          :help="$settings['internet_until'] ? 'Coupure prévue à '.\Illuminate\Support\Carbon::parse($settings['internet_until'])->timezone(config('app.timezone'))->format('d/m H:i').'.' : null" />
+            <div class="flex justify-end"><button class="btn-primary"><x-icon name="check" class="h-4 w-4" /> Enregistrer</button></div>
+        </x-admin.section>
+    </form>
+
+    <form method="POST" action="{{ route('admin.sandbox.open') }}" class="card flex flex-wrap items-end gap-3 p-4">
+        @csrf
+        <x-form.select name="minutes" label="Ouverture temporaire (démo), même hors horaires" :options="[30 => '30 minutes', 60 => '1 heure', 120 => '2 heures', 240 => '4 heures', 0 => 'Annuler l\'ouverture temporaire']" value="60" />
+        <button class="btn-secondary">Appliquer</button>
+    </form>
+
+    <form method="POST" action="{{ route('admin.sandbox.resources') }}">
+        @csrf @method('PUT')
+        <x-admin.section title="Ressources et limites" description="Appliquées à chaud, sans redémarrer la machine. Les limites par compte valent pour les nouvelles sessions.">
+            <p class="text-sm font-semibold text-slate-700">Machine</p>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <x-form.input name="resources[cpus]" type="number" step="0.05" label="Processeurs" :value="$settings['resources']['cpus']" min="0.05" max="4" />
+                <x-form.input name="resources[memory_mb]" type="number" label="Mémoire (Mo)" :value="$settings['resources']['memory_mb']" min="32" max="4096" />
+                <x-form.input name="resources[pids]" type="number" label="Processus au total" :value="$settings['resources']['pids']" min="16" max="4096" />
+            </div>
+            <p class="text-sm font-semibold text-slate-700">Par compte</p>
+            <div class="grid gap-4 sm:grid-cols-4">
+                <x-form.input name="limits[nproc]" type="number" label="Processus" :value="$settings['limits']['nproc']" min="4" max="256" />
+                <x-form.input name="limits[memory_mb]" type="number" label="Mémoire virtuelle / processus (Mo)" :value="$settings['limits']['memory_mb']" min="32" max="1024" />
+                <x-form.input name="limits[file_mb]" type="number" label="Taille d'un fichier (Mo)" :value="$settings['limits']['file_mb']" min="1" max="1024" />
+                <x-form.input name="limits[user_quota_mb]" type="number" label="Quota disque (Mo)" :value="$settings['limits']['user_quota_mb']" min="1" max="4096" />
+            </div>
+            <p class="text-sm font-semibold text-slate-700">Connexions</p>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <x-form.input name="connections[max]" type="number" label="Sessions simultanées" :value="$settings['connections']['max']" min="1" max="200" />
+                <x-form.input name="connections[per_ip]" type="number" label="Sessions par adresse IP" :value="$settings['connections']['per_ip']" min="1" max="20" />
+                <x-form.input name="connections[per_minute]" type="number" label="Connexions par minute et par IP" :value="$settings['connections']['per_minute']" min="1" max="120" />
+            </div>
+            <div class="flex justify-end"><button class="btn-primary"><x-icon name="check" class="h-4 w-4" /> Enregistrer</button></div>
+        </x-admin.section>
+    </form>
+
+    <form method="POST" action="{{ route('admin.sandbox.maintenance') }}">
+        @csrf @method('PUT')
+        <x-admin.section title="Maintenance automatique">
+            <x-form.textarea name="motd" label="Message d'accueil (affiché à la connexion)" :value="$settings['motd']" rows="4" maxlength="2000" help="Vide : message par défaut." />
             <div class="flex flex-wrap items-end gap-5">
                 <x-form.checkbox name="auto_backup" label="Sauvegarde automatique chaque nuit (4 h 15)" :checked="$settings['auto_backup']" />
                 <x-form.input name="keep" type="number" label="Sauvegardes automatiques conservées" :value="$settings['keep']" min="1" max="60" class="w-56" />
+            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <x-form.select name="reset_frequency" label="Réinitialisation (4 h 30)" :options="\App\Services\Sandbox::FREQUENCIES" :value="$settings['reset_frequency']" />
+                <x-form.select name="reference_backup" label="État de référence restauré" placeholder="Aucun : dossiers vidés"
+                               :options="collect($backups ?? [])->mapWithKeys(fn ($b) => [$b['id'] => $b['label'].' — '.\Illuminate\Support\Carbon::parse($b['created_at'])->format('d/m/Y')])->all()" :value="$settings['reference_backup']" />
+                <x-form.select name="guest_rotation" label="Nouveau mot de passe invité (4 h 45)" :options="\App\Services\Sandbox::FREQUENCIES" :value="$settings['guest_rotation']" />
             </div>
             <div class="flex justify-end"><button class="btn-primary"><x-icon name="check" class="h-4 w-4" /> Enregistrer</button></div>
         </x-admin.section>
@@ -78,6 +140,10 @@
                                 <td>
                                     <p class="font-mono font-medium text-slate-900">{{ $account->username }} @if ($account->is_guest)<span class="badge-amber font-sans">Invité</span>@endif</p>
                                     @if ($account->label)<p class="text-xs text-slate-500">{{ $account->label }}</p>@endif
+                                    @if (isset($status['usage_by_user'][$account->username]))
+                                        <p @class(['text-xs', 'text-red-600' => in_array($account->username, $status['over_quota_users'] ?? []), 'text-slate-400' => ! in_array($account->username, $status['over_quota_users'] ?? [])])>
+                                            {{ $mb($status['usage_by_user'][$account->username] * 1024) }} / {{ $settings['limits']['user_quota_mb'] }} Mo</p>
+                                    @endif
                                     @if ($account->is_guest && $account->guestPassword())<p class="text-xs text-slate-500">Mot de passe : <span class="font-mono">{{ $account->guestPassword() }}</span></p>@endif
                                     <form x-show="edit" x-cloak method="POST" action="{{ route('admin.sandbox.accounts.update', $account) }}" class="mt-3 space-y-3">
                                         @csrf @method('PUT')
@@ -134,28 +200,40 @@
             @endforelse
         </x-admin.section>
 
-        <x-admin.section title="Connexions récentes" description="Journal de l'agent (relais SSH et terminal web), remis à zéro à son redémarrage.">
-            @if (empty($status['connections']))
-                <p class="text-sm text-slate-500">Aucune connexion.</p>
-            @else
-                <div class="max-h-72 overflow-y-auto">
-                    <table class="admin-table">
-                        <thead><tr><th>Date</th><th>Adresse IP</th><th>Canal</th><th>Résultat</th></tr></thead>
-                        <tbody class="divide-y divide-slate-100 text-sm">
-                            @foreach ($status['connections'] as $connection)
-                                <tr>
-                                    <td class="whitespace-nowrap">{{ \Illuminate\Support\Carbon::parse($connection['at'])->timezone(config('app.timezone'))->format('d/m H:i:s') }}</td>
-                                    <td class="font-mono text-xs"><a href="{{ route('admin.ip-history', ['ip' => $connection['ip']]) }}" class="hover:underline">{{ $connection['ip'] }}</a></td>
-                                    <td>{{ $connection['channel'] === 'web' ? 'Terminal web' : 'SSH' }}@if (! empty($connection['username'])) · {{ $connection['username'] }}@endif</td>
-                                    <td>{{ $connection['result'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+        <x-admin.section title="Sessions et actions" description="">
+            <div class="flex flex-wrap gap-2">
+                <form method="POST" action="{{ route('admin.sandbox.guest.rotate') }}">@csrf
+                    <button class="btn-secondary btn-sm" onclick="return confirm('Générer un nouveau mot de passe pour le compte invité ?')">Nouveau mot de passe invité</button></form>
+                <form method="POST" action="{{ route('admin.sandbox.upgrade') }}">@csrf
+                    <button class="btn-secondary btn-sm" onclick="return confirm('Mettre à jour les paquets de la machine ? (internet est ouvert pendant la mise à jour)')">Mettre à jour les paquets</button></form>
+            </div>
+            @if (session('upgrade_output'))<pre class="max-h-64 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-200">{{ session('upgrade_output') }}</pre>@endif
+            <p class="text-xs text-slate-500">La mise à jour des paquets dure jusqu'à la recréation du conteneur : reconstruisez l'image (<code>docker compose build --pull</code>) pour la rendre permanente.</p>
         </x-admin.section>
     @endif
+
+    <x-admin.section title="Historique des connexions" description="Relevé chaque minute dans le journal de l'agent. Adresses IP effacées après 3 mois.">
+        @if ($connections->isEmpty())
+            <p class="text-sm text-slate-500">Aucune connexion enregistrée.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="admin-table">
+                    <thead><tr><th>Date</th><th>Adresse IP</th><th>Canal</th><th>Résultat</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        @foreach ($connections as $connection)
+                            <tr>
+                                <td class="whitespace-nowrap">{{ $connection->connected_at->format('d/m H:i:s') }}</td>
+                                <td class="font-mono text-xs">@if ($connection->ip_address)<a href="{{ route('admin.ip-history', ['ip' => $connection->ip_address]) }}" class="hover:underline">{{ $connection->ip_address }}</a>@else effacée @endif</td>
+                                <td>{{ $connection->channel === 'web' ? 'Terminal web' : 'SSH' }}@if ($connection->username) · {{ $connection->username }}@endif</td>
+                                <td @class(['text-red-600' => $connection->isRefused()])>{{ $connection->result }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            {{ $connections->links() }}
+        @endif
+    </x-admin.section>
 
     @if ($backups !== null)
         <x-admin.section title="Sauvegardes" description="Archives des dossiers personnels (/home). Restaurer ferme les sessions et remplace tous les dossiers.">

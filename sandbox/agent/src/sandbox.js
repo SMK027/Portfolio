@@ -73,8 +73,13 @@ export async function run(command, { input = null, output = null } = {}) {
     }
 }
 
-export async function applyAccounts(accounts, limits = {}) {
-    await run('apply', { input: JSON.stringify({ accounts, limits }) });
+export async function applyAccounts(accounts, limits = {}, motd = null) {
+    await run('apply', { input: JSON.stringify({ accounts, limits, motd }) });
+}
+
+/** Mise à jour des paquets (apk upgrade) par le proxy de sortie ; renvoie la fin de la sortie. */
+export async function upgrade() {
+    return (await run('upgrade')).split('\n').slice(-40).join('\n');
 }
 
 /** Espace occupé par compte (Ko). */

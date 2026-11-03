@@ -52,6 +52,7 @@ class Setting extends Model
             'notifications.discord'     => 'Notifications Discord',
             'sandbox.settings'          => 'Machine SSH',
             'sandbox.ssh'               => 'Machine SSH : adresse publique',
+            'sandbox.monitor'           => 'Machine SSH : état surveillé',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

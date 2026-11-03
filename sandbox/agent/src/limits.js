@@ -1,5 +1,9 @@
 // Limites par adresse IP communes au relais SSH et au terminal web.
 import config from './config.js';
+import { state } from './state.js';
+
+/** Limites en vigueur : réglages du panel, sinon variables d'environnement. */
+const setting = (key, fallback) => state.connections?.[key] ?? fallback;
 
 const active = new Map(); // ip => nombre de sessions ouvertes
 const recent = new Map(); // ip => horodatages des connexions de la dernière minute
@@ -15,13 +19,13 @@ export function acquire(ip) {
     times.push(now);
     recent.set(ip, times);
 
-    if (times.length > config.maxConnectionsPerMinute) {
+    if (times.length > setting('per_minute', config.maxConnectionsPerMinute)) {
         return 'trop de connexions en une minute';
     }
-    if ((active.get(ip) ?? 0) >= config.maxSessionsPerIp) {
+    if ((active.get(ip) ?? 0) >= setting('per_ip', config.maxSessionsPerIp)) {
         return 'trop de sessions ouvertes depuis cette adresse';
     }
-    if (totalSessions() >= config.maxSessions) {
+    if (totalSessions() >= setting('max', config.maxSessions)) {
         return 'machine complète, réessayez plus tard';
     }
     active.set(ip, (active.get(ip) ?? 0) + 1);

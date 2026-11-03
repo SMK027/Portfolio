@@ -206,6 +206,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::middleware('can:manage-sandbox')->controller(Admin\SandboxController::class)->prefix('machine-ssh')->name('sandbox.')->group(function () {
         Route::get('/', 'show')->name('show');
         Route::put('/reglages', 'updateSettings')->name('settings');
+        Route::post('/ouverture-temporaire', 'openTemporarily')->name('open');
+        Route::put('/ressources', 'updateResources')->name('resources');
+        Route::put('/maintenance', 'updateMaintenance')->name('maintenance');
+        Route::post('/invite/mot-de-passe', 'rotateGuest')->name('guest.rotate');
+        Route::post('/mise-a-jour', 'upgrade')->middleware('throttle:3,10')->name('upgrade');
         Route::post('/comptes', 'storeAccount')->name('accounts.store');
         Route::put('/comptes/{account}', 'updateAccount')->name('accounts.update');
         Route::delete('/comptes/{account}', 'destroyAccount')->name('accounts.destroy');

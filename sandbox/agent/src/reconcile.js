@@ -11,11 +11,14 @@ import { collect as collectAuthLog } from './authlog.js';
 export async function apply() {
     try {
         await docker.isolateSandbox();
+        if (state.resources) {
+            await docker.updateResources(state.resources);
+        }
         await docker.setInternet(state.internet);
         // Compte au-delà de son quota : désactivé jusqu'à ce que l'espace soit libéré.
         const accounts = state.accounts.map((a) => ({ ...a, enabled: a.enabled && ! runtime.overUsers.includes(a.username) }));
         const { user_quota_mb: _, ...limits } = { ...DEFAULT_LIMITS, ...state.limits };
-        await sandbox.applyAccounts(accounts, limits);
+        await sandbox.applyAccounts(accounts, limits, state.motd);
         runtime.lastApplied = new Date().toISOString();
         runtime.lastError = null;
     } catch (error) {
