@@ -84,6 +84,11 @@ class AppointmentController extends Controller
 
         $this->mailer->queue($appointment->email, new AppointmentVisitorMail($appointment, AppointmentVisitorMail::RECEIVED), 'accusé de rendez-vous');
         $this->mailer->queue($this->ownerEmail(), new AppointmentOwnerMail($appointment, AppointmentOwnerMail::REQUESTED), 'notification de rendez-vous');
+        app(\App\Services\DiscordNotifier::class)->notify('appointment', 'Demande de rendez-vous : '.$appointment->name, $appointment->message, [
+            'Créneau' => $start->translatedFormat('l j F à H:i'),
+            'Sujet'   => $appointment->topic,
+            'E-mail'  => $appointment->email,
+        ], route('admin.appointments.index'));
 
         return redirect()->route('appointments.show')->with('success',
             'Demande envoyée pour le '.$start->translatedFormat('l j F à H:i').'. Vous recevrez un e-mail de confirmation.');

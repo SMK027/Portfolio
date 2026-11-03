@@ -107,6 +107,7 @@ class LoginBan
             'méthode'    => $method,
             'jusqu\'au'  => $ban->banned_until->format('d/m/Y H:i'),
         ], force: true);
+        $this->notify($ban);
 
         return $ban;
     }
@@ -132,8 +133,18 @@ class LoginBan
             'code HTTP' => $ban->status(),
             'jusqu\'au' => $until?->format('d/m/Y H:i') ?? 'sans date de fin',
         ], force: true);
+        $this->notify($ban, $by);
 
         return $ban;
+    }
+
+    /** Notification Discord d'un bannissement (automatique ou manuel). */
+    protected function notify(IpBan $ban, ?User $by = null): void
+    {
+        app(DiscordNotifier::class)->notify('ip_ban', 'Adresse IP bannie : '.$ban->ip_address, $ban->reason, [
+            'Jusqu\'au' => $ban->banned_until?->format('d/m/Y H:i') ?? 'sans date de fin',
+            'Par'       => $ban->is_manual ? ($by?->name ?? 'console') : 'bannissement automatique',
+        ], route('admin.ip-bans.index'));
     }
 
     /** Modification par un super-administrateur (date de fin, motif, code HTTP). */

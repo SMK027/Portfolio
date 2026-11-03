@@ -176,6 +176,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::put('/pays-bloques', [Admin\BlockedCountryController::class, 'update'])->name('blocked-countries.update');
     });
 
+    // Notifications Discord : super-administrateurs uniquement (l'URL du webhook est un secret)
+    Route::middleware('can:manage-notifications')->controller(Admin\NotificationController::class)->prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', 'edit')->name('edit');
+        Route::put('/', 'update')->name('update');
+        Route::post('/test', 'test')->middleware('throttle:5,1')->name('test');
+    });
+
     // Superviseurs : super-administrateurs uniquement
     Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');

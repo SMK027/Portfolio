@@ -48,6 +48,11 @@ class ContactController extends Controller
         // La date d'envoi (notified_at) est enregistrée une fois l'e-mail réellement parti.
         $mailer->queue($recipient, new ContactMessageReceived($message), 'notification de contact', markSent: $message);
 
+        app(\App\Services\DiscordNotifier::class)->notify('contact', $message->subject, \Illuminate\Support\Str::limit($message->message, 500), [
+            'De'     => trim($message->first_name.' '.$message->last_name),
+            'E-mail' => $message->email,
+        ], route('admin.messages.show', $message));
+
         return redirect()->route('contact.show')
             ->with('success', 'Merci ! Votre message a bien été envoyé, je vous répondrai rapidement.');
     }

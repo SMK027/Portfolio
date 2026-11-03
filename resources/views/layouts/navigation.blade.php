@@ -23,6 +23,7 @@
             ...($sections['Comptes et sécurité'] ?? []),
             ['admin.service-accounts.index', 'Comptes de service et bots', 'cog', 'admin.service-accounts.*'],
             ['admin.supervisors.index', 'Superviseurs', 'lock', 'admin.supervisors.*'],
+            ['admin.notifications.edit', 'Notifications Discord', 'megaphone', 'admin.notifications.*'],
             ['admin.login-path.edit', 'Adresse de connexion', 'lock', 'admin.login-path.*'],
             ['admin.ip-bans.index', 'Adresses IP bannies', 'no-symbol', 'admin.ip-bans.*'],
             ['admin.blocked-countries.edit', 'Pays bloqués', 'no-symbol', 'admin.blocked-countries.*'],

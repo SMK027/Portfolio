@@ -48,7 +48,13 @@ class CvController extends Controller
             return back()->withErrors(['code' => 'Ce code est invalide, a expiré ou a déjà été utilisé le nombre de fois prévu.'])->withInput();
         }
 
-        $code->markUsed($request);
+        $use = $code->markUsed($request);
+        app(\App\Services\DiscordNotifier::class)->notify('cv_download', 'CV téléchargé : '.$code->label, null, [
+            'Code'        => $code->formatted(),
+            'Utilisation' => $code->uses.($code->max_uses ? ' / '.$code->max_uses : ''),
+            'Provenance'  => \App\Services\GeoIp::label($use->country).($use->city ? ' · '.$use->city : ''),
+            'Appareil'    => collect([\App\Support\UserAgent::DEVICES[$use->device] ?? null, $use->browser, $use->os])->filter()->join(' · '),
+        ], route('admin.profile.cv-codes.show', $code));
 
         return $this->serve($profile);
     }

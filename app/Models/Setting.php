@@ -49,6 +49,7 @@ class Setting extends Model
             'security.blocked_countries' => 'Pays bloqués',
             'appointments.google'       => 'Google Agenda',
             'easter_eggs.settings'      => 'Page d\'easter eggs',
+            'notifications.discord'     => 'Notifications Discord',
             'mail.last_error'           => 'Dernière erreur d\'envoi d\'e-mail',
             'mail.last_error_at'        => 'Date de la dernière erreur d\'e-mail',
         ][$this->key] ?? $this->key;

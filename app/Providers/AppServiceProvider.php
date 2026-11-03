@@ -57,6 +57,17 @@ class AppServiceProvider extends ServiceProvider
             'email' => Str::limit((string) $e->request->input('email'), 100),
         ], force: true));
         Event::listen(PasswordReset::class, fn (PasswordReset $e) => $audit()->record('auth.password_reset', $e->user, force: true));
+
+        // Notification Discord des connexions au panel (comptes humains administrateurs)
+        Event::listen(Login::class, function (Login $e) {
+            if ($e->user instanceof User && $e->user->isAdmin() && ! $e->user->isMachine()) {
+                app(\App\Services\DiscordNotifier::class)->notify('admin_login', 'Connexion à l\'administration', null, [
+                    'Compte'   => $e->user->name,
+                    'Adresse IP' => request()->ip(),
+                    'Pays'     => \App\Services\GeoIp::label(app(\App\Services\GeoIp::class)->country(request()->ip(), request()->header('CF-IPCountry'))),
+                ]);
+            }
+        });
     }
 
     /**
@@ -94,6 +105,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-login-path', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-ip-bans', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('manage-notifications', fn (User $user) => $user->isSuperAdmin());
 
         // API : 120 requêtes par minute et par code d'application (ou par IP sans code).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by(

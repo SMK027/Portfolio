@@ -35,6 +35,11 @@ class EasterEggController extends Controller
         $isManager = (bool) $request->user()?->canUsePanel('easter_eggs.read|easter_eggs.write|easter_eggs.delete');
 
         if ($this->eggs->isEnabled() && $request->hasValidSignature()) {
+            if (! $this->eggs->hasAccess($request)) {
+                app(\App\Services\DiscordNotifier::class)->notify('easter_egg', 'Page d\'easter eggs découverte', 'Un visiteur a trouvé le déclencheur caché.', [
+                    'Pays' => \App\Services\GeoIp::label(app(\App\Services\GeoIp::class)->country($request->ip(), $request->header('CF-IPCountry'))),
+                ]);
+            }
             $this->eggs->grantAccess($request);
 
             // Lien signé consommé : l'adresse affichée (et partageable) ne donne plus accès.
@@ -65,6 +70,7 @@ class EasterEggController extends Controller
         }
 
         $this->eggs->unlock($request, $egg);
+        app(\App\Services\DiscordNotifier::class)->notify('easter_egg', 'Easter egg déverrouillé : '.$egg->title, null, [], route('admin.easter-eggs.edit', $egg));
         $request->session()->put('easter_eggs.just_unlocked', $egg->id);
 
         return response()->json(['ok' => true]);

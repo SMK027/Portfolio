@@ -47,6 +47,11 @@ Les fichiers de projets sont servis par l'application et suivent la visibilité 
 
 **Référencement** : *Administration → Référencement* permet de désindexer tout le site. Les pages reçoivent alors une balise `noindex` et toutes les réponses l'en-tête `X-Robots-Tag: noindex, nofollow`. Le `robots.txt`, généré dynamiquement, bloque les images publiques (`/storage/`) mais laisse les pages explorables, pour que les moteurs lisent la consigne et retirent les pages déjà indexées. L'administration et la connexion ne sont jamais indexées.
 
+**Notifications Discord** (*Comptes et sécurité → Notifications Discord*, super-administrateurs) : un webhook de salon reçoit les événements choisis. Ce sont les nouveaux messages de contact, les demandes de rendez-vous, les téléchargements du CV avec un code, les recommandations à modérer, la découverte des easter eggs, les bannissements d'IP et les connexions à l'administration.
+- L'URL du webhook est chiffrée en base. Elle n'est jamais placée dans la file d'attente et n'est plus affichée une fois enregistrée. Seules les adresses `https://discord.com/api/webhooks/…` sont acceptées.
+- L'envoi passe par la file d'attente, avec 3 tentatives. Un échec n'empêche jamais l'action du visiteur.
+- Les mentions (`@everyone`…) sont désactivées. Un bouton envoie un message de test.
+
 **Statistiques de visite** (*Site → Statistiques*), à usage statistique uniquement : pages vues, visiteurs, visites, nouveaux / récurrents, temps moyen par visite et par page, pays, type d'appareil, navigateur, système, pages les plus vues, sites d'origine et détail des dernières pages vues (avec IP, visibles des seuls administrateurs).
 - cookie propre au site `pv_vid` (13 mois) pour reconnaître un visiteur qui revient, cookie de visite `pv_sid` (30 min d'inactivité) ; temps de lecture mesuré quand la page est visible et envoyé en la quittant ;
 - pays, région et ville (approximatifs, centre de la ville au mieux) déduits de bases locales (DB-IP City/Country Lite via `geoip2/geoip2`, CC BY 4.0, `php artisan portfolio:geoip-update`, mise à jour mensuelle automatique) : aucune IP envoyée à un tiers ;
