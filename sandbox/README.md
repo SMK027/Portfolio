@@ -45,6 +45,14 @@ Côté portfolio (`.env` et `docker-compose.yml`) :
 2. Renseignez `SANDBOX_API_URL=http://sandbox-agent:8080` et `SANDBOX_API_TOKEN` (même valeur que ci-dessus). Le port et l'adresse affichés aux visiteurs viennent de `sandbox/.env` (`SANDBOX_SSH_PUBLIC_PORT`, `SANDBOX_SSH_PUBLIC_HOST`, par défaut `APP_DOMAIN`) : l'agent les transmet au portfolio. `SANDBOX_SSH_PORT` et `SANDBOX_SSH_HOST` dans le `.env` du portfolio ne servent qu'à les forcer.
 3. Ouvrez le port `SANDBOX_SSH_PUBLIC_PORT` (2222 par défaut) dans le pare-feu de l'hôte.
 
+**Comptes de gestion (root)** : chaque super-administrateur peut créer depuis le panel un compte `adm-…`, à l'UID 0, authentifié uniquement par clé SSH.
+- Connexion par un port dédié, toujours ouvert même quand l'accès public est fermé : `ssh -p 2224 adm-…@domaine` (`SANDBOX_SSH_MANAGER_PORT`). L'agent le relaie vers un second port sshd interne (2200).
+- Le port public refuse ces comptes, et le port de gestion refuse les visiteurs et tout mot de passe.
+- Ce sont des root *du conteneur* : capacités réduites, `no-new-privileges`, aucun accès à l'hôte ni au portfolio. Ils peuvent lire tous les dossiers des visiteurs et modifier le système jusqu'au prochain redémarrage.
+- Un compte n'est appliqué que tant que son propriétaire est super-administrateur et actif. Il est retiré dans la minute qui suit, sessions fermées, dès que ce n'est plus le cas ou qu'il est révoqué.
+- Clés acceptées : ed25519 (recommandé), ECDSA, clés matérielles `sk-`, RSA de 2048 bits au moins. DSA est refusé. Créer un compte ou ajouter une clé exige de reconfirmer son mot de passe.
+- Chaque connexion root est inscrite au journal d'activité et signalée sur Discord (événement « Machine SSH »). Les bannissements et les limites de connexion s'appliquent aussi à ce port.
+
 **Bannissements partagés** : les échecs d'authentification (SSH et terminal web) remontent au portfolio, qui applique ses règles habituelles (`LOGIN_BAN_*`). Les adresses bannies par le portfolio sont refusées par l'agent. Pour le SSH, l'agent retrouve l'IP réelle d'un échec grâce au port source de la connexion relayée, lu dans le journal de sshd. Les adresses privées, comme la passerelle Docker, ne sont jamais bannies. Les pays bloqués s'appliquent au terminal web, car le ticket est délivré par le portfolio, mais pas au port SSH direct.
 
 Adresses IP réelles : le journal des connexions et les limites par IP utilisent l'adresse vue par l'agent. Avec le proxy « userland » de Docker (réglage par défaut), toutes les connexions SSH semblent venir de la passerelle Docker. Pour voir les vraies adresses, désactivez-le : `"userland-proxy": false` dans `/etc/docker/daemon.json`, puis redémarrez Docker. Le terminal web, lui, reçoit l'IP réelle par le ticket du portfolio.

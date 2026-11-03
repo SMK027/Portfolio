@@ -59,6 +59,7 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
 - **Alertes Discord** (événement « Machine SSH ») : machine arrêtée, agent injoignable, quota saturé, rafale de connexions refusées, réinitialisation planifiée.
 - Sauvegardes et restaurations des dossiers personnels : manuelles ou automatiques chaque nuit, téléchargeables.
 - La page publique `/machine-ssh` est privée par défaut. Elle donne la commande SSH et un terminal dans le navigateur. Le terminal propose le plein écran, le copier-coller (Ctrl+Maj+C / Ctrl+Maj+V), une barre de touches sur mobile et un compte à rebours avant la fermeture pour inactivité.
+- **Comptes de gestion (root)** : chaque super-administrateur peut créer un compte `adm-…`, authentifié par clé SSH uniquement, sur un port dédié toujours ouvert (2224). Le compte est retiré automatiquement s'il perd ce rôle. Les connexions sont journalisées et signalées sur Discord.
 - **Session jetable** (option) : sans compte, un compte temporaire est créé à la connexion au terminal web puis supprimé avec son dossier à la déconnexion.
 - **Défis Linux** : chaque nouveau compte reçoit `~/defis` (fichier caché, `grep`, permissions, `find`, pipes). La commande `defis` suit la progression et vérifie les réponses.
 - Le mode `/terminal` du portfolio propose une commande `ssh` qui ouvre la machine.

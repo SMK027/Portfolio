@@ -67,6 +67,7 @@ services:
       - SANDBOX_API_TOKEN=${SANDBOX_API_TOKEN:-}
       - SANDBOX_SSH_HOST=${SANDBOX_SSH_HOST:-}
       - SANDBOX_SSH_PORT=${SANDBOX_SSH_PORT:-}
+      - SANDBOX_SSH_MANAGER_PORT=${SANDBOX_SSH_MANAGER_PORT:-}
       - SANDBOX_WS_URL=${SANDBOX_WS_URL:-}
     labels:
       - "traefik.enable=true"

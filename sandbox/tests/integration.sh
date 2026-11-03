@@ -10,7 +10,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="${SANDBOX_TEST_PORT_BASE:-23000}"
-SSH_PORT=$((BASE + 22)) API_PORT=$((BASE + 80)) WS_PORT=$((BASE + 81))
+SSH_PORT=$((BASE + 22)) MANAGER_PORT=$((BASE + 24)) API_PORT=$((BASE + 80)) WS_PORT=$((BASE + 81))
 PROJECT="sandbox-test-$$"
 TOKEN="$(openssl rand -hex 32)"
 WORK="$(mktemp -d)"
@@ -30,6 +30,7 @@ services:
       - SANDBOX_EGRESS_NETWORK=$PROJECT-egress
     ports: !override
       - "127.0.0.1:$SSH_PORT:2222"
+      - "127.0.0.1:$MANAGER_PORT:2224"
       - "127.0.0.1:$API_PORT:8080"
       - "127.0.0.1:$WS_PORT:8081"
 networks:
@@ -46,7 +47,7 @@ ssh_as() { local user="$1" pass="$2"; shift 2; timeout 40 sshpass -p "$pass" ssh
 check() { local label="$1"; shift; if "$@" >/dev/null 2>&1; then echo "  ✔ $label"; else echo "  ✘ $label"; FAILURES=$((FAILURES + 1)); fi; }
 wait_for() { for _ in $(seq 1 40); do "$@" >/dev/null 2>&1 && return 0; sleep 2; done; return 1; }
 # Fonctions et variables utilisées dans les sous-shells des contrôles
-export TOKEN API_PORT SSH_PORT PROJECT
+export TOKEN API_PORT SSH_PORT MANAGER_PORT PROJECT WORK
 export -f api ssh_as wait_for
 
 cleanup() {
@@ -105,6 +106,21 @@ check "adresse bannie refusée" bash -c "! ssh_as testeur Test-pass-1 true"
 state false false
 check "accès fermé : connexion refusée" bash -c "! ssh_as testeur Test-pass-1 true"
 state true false
+
+echo "▶ Comptes de gestion (root)"
+ssh-keygen -q -t ed25519 -N '' -C integration -f "$WORK/admkey"
+managers() { api PUT state "{\"public\":$1,\"internet\":false,\"managers\":$2,\"accounts\":[{\"username\":\"testeur\",\"hash\":\"$HASH\",\"enabled\":true}]}" >/dev/null; }
+manager_ssh() { timeout 20 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o IdentitiesOnly=yes -o BatchMode=yes \
+    -i "$WORK/admkey" -p "$1" adm-test@127.0.0.1 "${@:2}"; }
+export -f manager_ssh
+managers false "[{\"username\":\"adm-test\",\"keys\":[\"$(cat "$WORK/admkey.pub")\"]}]"
+check "root par clé, accès public fermé" bash -c "manager_ssh $MANAGER_PORT 'id -u' | grep -qx 0"
+managers true "[{\"username\":\"adm-test\",\"keys\":[\"$(cat "$WORK/admkey.pub")\"]}]"
+check "port public interdit aux comptes de gestion" bash -c "! manager_ssh $SSH_PORT true"
+check "port de gestion interdit aux visiteurs" bash -c "! timeout 20 sshpass -p Test-pass-1 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -p $MANAGER_PORT testeur@127.0.0.1 true"
+check "pas de mot de passe sur le port de gestion" bash -c "! timeout 20 sshpass -p x ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -p $MANAGER_PORT adm-test@127.0.0.1 true"
+managers true "[]"
+check "compte révoqué refusé" bash -c "! manager_ssh $MANAGER_PORT true"
 
 echo "▶ Terminal web et session jetable"
 cat > "$WORK/ws.mjs" <<'JS'
