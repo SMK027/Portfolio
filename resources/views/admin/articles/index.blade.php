@@ -51,7 +51,7 @@
                             </td>
                             <td>
                                 <x-article-status :article="$article" />
-                                @if ($article->published_at)<p class="mt-0.5 text-xs text-slate-400">{{ $article->published_at->format('d/m/Y H:i') }}</p>@endif
+                                @if ($article->published_at)<p class="mt-0.5 text-xs text-slate-400">{{ $article->published_at->format('d/m/Y H:i') }}@if ($article->reactions_count) · {{ $article->reactions_count }} réaction{{ $article->reactions_count > 1 ? 's' : '' }}@endif</p>@endif
                                 @if ($article->isPendingReview() && $article->submitted_at)<p class="mt-0.5 text-xs text-slate-400">soumis le {{ $article->submitted_at->format('d/m/Y') }}</p>@endif
                             </td>
                             <td class="whitespace-nowrap text-right">

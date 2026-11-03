@@ -50,6 +50,11 @@ class Article extends Model
         static::updated(fn (Article $article) => $article->wasChanged(['title', 'excerpt', 'content']) && $record($article));
     }
 
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(ArticleReaction::class);
+    }
+
     public function files(): HasMany
     {
         return $this->hasMany(ArticleFile::class)->orderBy('position')->orderBy('id');

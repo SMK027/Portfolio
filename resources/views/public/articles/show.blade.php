@@ -125,6 +125,25 @@
                 </section>
             @endif
 
+            @if ($reactions ?? null)
+                {{-- Réactions anonymes : un vote par emoji et par visiteur --}}
+                <section x-data="articleReactions(@js($reactions), @js(route('articles.reactions', $article)))" class="border-t border-slate-200 pt-6">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-700">Cet article vous a plu ?</h2>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (\App\Models\ArticleReaction::EMOJIS as $key => [$emoji, $label])
+                            <button type="button" @click="toggle(@js($key))" :disabled="busy"
+                                    :aria-pressed="mine.includes(@js($key)).toString()" aria-label="{{ $label }}" title="{{ $label }}"
+                                    class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition disabled:opacity-60"
+                                    :class="mine.includes(@js($key)) ? 'border-primary-400 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'">
+                                <span class="text-base leading-none" aria-hidden="true">{{ $emoji }}</span>
+                                <span class="tabular-nums" x-text="counts[@js($key)] ?? 0">{{ $reactions['counts'][$key] ?? 0 }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                    <p x-show="error" x-cloak class="form-error mt-2" x-text="error"></p>
+                </section>
+            @endif
+
             @auth
                 @if (auth()->user()->isAdmin())
                     <div class="border-t border-slate-200 pt-6">

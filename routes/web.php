@@ -57,6 +57,7 @@ Route::middleware('page:projets')->prefix('projets')->name('projects.')->group(f
 Route::middleware('page:veille')->prefix('veille')->name('articles.')->group(function () {
     Route::get('/', [ArticleController::class, 'index'])->name('index');
     Route::get('/{article}', [ArticleController::class, 'show'])->name('show');
+    Route::post('/{article}/reactions', \App\Http\Controllers\ArticleReactionController::class)->middleware('throttle:30,1')->name('reactions');
 });
 
 // Brouillon partagé (lien secret et temporaire), indépendant de la visibilité de la page Veille

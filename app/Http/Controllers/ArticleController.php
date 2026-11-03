@@ -57,6 +57,9 @@ class ArticleController extends Controller
         return view('public.articles.show', [
             'page'    => $request->attributes->get('page'),
             'article' => $article,
+            'reactions' => $article->isPublished()
+                ? \App\Models\ArticleReaction::summaryFor($article, \App\Models\ArticleReaction::visitorFor($request))
+                : null,
             'related' => Article::published()
                 ->whereKeyNot($article->id)
                 ->whereHas('themes', fn ($q) => $q->whereIn('themes.id', $article->themes->pluck('id')))

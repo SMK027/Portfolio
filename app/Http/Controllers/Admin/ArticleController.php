@@ -41,7 +41,7 @@ class ArticleController extends Controller
         return view('admin.articles.index', [
             'filter'       => $filter,
             'pendingCount' => Article::pendingReview()->count(),
-            'articles'     => Article::with('author', 'coauthors', 'themes')
+            'articles'     => Article::with('author', 'coauthors', 'themes')->withCount('reactions')
                 ->when($request->filled('q'), fn ($q) => $q->where('title', 'like', '%'.$request->string('q').'%'))
                 ->when($filter === 'a-valider', fn ($q) => $q->pendingReview())
                 ->when($filter === 'mes-articles', fn ($q) => $q->where(fn ($q) => $q
