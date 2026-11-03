@@ -23,7 +23,12 @@
             Lien valable jusqu'au {{ $article->preview_expires_at->translatedFormat('j F Y à H:i') }}.
         </div>
     @endif
-    <article>
+    {{-- Progression de lecture : fine barre collée sous le menu --}}
+    <div x-data="readingProgress" data-target="#article-body" class="pointer-events-none sticky top-16 z-30 -mb-1 h-1"
+         role="progressbar" aria-label="Progression de la lecture" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(progress)">
+        <div class="h-full origin-left bg-gradient-to-r from-primary-500 to-accent-500 transition-[width] duration-150 ease-out" :style="`width: ${progress}%`" style="width: 0"></div>
+    </div>
+    <article id="article-body">
         <header class="relative overflow-hidden bg-slate-900">
             @if ($article->thumbnailUrl())
                 <img src="{{ $article->thumbnailUrl() }}" alt="" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover opacity-30">
