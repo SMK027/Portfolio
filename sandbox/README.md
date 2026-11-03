@@ -45,6 +45,8 @@ Côté portfolio (`.env` et `docker-compose.yml`) :
 2. Renseignez `SANDBOX_API_URL=http://sandbox-agent:8080` et `SANDBOX_API_TOKEN` (même valeur que ci-dessus). Le port et l'adresse affichés aux visiteurs viennent de `sandbox/.env` (`SANDBOX_SSH_PUBLIC_PORT`, `SANDBOX_SSH_PUBLIC_HOST`, par défaut `APP_DOMAIN`) : l'agent les transmet au portfolio. `SANDBOX_SSH_PORT` et `SANDBOX_SSH_HOST` dans le `.env` du portfolio ne servent qu'à les forcer.
 3. Ouvrez le port `SANDBOX_SSH_PUBLIC_PORT` (2222 par défaut) dans le pare-feu de l'hôte.
 
+**Bannissements partagés** : les échecs d'authentification (SSH et terminal web) remontent au portfolio, qui applique ses règles habituelles (`LOGIN_BAN_*`). Les adresses bannies par le portfolio sont refusées par l'agent. Pour le SSH, l'agent retrouve l'IP réelle d'un échec grâce au port source de la connexion relayée, lu dans le journal de sshd. Les adresses privées, comme la passerelle Docker, ne sont jamais bannies. Les pays bloqués s'appliquent au terminal web, car le ticket est délivré par le portfolio, mais pas au port SSH direct.
+
 Adresses IP réelles : le journal des connexions et les limites par IP utilisent l'adresse vue par l'agent. Avec le proxy « userland » de Docker (réglage par défaut), toutes les connexions SSH semblent venir de la passerelle Docker. Pour voir les vraies adresses, désactivez-le : `"userland-proxy": false` dans `/etc/docker/daemon.json`, puis redémarrez Docker. Le terminal web, lui, reçoit l'IP réelle par le ticket du portfolio.
 
 Le terminal web passe par `https://APP_DOMAIN/ssh-ws` (routeur Traefik de l'agent, prioritaire sur le portfolio).

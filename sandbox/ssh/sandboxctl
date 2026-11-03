@@ -9,6 +9,7 @@
 #   usage            espace occupé par /home, en Ko
 #   usage-users      espace occupé par compte, en Ko (JSON)
 #   reap             tue les processus des comptes sans session ouverte
+#   auth-log         journal d'authentification de sshd depuis la dernière lecture
 #   backup           archive tar.gz de /home sur la sortie
 #   restore          remplace /home par l'archive lue sur l'entrée
 set -euo pipefail
@@ -117,6 +118,14 @@ case "$COMMAND" in
             [ -d "$dir" ] || continue
             printf '%s %s\n' "$(basename "$dir")" "$(du -sk "$dir" | cut -f1)"
         done | jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ") | {(.[0]): (.[1]|tonumber)}) | add // {}'
+        ;;
+
+    auth-log)
+        # Journal sshd depuis la dernière lecture (vidé ensuite)
+        if [ -f /run/sshd-auth.log ]; then
+            cat /run/sshd-auth.log
+            : > /run/sshd-auth.log
+        fi
         ;;
 
     reap)

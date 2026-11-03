@@ -4,6 +4,7 @@
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import http from 'node:http';
+import net from 'node:net';
 import config from './config.js';
 import * as backups from './backups.js';
 import * as docker from './docker.js';
@@ -11,7 +12,7 @@ import * as sandbox from './sandbox.js';
 import { closeAll } from './gateway.js';
 import { closeAllTerminals } from './terminal.js';
 import { totalSessions } from './limits.js';
-import { DEFAULT_LIMITS, runtime, saveState, state } from './state.js';
+import { DEFAULT_LIMITS, pendingFailures, runtime, saveState, state } from './state.js';
 import { apply } from './reconcile.js';
 
 const USERNAME = /^[a-z][a-z0-9_-]{2,31}$/;
@@ -68,6 +69,8 @@ function validateState(body) {
         public: body.public === true,
         internet: body.internet === true,
         accounts: accounts.map((a) => ({ username: a.username, hash: a.hash, enabled: a.enabled !== false })),
+        banned_ips: (Array.isArray(body.banned_ips) ? body.banned_ips : [])
+            .filter((ip) => typeof ip === 'string' && net.isIP(ip)).slice(0, 10000),
     };
 }
 
@@ -134,6 +137,8 @@ const routes = {
         await apply();
         return { ok: true };
     },
+    // Échecs d'authentification depuis la dernière lecture (le portfolio applique ses règles de bannissement)
+    'POST /auth-failures/drain': async () => ({ failures: pendingFailures.splice(0) }),
     'GET /backups': async () => ({ backups: backups.list() }),
     'POST /backups': async (request) => {
         const body = await readJson(request);

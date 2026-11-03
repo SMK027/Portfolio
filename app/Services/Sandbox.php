@@ -56,6 +56,8 @@ class Sandbox
         return [
             'public'   => (bool) $settings['public'],
             'internet' => (bool) $settings['internet'],
+            // Adresses bannies par le portfolio : refusées aussi par la machine
+            'banned_ips' => \App\Models\IpBan::active()->limit(10000)->pluck('ip_address')->unique()->values()->all(),
             'accounts' => SandboxAccount::ordered()->get()->map(fn (SandboxAccount $a) => [
                 'username' => $a->username,
                 'hash'     => $a->password_hash,
@@ -74,6 +76,25 @@ class Sandbox
         $this->rememberSsh($response['ssh'] ?? null);
 
         return $response['last_error'] ?? null;
+    }
+
+    /**
+     * Échecs d'authentification relevés par l'agent (SSH et terminal web) : comptés
+     * par le bannissement automatique du portfolio, comme les échecs de connexion au panel.
+     */
+    public function processAuthFailures(): int
+    {
+        $failures = $this->call('post', 'auth-failures/drain')['failures'] ?? [];
+        $bans = app(LoginBan::class);
+        foreach ($failures as $failure) {
+            // Adresse privée : passerelle Docker (proxy « userland » actif), partagée par tous les
+            // visiteurs. La bannir fermerait la machine à tout le monde : ignorée.
+            if (filter_var($failure['ip'] ?? null, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                $bans->recordFailure($failure['ip'], ($failure['channel'] ?? '') === 'web' ? 'machine SSH (terminal web)' : 'machine SSH');
+            }
+        }
+
+        return count($failures);
     }
 
     public function status(): array

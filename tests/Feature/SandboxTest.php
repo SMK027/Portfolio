@@ -67,6 +67,29 @@ class SandboxTest extends TestCase
         $this->assertSame('ssh guest@forced.example.net', $sandbox->sshCommand());
     }
 
+    public function test_agent_failures_feed_the_ip_ban_and_bans_are_pushed(): void
+    {
+        config(['auth.login_ban.enabled' => true, 'auth.login_ban.max_attempts' => 3, 'auth.login_ban.whitelist' => '']);
+        Http::fake([
+            'sandbox-agent:8080/auth-failures/drain' => Http::response(['failures' => [
+                ['ip' => '203.0.113.66', 'channel' => 'ssh', 'username' => 'root'],
+                ['ip' => '203.0.113.66', 'channel' => 'ssh', 'username' => 'admin'],
+                ['ip' => '203.0.113.66', 'channel' => 'web', 'username' => 'guest'],
+                ['ip' => 'pas-une-ip', 'channel' => 'ssh'],
+                ['ip' => '172.28.0.1', 'channel' => 'ssh'], ['ip' => '172.28.0.1', 'channel' => 'ssh'], ['ip' => '172.28.0.1', 'channel' => 'ssh'],
+            ]]),
+            'sandbox-agent:8080/state' => Http::response(['ok' => true, 'last_error' => null]),
+        ]);
+        $sandbox = app(Sandbox::class);
+
+        $this->assertSame(7, $sandbox->processAuthFailures());
+        $this->assertTrue(\App\Models\IpBan::active()->where('ip_address', '203.0.113.66')->exists());
+        $this->assertFalse(\App\Models\IpBan::where('ip_address', '172.28.0.1')->exists()); // passerelle Docker : jamais bannie
+
+        $sandbox->sync();
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/state') && $r['banned_ips'] === ['203.0.113.66']);
+    }
+
     public function test_only_super_admins_manage_the_machine(): void
     {
         $this->actingAs(User::factory()->admin()->create())->get(route('admin.sandbox.show'))->assertForbidden();

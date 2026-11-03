@@ -8,7 +8,7 @@ import { WebSocketServer } from 'ws';
 import ssh2 from 'ssh2';
 import config from './config.js';
 import { acquire, release } from './limits.js';
-import { isOpen, logConnection } from './state.js';
+import { isBanned, isOpen, logConnection, recordFailure } from './state.js';
 import { verifyTicket } from './tickets.js';
 
 const { Client } = ssh2;
@@ -33,6 +33,10 @@ export function startTerminal() {
 
         if (! ticket) {
             refuse('lien expiré, rechargez la page');
+            return;
+        }
+        if (isBanned(ip)) {
+            refuse('adresse bannie');
             return;
         }
         if (! isOpen()) {
@@ -103,6 +107,7 @@ export function startTerminal() {
                 ssh.on('error', (error) => {
                     const denied = error.level === 'client-authentication';
                     logConnection({ ip, channel: 'web', username, result: denied ? 'refusée (identifiants)' : 'erreur' });
+                    if (denied) recordFailure({ ip, channel: 'web', username });
                     close(denied ? 'identifiant ou mot de passe incorrect' : 'machine injoignable');
                 });
                 ssh.connect({

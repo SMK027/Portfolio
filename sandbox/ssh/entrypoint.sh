@@ -5,4 +5,5 @@ for type in ed25519 rsa; do
     [ -f "/etc/ssh/keys/ssh_host_${type}_key" ] || ssh-keygen -q -t "$type" -N '' -f "/etc/ssh/keys/ssh_host_${type}_key"
 done
 chmod 600 /etc/ssh/keys/*_key
-exec /usr/sbin/sshd -D -e
+# Journal d'authentification lu (puis vidé) par l'agent : échecs rattachés à l'IP réelle du visiteur.
+exec /usr/sbin/sshd -D -E /run/sshd-auth.log

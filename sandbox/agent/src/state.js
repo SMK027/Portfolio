@@ -14,6 +14,7 @@ export const state = {
     public: false,
     internet: false,
     accounts: [],
+    banned_ips: [],
     limits: { ...DEFAULT_LIMITS },
     ...(fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}),
 };
@@ -38,6 +39,19 @@ export function saveState(next) {
 /** Accès public : ouvert par le panel et quota respecté. */
 export function isOpen() {
     return state.public && ! runtime.overQuota;
+}
+
+/** Adresse bannie par le portfolio (échecs de connexion, bannissement manuel). */
+export function isBanned(ip) {
+    return Array.isArray(state.banned_ips) && state.banned_ips.includes(ip);
+}
+
+/** Échecs d'authentification en attente de transmission au portfolio (qui décide des bannissements). */
+export const pendingFailures = [];
+
+export function recordFailure(entry) {
+    pendingFailures.push({ at: new Date().toISOString(), ...entry });
+    pendingFailures.splice(0, Math.max(0, pendingFailures.length - 1000));
 }
 
 export function logConnection(entry) {

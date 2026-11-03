@@ -6,6 +6,7 @@ import * as sandbox from './sandbox.js';
 import { closeAll } from './gateway.js';
 import { closeAllTerminals } from './terminal.js';
 import { DEFAULT_LIMITS, runtime, state } from './state.js';
+import { collect as collectAuthLog } from './authlog.js';
 
 export async function apply() {
     try {
@@ -55,6 +56,7 @@ export async function watch() {
             }
 
             await sandbox.reap();
+            await collectAuthLog();
         }
     } catch (error) {
         runtime.lastError = error.message;
