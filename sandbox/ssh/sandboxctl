@@ -71,8 +71,18 @@ connected_users() {
     ps -eo args= | awk '$1 ~ /^sshd(-session)?:$/ && $2 ~ /@/ { split($2, a, "@"); print a[1] }' | sort -u
 }
 
-# Dossiers privés : propriétaire seul (0700)
+# Dossiers privés : propriétaire seul (0700). /home lui-même reste franchissable (0755) :
+# une restauration applique à /home les droits de l'entrée « . » de l'archive (0700 pour
+# une archive vide), ce qui interdirait l'accès à tous les comptes non root.
 fix_owners() {
+    chown root:root /home
+    chmod 0755 /home
+    # Dossier personnel manquant (réinitialisation, restauration) : recréé depuis /etc/skel
+    for user in $(sandbox_users); do
+        if [ ! -d "/home/$user" ]; then
+            cp -a /etc/skel "/home/$user"
+        fi
+    done
     for dir in /home/*/; do
         [ -d "$dir" ] || continue
         user="$(basename "$dir")"

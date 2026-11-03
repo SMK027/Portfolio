@@ -93,6 +93,9 @@ BACKUP="$(api POST backups '{"label":"test"}' | grep -o '"id":"[a-f0-9]*"' | cut
 ssh_as testeur Test-pass-1 'echo modifié > fichier.txt'
 api POST "backups/$BACKUP/restore" >/dev/null
 check "fichier restauré" bash -c "ssh_as testeur Test-pass-1 'cat fichier.txt' | grep -qx original"
+api POST reset >/dev/null
+check "après réinitialisation : dossier recréé et accessible" bash -c "ssh_as testeur Test-pass-1 'pwd; ls -d ~/defis' | grep -qx /home/testeur/defis"
+check "après réinitialisation : /home franchissable (755)" bash -c "docker exec $PROJECT-ssh stat -c %a /home | grep -qx 755"
 
 echo "▶ Quota par compte"
 ssh_as testeur Test-pass-1 'head -c 3M /dev/urandom > gros.bin' || true
