@@ -312,25 +312,32 @@ class Sandbox
         Setting::set(self::MONITOR_SETTING, array_map(fn ($alert) => $alert[0], $alerts));
     }
 
-    /** Enregistre les connexions du journal de l'agent postérieures à la dernière relevée. */
+    /**
+     * Enregistre les entrées du journal de l'agent qui ne le sont pas encore. Le journal
+     * renvoie ses 200 dernières entrées à chaque relevé : chacune est reconnue par son
+     * empreinte (date au millième, IP, canal, compte, résultat), jamais par comparaison de dates.
+     */
     public function recordConnections(array $connections): int
     {
-        $last = SandboxConnection::max('connected_at');
         $rows = collect($connections)
             ->filter(fn ($c) => isset($c['at'], $c['result']))
             ->map(fn ($c) => [
+                'fingerprint'  => sha1(json_encode([$c['at'], $c['ip'] ?? null, $c['channel'] ?? null, $c['username'] ?? null, $c['result']])),
                 'connected_at' => \Illuminate\Support\Carbon::parse($c['at'])->setTimezone(config('app.timezone')),
                 'ip_address'   => filter_var($c['ip'] ?? null, FILTER_VALIDATE_IP) ?: null,
                 'channel'      => in_array($c['channel'] ?? 'ssh', ['web', 'gestion'], true) ? $c['channel'] : 'ssh',
                 'username'     => isset($c['username']) && (preg_match(SandboxAccount::USERNAME_PATTERN, $c['username']) || preg_match(\App\Models\SandboxManager::USERNAME_PATTERN, $c['username'])) ? $c['username'] : null,
                 'result'       => \Illuminate\Support\Str::limit((string) $c['result'], 80, ''),
             ])
-            ->filter(fn ($row) => $last === null || $row['connected_at']->gt(\Illuminate\Support\Carbon::parse($last)))
+            ->unique('fingerprint')
             ->sortBy('connected_at')
             ->values();
 
+        // Seules les entrées nouvelles sont enregistrées… et notifiées ci-dessous
+        $known = SandboxConnection::whereIn('fingerprint', $rows->pluck('fingerprint'))->pluck('fingerprint')->flip();
+        $rows = $rows->reject(fn ($row) => $known->has($row['fingerprint']))->values();
         if ($rows->isNotEmpty()) {
-            SandboxConnection::insert($rows->all());
+            SandboxConnection::insertOrIgnore($rows->all());
         }
 
         // Accès root : journal d'activité et alerte Discord

@@ -109,4 +109,23 @@ class SandboxManagerTest extends TestCase
         $this->assertDatabaseHas('sandbox_connections', ['channel' => 'gestion', 'username' => 'adm-leo']);
         Http::assertSent(fn (HttpRequest $r) => str_contains($r->url(), 'discord.com') && str_contains($r['embeds'][0]['title'], 'connexion root de adm-leo'));
     }
+
+    public function test_a_root_login_is_recorded_and_notified_only_once(): void
+    {
+        app(\App\Services\DiscordNotifier::class)->save('https://discord.com/api/webhooks/1/abc', ['sandbox']);
+        SandboxManager::create(['user_id' => $this->admin->id, 'username' => 'adm-leo', 'public_keys' => [SandboxManager::parseKey(self::ED25519)]]);
+        // Journal de l'agent : horodatage au millième, renvoyé à chaque relevé tant qu'il reste dans les 200 dernières entrées
+        $log = [
+            ['at' => '2026-11-04T10:38:42.567Z', 'ip' => '78.240.9.240', 'channel' => 'gestion', 'username' => 'adm-leo', 'result' => 'authentifiée'],
+            ['at' => '2026-11-04T10:38:41.912Z', 'ip' => '78.240.9.240', 'channel' => 'gestion', 'result' => 'ouverte'],
+        ];
+
+        foreach (range(1, 5) as $minute) {
+            app(Sandbox::class)->recordConnections($log);
+        }
+
+        $this->assertSame(2, \App\Models\SandboxConnection::count());
+        $this->assertSame(1, \App\Models\AuditLog::where('action', 'sandbox.manager_login')->count());
+        $this->assertCount(1, collect(Http::recorded())->filter(fn ($pair) => str_contains($pair[0]->url(), 'discord.com')));
+    }
 }

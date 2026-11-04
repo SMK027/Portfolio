@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 /** Connexion à la machine SSH (IP effacée après 3 mois, ligne supprimée après 13 mois). */
-#[Fillable(['connected_at', 'ip_address', 'channel', 'username', 'result'])]
+#[Fillable(['fingerprint', 'connected_at', 'ip_address', 'channel', 'username', 'result'])]
 class SandboxConnection extends Model
 {
     public $timestamps = false;
