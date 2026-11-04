@@ -295,7 +295,69 @@
         </x-admin.section>
     @endif
 
-    <x-admin.section title="Historique des connexions" description="Relevé chaque minute dans le journal de l'agent. Adresses IP effacées après 3 mois.">
+    <x-admin.section id="echecs" title="Échecs de connexion par adresse IP"
+                     description="Connexions refusées regroupées par adresse, les plus nombreuses d'abord. Le bannissement automatique s'applique déjà selon vos règles ; bannissez ici les adresses insistantes.">
+        <nav class="inline-flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1 text-sm" aria-label="Période">
+            @foreach (\App\Http\Controllers\Admin\SandboxController::FAILURE_PERIODS as $key => [$label])
+                <a href="{{ route('admin.sandbox.show', array_filter(['echecs' => $key, 'avec_echecs' => $showFailures ? 1 : null])) }}#echecs"
+                   @class(['rounded-md px-3 py-1.5 font-medium', 'bg-primary-50 text-primary-700' => $failurePeriod === $key, 'text-slate-600 hover:bg-slate-50' => $failurePeriod !== $key])>{{ $label }}</a>
+            @endforeach
+        </nav>
+        @if ($failuresByIp->isEmpty())
+            <p class="text-sm text-slate-500">Aucun échec sur cette période.</p>
+        @else
+            <p class="text-sm text-slate-600">
+                <strong>{{ $failuresByIp->sum('count') }}</strong> échec(s) depuis <strong>{{ $failuresByIp->count() }}</strong> adresse(s),
+                dont {{ $failuresByIp->where('banned', true)->count() }} déjà bannie(s).
+            </p>
+            <div class="overflow-x-auto">
+                <table class="admin-table">
+                    <thead><tr><th>Adresse IP</th><th class="text-right">Échecs</th><th>Identifiants tentés</th><th class="hidden lg:table-cell">Motifs</th><th class="hidden md:table-cell">Période</th><th></th></tr></thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        @foreach ($failuresByIp as $row)
+                            <tr>
+                                <td class="whitespace-nowrap">
+                                    <a href="{{ route('admin.ip-history', ['ip' => $row->ip]) }}" class="font-mono text-xs hover:underline" title="Historique de cette adresse">{{ $row->ip }}</a>
+                                    <span class="block text-xs text-slate-400">{{ $row->channels->map(fn ($c) => ['web' => 'Terminal web', 'gestion' => 'Gestion'][$c] ?? 'SSH')->join(', ') }}</span>
+                                </td>
+                                <td class="text-right font-semibold tabular-nums">{{ $row->count }}</td>
+                                <td class="max-w-xs">
+                                    @forelse ($row->usernames->take(6) as $name => $times)
+                                        <span class="mr-1 inline-block font-mono text-xs">{{ $name }}@if ($times > 1)<span class="text-slate-400">×{{ $times }}</span>@endif</span>
+                                    @empty
+                                        <span class="text-xs text-slate-400">—</span>
+                                    @endforelse
+                                    @if ($row->usernames->count() > 6)<span class="text-xs text-slate-400">+{{ $row->usernames->count() - 6 }}</span>@endif
+                                </td>
+                                <td class="hidden text-xs text-slate-500 lg:table-cell">
+                                    {{ $row->reasons->map(fn ($n, $reason) => $reason.($n > 1 ? ' ×'.$n : ''))->join(' · ') }}
+                                </td>
+                                <td class="hidden whitespace-nowrap text-xs text-slate-500 md:table-cell">
+                                    {{ $row->first->format('d/m H:i') }}@if ($row->first->ne($row->last)) → {{ $row->last->format('d/m H:i') }}@endif
+                                </td>
+                                <td class="whitespace-nowrap text-right">
+                                    @if ($row->banned)
+                                        <span class="badge-red">Bannie</span>
+                                    @else
+                                        <a href="{{ route('admin.ip-bans.create', ['ip' => $row->ip]) }}" class="btn-secondary btn-sm"><x-icon name="no-symbol" class="h-4 w-4" /> Bannir</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </x-admin.section>
+
+    <x-admin.section id="historique" title="Historique des connexions" description="Relevé chaque minute dans le journal de l'agent. Adresses IP effacées après 3 mois.">
+        <p class="text-sm text-slate-500">
+            @if ($showFailures)
+                Toutes les connexions, échecs compris. <a href="{{ route('admin.sandbox.show', ['echecs' => $failurePeriod]) }}#historique" class="font-medium text-primary-600 hover:underline">Masquer les échecs</a>
+            @else
+                Échecs masqués (voir le regroupement par adresse ci-dessus). <a href="{{ route('admin.sandbox.show', ['echecs' => $failurePeriod, 'avec_echecs' => 1]) }}#historique" class="font-medium text-primary-600 hover:underline">Afficher aussi les échecs</a>
+            @endif
+        </p>
         @if ($connections->isEmpty())
             <p class="text-sm text-slate-500">Aucune connexion enregistrée.</p>
         @else

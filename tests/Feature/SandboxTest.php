@@ -344,4 +344,39 @@ class SandboxTest extends TestCase
     {
         $this->actingAs($this->admin)->post(route('admin.sandbox.accounts.store'), ['username' => 'tmp-abcd1234'])->assertSessionHasErrors('username');
     }
+
+    public function test_failures_are_grouped_by_ip_and_hidden_from_the_log(): void
+    {
+        $this->fakeAgent();
+        $add = fn (string $ip, string $user, string $result, int $minutesAgo) => \App\Models\SandboxConnection::create([
+            'connected_at' => now()->subMinutes($minutesAgo), 'ip_address' => $ip, 'channel' => 'ssh', 'username' => $user, 'result' => $result,
+        ]);
+        foreach (range(1, 40) as $i) {
+            $add('198.51.100.7', $i % 2 ? 'root' : 'admin', 'refusée (identifiants)', $i);
+        }
+        $add('198.51.100.8', 'oracle', 'refusée (trop de connexions en une minute)', 5);
+        $add('203.0.113.20', 'guest', 'authentifiée', 3);
+        $add('198.51.100.9', 'vieux', 'refusée (identifiants)', 60 * 24 * 3); // hors des dernières 24 h
+        \App\Models\IpBan::create(['ip_address' => '198.51.100.8', 'attempts' => 0, 'is_manual' => true, 'banned_until' => now()->addDay()]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertOk();
+        $groups = $response->viewData('failuresByIp');
+
+        $this->assertSame(['198.51.100.7', '198.51.100.8'], $groups->pluck('ip')->all());
+        $this->assertSame(40, $groups[0]->count);
+        $this->assertEquals(['root' => 20, 'admin' => 20], $groups[0]->usernames->all()); // égalité : ordre indifférent
+        $this->assertSame(['identifiants' => 40], $groups[0]->reasons->all());
+        $this->assertFalse($groups[0]->banned);
+        $this->assertTrue($groups[1]->banned);
+        $response->assertSee(route('admin.ip-bans.create', ['ip' => '198.51.100.7']), false)->assertSee('Bannie');
+
+        // Journal détaillé : seulement la connexion réussie, sauf demande explicite
+        $this->assertSame(['authentifiée'], $response->viewData('connections')->pluck('result')->all());
+        $all = $this->actingAs($this->admin)->get(route('admin.sandbox.show', ['avec_echecs' => 1]))->viewData('connections');
+        $this->assertSame(30, $all->count()); // première page, échecs compris
+
+        // Période élargie : l'adresse plus ancienne apparaît
+        $week = $this->actingAs($this->admin)->get(route('admin.sandbox.show', ['echecs' => '7j']))->viewData('failuresByIp');
+        $this->assertContains('198.51.100.9', $week->pluck('ip')->all());
+    }
 }

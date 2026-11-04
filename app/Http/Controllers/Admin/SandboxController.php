@@ -22,8 +22,13 @@ class SandboxController extends Controller
     {
     }
 
-    public function show(): View
+    /** Périodes du regroupement des échecs : paramètre => [libellé, heures]. */
+    public const FAILURE_PERIODS = ['24h' => ['24 heures', 24], '7j' => ['7 jours', 168], '30j' => ['30 jours', 720]];
+
+    public function show(Request $request): View
     {
+        $period = array_key_exists((string) $request->query('echecs'), self::FAILURE_PERIODS) ? $request->query('echecs') : '24h';
+        $showFailures = $request->boolean('avec_echecs');
         $status = $backups = null;
         $error = null;
         if ($this->sandbox->isConfigured()) {
@@ -44,7 +49,13 @@ class SandboxController extends Controller
             'error'      => $error,
             'sshCommand' => $this->sandbox->sshCommand(),
             'effectivePublic' => $this->sandbox->effectivePublic(),
-            'connections' => \App\Models\SandboxConnection::latest('connected_at')->paginate(30, pageName: 'connexions'),
+            // Journal détaillé : échecs masqués par défaut (regroupés par adresse ci-dessous)
+            'connections' => \App\Models\SandboxConnection::query()
+                ->unless($showFailures, fn ($q) => $q->where('result', 'not like', 'refusée%'))
+                ->latest('connected_at')->paginate(30, pageName: 'connexions')->withQueryString(),
+            'showFailures' => $showFailures,
+            'failurePeriod' => $period,
+            'failuresByIp' => $this->failuresByIp(self::FAILURE_PERIODS[$period][1]),
             'managers'   => SandboxManager::with('user')->orderBy('username')->get(),
             'myManager'  => SandboxManager::where('user_id', auth()->id())->first(),
         ]);
@@ -330,6 +341,34 @@ class SandboxController extends Controller
                 echo $body->read(65536);
             }
         }, "machine-ssh-{$backup}.tar.gz", ['Content-Type' => 'application/gzip']);
+    }
+
+    /**
+     * Connexions refusées regroupées par adresse IP (les plus nombreuses d'abord), avec
+     * les identifiants tentés, canaux et motifs, et l'état de bannissement de l'adresse.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    protected function failuresByIp(int $hours): \Illuminate\Support\Collection
+    {
+        $rows = \App\Models\SandboxConnection::query()
+            ->where('result', 'like', 'refusée%')
+            ->where('connected_at', '>=', now()->subHours($hours))
+            ->whereNotNull('ip_address')
+            ->get(['ip_address', 'channel', 'username', 'result', 'connected_at'])
+            ->groupBy('ip_address');
+        $banned = \App\Models\IpBan::active()->whereIn('ip_address', $rows->keys())->pluck('ip_address')->flip();
+
+        return $rows->map(fn ($attempts, $ip) => (object) [
+            'ip'        => $ip,
+            'count'     => $attempts->count(),
+            'first'     => $attempts->min('connected_at'),
+            'last'      => $attempts->max('connected_at'),
+            'usernames' => $attempts->pluck('username')->filter()->countBy()->sortDesc(),
+            'channels'  => $attempts->pluck('channel')->unique()->values(),
+            'reasons'   => $attempts->map(fn ($a) => trim(\Illuminate\Support\Str::between($a->result, '(', ')')) ?: $a->result)->countBy()->sortDesc(),
+            'banned'    => $banned->has($ip),
+        ])->sortByDesc('count')->values()->take(200);
     }
 
     /** @return array<string, mixed> */

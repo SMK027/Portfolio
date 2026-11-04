@@ -55,6 +55,7 @@ Portfolio personnel construit sur Laravel 13 (Blade, Alpine.js, Tailwind CSS), a
   - message d'accueil modifiable ;
   - réinitialisation chaque nuit ou chaque lundi, en restaurant une sauvegarde de référence ;
   - nouveau mot de passe invité chaque nuit ou chaque lundi.
+- **Échecs de connexion regroupés par adresse IP** (24 h, 7 j ou 30 j) : nombre, identifiants tentés, motifs, période, et bouton « Bannir » qui pré-remplit le bannissement manuel. Le journal détaillé masque les échecs par défaut.
 - **Historique des connexions** relevé chaque minute. Les IP sont effacées après 3 mois et les lignes supprimées après 13 mois.
 - **Alertes Discord** (événement « Machine SSH ») : machine arrêtée, agent injoignable, quota saturé, rafale de connexions refusées, réinitialisation planifiée.
 - Sauvegardes et restaurations des dossiers personnels : manuelles ou automatiques chaque nuit, téléchargeables.
