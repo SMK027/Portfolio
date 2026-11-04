@@ -295,6 +295,21 @@
         </x-admin.section>
     @endif
 
+    <x-admin.section title="Connexions root réussies (30 jours)"
+                     description="Seules ces lignes correspondent à un accès root réel (clé acceptée). Une « connexion TCP » sur le port de gestion n'est qu'une ouverture avant authentification.">
+        @forelse ($rootLogins as $login)
+            <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span><span class="font-mono font-medium">{{ $login->username }}</span> · {{ $login->connected_at->format('d/m/Y H:i:s') }}</span>
+                <a href="{{ route('admin.ip-history', ['ip' => $login->ip_address]) }}" class="font-mono text-xs hover:underline">{{ $login->ip_address ?? 'IP effacée' }}</a>
+            </div>
+        @empty
+            <p class="text-sm text-emerald-700">Aucune connexion root réussie sur les 30 derniers jours.</p>
+        @endforelse
+        @if ($rootLogins->isNotEmpty())
+            <p class="text-xs text-slate-500">Une connexion que vous ne reconnaissez pas ? Révoquez le compte et ses clés ci-dessous, puis vérifiez le <a href="{{ route('admin.audit.index') }}" class="underline">journal d'activité</a>.</p>
+        @endif
+    </x-admin.section>
+
     <x-admin.section id="echecs" title="Échecs de connexion par adresse IP"
                      description="Connexions refusées regroupées par adresse, les plus nombreuses d'abord. Le bannissement automatique s'applique déjà selon vos règles ; bannissez ici les adresses insistantes.">
         <nav class="inline-flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1 text-sm" aria-label="Période">
@@ -355,7 +370,7 @@
             @if ($showFailures)
                 Toutes les connexions, échecs compris. <a href="{{ route('admin.sandbox.show', ['echecs' => $failurePeriod]) }}#historique" class="font-medium text-primary-600 hover:underline">Masquer les échecs</a>
             @else
-                Échecs masqués (voir le regroupement par adresse ci-dessus). <a href="{{ route('admin.sandbox.show', ['echecs' => $failurePeriod, 'avec_echecs' => 1]) }}#historique" class="font-medium text-primary-600 hover:underline">Afficher aussi les échecs</a>
+                Connexions authentifiées seulement : échecs (regroupés ci-dessus) et simples ouvertures TCP masqués. <a href="{{ route('admin.sandbox.show', ['echecs' => $failurePeriod, 'avec_echecs' => 1]) }}#historique" class="font-medium text-primary-600 hover:underline">Afficher aussi les échecs</a>
             @endif
         </p>
         @if ($connections->isEmpty())
@@ -370,7 +385,7 @@
                                 <td class="whitespace-nowrap">{{ $connection->connected_at->format('d/m H:i:s') }}</td>
                                 <td class="font-mono text-xs">@if ($connection->ip_address)<a href="{{ route('admin.ip-history', ['ip' => $connection->ip_address]) }}" class="hover:underline">{{ $connection->ip_address }}</a>@else effacée @endif</td>
                                 <td>{{ ['web' => 'Terminal web', 'gestion' => 'Gestion (root)'][$connection->channel] ?? 'SSH' }}@if ($connection->username) · {{ $connection->username }}@endif</td>
-                                <td @class(['text-red-600' => $connection->isRefused()])>{{ $connection->result }}</td>
+                                <td @class(['text-red-600' => $connection->isRefused(), 'text-slate-400' => $connection->isTcpOpen()])>{{ $connection->resultLabel() }}</td>
                             </tr>
                         @endforeach
                     </tbody>

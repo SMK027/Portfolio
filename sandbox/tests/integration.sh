@@ -103,6 +103,15 @@ check "compte bloqué au-delà du quota" wait_for bash -c "api GET status | grep
 docker exec "$PROJECT-ssh" rm -f /home/testeur/gros.bin
 check "compte débloqué après nettoyage" wait_for ssh_as testeur Test-pass-1 true
 
+echo "▶ Attribution des échecs"
+api POST auth-failures/drain >/dev/null
+ssh_as testeur Test-pass-1 true
+sleep 14
+check "connexion réussie : aucun échec compté" bash -c "api POST auth-failures/drain | grep -qx '{\"failures\":\[\]}'"
+timeout 3 bash -c "exec 3<>/dev/tcp/127.0.0.1/$SSH_PORT; sleep 1" || true
+sleep 14
+check "ouverture TCP sans authentification : comptée comme échec" bash -c "api POST auth-failures/drain | grep -q '\"channel\":\"ssh\",\"username\":null'"
+
 echo "▶ Bannissement et accès public"
 api PUT state "{\"public\":true,\"internet\":false,\"banned_ips\":[\"$(api GET status | grep -o '"ip":"[0-9.]*"' | head -1 | cut -d'"' -f4)\"],\"accounts\":[{\"username\":\"testeur\",\"hash\":\"$HASH\",\"enabled\":true}]}" >/dev/null
 check "adresse bannie refusée" bash -c "! ssh_as testeur Test-pass-1 true"

@@ -9,7 +9,10 @@ import { isBanned, isOpen, logConnection } from './state.js';
 
 export const openSockets = new Set();
 
-/** Port source de chaque connexion relayée vers sshd → IP réelle et canal (pour le journal sshd). */
+/**
+ * Port source de chaque connexion relayée vers sshd → IP réelle, canal et état
+ * (pour le journal sshd) ; retirée peu après la fermeture (voir authlog.js).
+ */
 export const relayedPorts = new Map();
 
 // Limites du port de gestion, indépendantes de celles des visiteurs
@@ -40,8 +43,10 @@ function relay({ listenPort, upstreamPort, channel, label, admit, onOpen, onClos
         }
 
         logConnection({ ip, channel, result: 'ouverte' });
+        let entry = null;
         const upstream = net.connect(upstreamPort, config.sshHost, () => {
-            relayedPorts.set(upstream.localPort, { ip, channel, at: Date.now() });
+            entry = { ip, channel, openedAt: Date.now(), closedAt: null, authenticated: false, failed: false };
+            relayedPorts.set(upstream.localPort, entry);
         });
         onOpen(client);
         let closed = false;
@@ -49,6 +54,9 @@ function relay({ listenPort, upstreamPort, channel, label, admit, onOpen, onClos
             if (! closed) {
                 closed = true;
                 onClose(client, ip);
+                if (entry) {
+                    entry.closedAt = Date.now();
+                }
             }
             client.destroy();
             upstream.destroy();

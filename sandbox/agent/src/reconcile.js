@@ -29,9 +29,20 @@ export async function apply() {
 }
 
 /** Vérification périodique : redémarrage de la machine détecté, quota disque. */
-export async function watch() {
+/** Exécute une étape de surveillance ; son échec n'empêche pas les suivantes. */
+async function step(name, fn) {
     try {
-        const info = await docker.inspect();
+        await fn();
+    } catch (error) {
+        runtime.lastError = `${name} : ${error.message}`;
+    }
+}
+
+/** Vérification périodique : redémarrage de la machine détecté, quotas, processus orphelins. */
+export async function watch() {
+    let info = null;
+    await step('état de la machine', async () => {
+        info = await docker.inspect();
         const startedAt = info?.State?.StartedAt ?? null;
         if (info?.State?.Running && startedAt !== runtime.containerStartedAt) {
             runtime.containerStartedAt = startedAt;
@@ -39,30 +50,37 @@ export async function watch() {
             await new Promise((resolve) => setTimeout(resolve, 3000));
             await apply();
         }
-        if (info?.State?.Running) {
-            runtime.usageKb = await sandbox.usageKb();
-            const over = runtime.usageKb > config.quotaKb;
-            if (over && ! runtime.overQuota) {
-                console.warn(`Quota dépassé (${runtime.usageKb} Ko) : accès public suspendu.`);
-                closeAll();
-                closeAllTerminals('espace disque de la machine saturé');
-                await sandbox.killSessions().catch(() => {});
-            }
-            runtime.overQuota = over;
-
-            // Quota par compte
-            runtime.usageByUser = await sandbox.usageByUser();
-            const quotaKb = (state.limits?.user_quota_mb ?? DEFAULT_LIMITS.user_quota_mb) * 1024;
-            const overUsers = Object.entries(runtime.usageByUser).filter(([, kb]) => kb > quotaKb).map(([user]) => user).sort();
-            if (overUsers.join() !== runtime.overUsers.join()) {
-                runtime.overUsers = overUsers;
-                await apply();
-            }
-
-            await sandbox.reap();
-            await collectAuthLog();
-        }
-    } catch (error) {
-        runtime.lastError = error.message;
+    });
+    if (! info?.State?.Running) {
+        return;
     }
+
+    await step('quota global', async () => {
+        runtime.usageKb = await sandbox.usageKb();
+        const over = runtime.usageKb > config.quotaKb;
+        if (over && ! runtime.overQuota) {
+            console.warn(`Quota dépassé (${runtime.usageKb} Ko) : accès public suspendu.`);
+            closeAll();
+            closeAllTerminals('espace disque de la machine saturé');
+            await sandbox.killSessions().catch(() => {});
+        }
+        runtime.overQuota = over;
+    });
+
+    await step('quota par compte', async () => {
+        runtime.usageByUser = await sandbox.usageByUser();
+        const quotaKb = (state.limits?.user_quota_mb ?? DEFAULT_LIMITS.user_quota_mb) * 1024;
+        const overUsers = Object.entries(runtime.usageByUser).filter(([, kb]) => kb > quotaKb).map(([user]) => user).sort();
+        if (overUsers.join() !== runtime.overUsers.join()) {
+            runtime.overUsers = overUsers;
+            await apply();
+        }
+    });
+
+    await step('nettoyage des processus', () => sandbox.reap());
+}
+
+/** Relevé du journal d'authentification, sur sa propre boucle rapide (voir authlog.js). */
+export async function watchAuthLog() {
+    await step('journal d\'authentification', () => collectAuthLog());
 }

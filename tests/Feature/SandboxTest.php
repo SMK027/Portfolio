@@ -379,4 +379,27 @@ class SandboxTest extends TestCase
         $week = $this->actingAs($this->admin)->get(route('admin.sandbox.show', ['echecs' => '7j']))->viewData('failuresByIp');
         $this->assertContains('198.51.100.9', $week->pluck('ip')->all());
     }
+
+    public function test_tcp_opens_are_not_shown_as_root_logins(): void
+    {
+        $this->fakeAgent();
+        $add = fn (string $channel, string $result, ?string $user = null) => \App\Models\SandboxConnection::create([
+            'connected_at' => now()->subMinute(), 'ip_address' => '176.65.148.253', 'channel' => $channel, 'username' => $user, 'result' => $result,
+        ]);
+        foreach (range(1, 20) as $i) {
+            $add('gestion', 'ouverte'); // robot : ouvre le port de gestion, sans jamais s'authentifier
+        }
+        $add('web', 'ouverte', 'guest'); // terminal web : session déjà authentifiée
+
+        $response = $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertOk()
+            ->assertSee('Aucune connexion root réussie sur les 30 derniers jours.');
+        $this->assertSame(['web'], $response->viewData('connections')->pluck('channel')->all());
+
+        $this->actingAs($this->admin)->get(route('admin.sandbox.show', ['avec_echecs' => 1]))
+            ->assertSee('connexion TCP (avant authentification)');
+
+        $add('gestion', 'authentifiée', 'adm-leo');
+        $this->actingAs($this->admin)->get(route('admin.sandbox.show'))
+            ->assertDontSee('Aucune connexion root réussie')->assertSee('adm-leo');
+    }
 }

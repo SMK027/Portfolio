@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import config from './config.js';
 import { startApi } from './api.js';
 import { startGateway } from './gateway.js';
-import { watch } from './reconcile.js';
+import { watch, watchAuthLog } from './reconcile.js';
 import { ensureKey } from './sandbox.js';
 import { startTerminal } from './terminal.js';
 
@@ -18,5 +18,13 @@ startTerminal();
 
 watch();
 setInterval(watch, 20000);
+// Journal sshd relevé souvent : les échecs restent attribuables à la bonne connexion.
+let collecting = false;
+setInterval(async () => {
+    if (collecting) return;
+    collecting = true;
+    await watchAuthLog();
+    collecting = false;
+}, 3000);
 
 process.on('SIGTERM', () => process.exit(0));

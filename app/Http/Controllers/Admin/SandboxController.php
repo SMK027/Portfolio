@@ -49,13 +49,16 @@ class SandboxController extends Controller
             'error'      => $error,
             'sshCommand' => $this->sandbox->sshCommand(),
             'effectivePublic' => $this->sandbox->effectivePublic(),
-            // Journal détaillé : échecs masqués par défaut (regroupés par adresse ci-dessous)
+            // Journal détaillé : échecs et simples ouvertures TCP masqués par défaut
             'connections' => \App\Models\SandboxConnection::query()
-                ->unless($showFailures, fn ($q) => $q->where('result', 'not like', 'refusée%'))
+                ->unless($showFailures, fn ($q) => $q->meaningful())
                 ->latest('connected_at')->paginate(30, pageName: 'connexions')->withQueryString(),
             'showFailures' => $showFailures,
             'failurePeriod' => $period,
             'failuresByIp' => $this->failuresByIp(self::FAILURE_PERIODS[$period][1]),
+            // Connexions root réellement authentifiées (clé acceptée), 30 derniers jours
+            'rootLogins' => \App\Models\SandboxConnection::where('channel', 'gestion')->where('result', 'authentifiée')
+                ->where('connected_at', '>=', now()->subDays(30))->latest('connected_at')->limit(50)->get(),
             'managers'   => SandboxManager::with('user')->orderBy('username')->get(),
             'myManager'  => SandboxManager::where('user_id', auth()->id())->first(),
         ]);
