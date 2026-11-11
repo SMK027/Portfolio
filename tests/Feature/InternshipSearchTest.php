@@ -44,6 +44,10 @@ class InternshipSearchTest extends TestCase
             'contacted_on' => '2026-10-01', 'contact_method' => 'web_form', 'status' => 'refused', 'followed_up_on' => '2026-10-03',
         ])->assertSessionHasNoErrors();
         $this->assertSame('web_form', $contact->fresh()->contact_method);
+        $this->put(route('admin.internship.update', $contact), $contact->only(['company', 'address']) + [
+            'contacted_on' => '2026-10-01', 'contact_method' => 'other', 'status' => 'refused',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Autre', $contact->fresh()->methodLabel());
 
         $this->post(route('admin.internship.remarks.store'), ['noted_on' => '2026-10-10', 'body' => 'Peu de réponses pour l\'instant.'])->assertRedirect();
 

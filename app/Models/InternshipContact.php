@@ -19,6 +19,7 @@ class InternshipContact extends Model
         'letter'    => 'Lettre',
         'in_person' => 'Présentiel',
         'web_form'  => 'Formulaire web',
+        'other'     => 'Autre',
     ];
 
     public const STATUSES = [
@@ -51,6 +52,7 @@ class InternshipContact extends Model
         'letter'    => 'document',
         'in_person' => 'map-pin',
         'web_form'  => 'globe',
+        'other'     => 'ellipsis',
     ];
 
     /** Résultats pour lesquels une relance prévue a un sens. */
