@@ -28,6 +28,18 @@
                         @endif
                     </dd>
                 </div>
+                <div class="flex gap-2"><dt class="text-slate-500">Adresse IP :</dt>
+                    <dd>
+                        @if ($message->ip_address)
+                            <span class="font-mono">{{ $message->ip_address }}</span>
+                            @can('manage-ip-bans')
+                                <a href="{{ route('admin.ip-bans.create', ['ip' => $message->ip_address]) }}" class="ml-1 text-xs font-medium text-primary-600 hover:underline">Bannir</a>
+                            @endcan
+                        @else
+                            <span class="text-slate-400">inconnue</span>
+                        @endif
+                    </dd>
+                </div>
                 @if ($message->recaptcha_score !== null)
                     <div class="flex gap-2"><dt class="text-slate-500">Score reCAPTCHA :</dt><dd>{{ number_format($message->recaptcha_score, 1) }}</dd></div>
                 @endif

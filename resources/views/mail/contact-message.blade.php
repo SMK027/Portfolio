@@ -4,6 +4,7 @@
 **De :** {{ $contactMessage->fullName() }} ({{ $contactMessage->email }})
 **Objet :** {{ $contactMessage->subject }}
 **Reçu le :** {{ $contactMessage->created_at->translatedFormat('j F Y à H:i') }}
+**Adresse IP :** {{ $contactMessage->ip_address ?? 'inconnue' }}
 
 <x-mail::panel>
 {{ $contactMessage->message }}
