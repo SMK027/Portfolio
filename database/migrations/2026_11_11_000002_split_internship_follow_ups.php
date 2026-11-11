@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -17,6 +18,13 @@ return new class extends Migration
         Schema::table('internship_contacts', function (Blueprint $table) {
             $table->date('followed_up_on')->nullable()->after('status');
         });
+
+        // Les dates saisies jusqu'ici étaient des relances effectuées : transférées vers la
+        // dernière relance, la relance prévue repart vide.
+        DB::table('internship_contacts')->whereNotNull('follow_up_on')->update([
+            'followed_up_on' => DB::raw('follow_up_on'),
+            'follow_up_on'   => null,
+        ]);
 
         Schema::table('internship_contacts', function (Blueprint $table) {
             $table->dropColumn('follow_up_method');
