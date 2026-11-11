@@ -40,6 +40,9 @@ Schedule::call(fn () => \App\Models\User::warnUpcomingDeactivations())->hourly()
 // Bannissements d'adresses IP terminés depuis plus de 3 mois : supprimés chaque nuit.
 Schedule::call(fn () => app(\App\Services\LoginBan::class)->prune())->dailyAt('03:40')->name('ip-bannies:purge');
 
+// Formulaire de contact : codes de vérification de plus de 2 jours supprimés.
+Schedule::call(fn () => \App\Models\ContactVerification::prune())->dailyAt('03:55')->name('contact:purge-verifications');
+
 // Journal d'activité : archivé après 1 mois, supprimé définitivement après 3 mois.
 Schedule::call(fn () => \App\Models\AuditLog::applyRetention())->dailyAt('03:50')->name('journal:conservation');
 

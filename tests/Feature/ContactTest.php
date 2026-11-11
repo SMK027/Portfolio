@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\ContactMessageReceived;
+use App\Mail\ContactVerificationCode;
 use App\Models\ContactMessage;
+use App\Models\ContactVerification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -60,14 +62,128 @@ class ContactTest extends TestCase
         $this->get('/contact')->assertSee('recaptcha/api.js?render=site-key', false);
     }
 
-    public function test_message_is_stored_and_notified(): void
+    /** Code envoyé par le dernier e-mail de vérification. */
+    protected function lastCode(): string
     {
-        $this->post('/contact', $this->payload())->assertRedirect(route('contact.show'))->assertSessionHas('success');
+        $code = null;
+        Mail::assertSent(ContactVerificationCode::class, function (ContactVerificationCode $mail) use (&$code) {
+            $code = $mail->code;
+
+            return true;
+        });
+
+        return $code;
+    }
+
+    public function test_submission_sends_a_verification_code_without_storing_the_message(): void
+    {
+        $this->post('/contact', $this->payload())->assertRedirect(route('contact.verification'));
+
+        $this->assertDatabaseCount('contact_messages', 0);
+        Mail::assertSent(ContactVerificationCode::class, fn ($mail) => $mail->hasTo('ada@example.com') && preg_match('/^\d{6}$/', $mail->code));
+        Mail::assertNotSent(ContactMessageReceived::class);
+
+        $verification = ContactVerification::sole();
+        $this->assertSame('127.0.0.1', $verification->ip_address);
+        $this->assertNotSame($this->lastCode(), $verification->code_hash);
+
+        $this->get('/contact/verification')->assertOk()->assertSee('ada@example.com');
+    }
+
+    public function test_message_is_stored_with_ip_and_notified_once_code_is_confirmed(): void
+    {
+        $this->post('/contact', $this->payload(), ['REMOTE_ADDR' => '203.0.113.7']);
+
+        $this->post('/contact/verification', ['code' => $this->lastCode()])
+            ->assertRedirect(route('contact.show'))->assertSessionHas('success');
 
         $message = ContactMessage::sole();
         $this->assertSame('Ada', $message->first_name);
+        $this->assertSame('203.0.113.7', $message->ip_address);
         $this->assertNotNull($message->consented_at);
+        $this->assertNotNull(ContactVerification::sole()->verified_at);
         Mail::assertSent(ContactMessageReceived::class);
+
+        // Le code ne peut pas resservir.
+        $this->post('/contact/verification', ['code' => $this->lastCode()])->assertRedirect(route('contact.show'));
+        $this->assertDatabaseCount('contact_messages', 1);
+    }
+
+    public function test_wrong_code_is_rejected_and_attempts_are_limited(): void
+    {
+        $this->post('/contact', $this->payload());
+        $good = $this->lastCode();
+        $bad = $good === '000000' ? '111111' : '000000';
+
+        for ($i = 0; $i < ContactVerification::MAX_ATTEMPTS; $i++) {
+            $this->post('/contact/verification', ['code' => $bad])->assertSessionHasErrors('code');
+        }
+        $this->post('/contact/verification', ['code' => $good])->assertSessionHasErrors('code');
+        $this->assertDatabaseCount('contact_messages', 0);
+    }
+
+    public function test_expired_code_is_rejected(): void
+    {
+        $this->post('/contact', $this->payload());
+        $this->travel(ContactVerification::TTL_MINUTES + 1)->minutes();
+
+        $this->post('/contact/verification', ['code' => $this->lastCode()])->assertSessionHasErrors('code');
+        $this->assertDatabaseCount('contact_messages', 0);
+    }
+
+    public function test_code_can_be_resent_and_previous_one_is_invalidated(): void
+    {
+        $this->post('/contact', $this->payload());
+        $first = $this->lastCode();
+
+        $this->post('/contact/verification/renvoyer')->assertRedirect(route('contact.verification'));
+        Mail::assertSent(ContactVerificationCode::class, 2);
+        $second = $this->lastCode();
+
+        if ($first !== $second) {
+            $this->post('/contact/verification', ['code' => $first])->assertSessionHasErrors('code');
+        }
+        $this->post('/contact/verification', ['code' => $second])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('contact_messages', 1);
+    }
+
+    public function test_sender_is_blocked_for_12_hours_after_3_code_emails(): void
+    {
+        $this->post('/contact', $this->payload());
+        $this->post('/contact/verification/renvoyer');
+        $this->post('/contact/verification/renvoyer');
+        Mail::assertSent(ContactVerificationCode::class, 3);
+
+        // Plus de renvoi, ni de nouveau message, même avec une autre adresse e-mail (même IP)…
+        $this->post('/contact/verification/renvoyer')->assertSessionHasErrors('code');
+        $this->post('/contact', $this->payload(['email' => 'autre@example.com']))->assertSessionHasErrors('email');
+        // … ni depuis une autre IP avec la même adresse e-mail.
+        $this->post('/contact', $this->payload(), ['REMOTE_ADDR' => '198.51.100.1'])->assertSessionHasErrors('email');
+        Mail::assertSent(ContactVerificationCode::class, 3);
+        $this->get('/contact')->assertSee('limite de 3 envois');
+
+        // Le dernier code reçu reste utilisable.
+        $this->post('/contact/verification', ['code' => $this->lastCode()])->assertSessionHasNoErrors();
+
+        $this->travel(11)->hours();
+        $this->post('/contact', $this->payload())->assertSessionHasErrors('email');
+
+        $this->travel(61)->minutes();
+        $this->post('/contact', $this->payload())->assertRedirect(route('contact.verification'));
+        Mail::assertSent(ContactVerificationCode::class, 4);
+    }
+
+    public function test_failed_code_email_does_not_count(): void
+    {
+        config(['mail.default' => 'inexistant']);
+
+        $this->post('/contact', $this->payload())->assertSessionHasErrors('email');
+        $this->assertDatabaseCount('contact_verifications', 0);
+    }
+
+    public function test_verification_page_redirects_without_pending_request(): void
+    {
+        $this->get('/contact/verification')->assertRedirect(route('contact.show'));
     }
 
     public function test_consent_is_required(): void
@@ -93,6 +209,7 @@ class ContactTest extends TestCase
         Http::fake(['*' => Http::response(['success' => true, 'score' => 0.9, 'action' => 'contact'])]);
 
         $this->post('/contact', $this->payload())->assertSessionHasNoErrors();
+        $this->post('/contact/verification', ['code' => $this->lastCode()])->assertSessionHasNoErrors();
 
         $this->assertSame(0.9, ContactMessage::sole()->recaptcha_score);
         Http::assertSent(fn ($request) => $request['secret'] === 'secret-key' && $request['response'] === 'token');

@@ -106,6 +106,13 @@ Route::middleware('page:contact')->group(function () {
     Route::post('/contact', [ContactController::class, 'store'])
         ->middleware('throttle:5,10')
         ->name('contact.store');
+    Route::get('/contact/verification', [ContactController::class, 'verification'])->name('contact.verification');
+    Route::post('/contact/verification', [ContactController::class, 'verify'])
+        ->middleware('throttle:15,10')
+        ->name('contact.verify');
+    Route::post('/contact/verification/renvoyer', [ContactController::class, 'resend'])
+        ->middleware('throttle:5,10')
+        ->name('contact.resend');
 });
 
 /*

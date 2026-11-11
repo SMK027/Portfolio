@@ -43,11 +43,22 @@ class MailResilienceTest extends TestCase
     }
 
     #[DataProvider('brokenConfigurations')]
-    public function test_contact_form_still_works_when_mail_is_broken(array $config): void
+    public function test_contact_form_reports_an_error_when_the_code_cannot_be_sent(array $config): void
     {
         config($config);
 
-        $this->post('/contact', $this->contactPayload())
+        $this->post('/contact', $this->contactPayload())->assertSessionHasErrors('email');
+
+        $this->assertDatabaseCount('contact_verifications', 0);
+        $this->assertNotNull(app(SafeMailer::class)->lastError());
+    }
+
+    #[DataProvider('brokenConfigurations')]
+    public function test_confirmed_contact_message_is_kept_when_mail_is_broken(array $config): void
+    {
+        config($config);
+
+        $this->submitVerifiedContact($this->contactPayload())
             ->assertRedirect(route('contact.show'))
             ->assertSessionHas('success');
 
@@ -73,7 +84,7 @@ class MailResilienceTest extends TestCase
         app(SafeMailer::class)->send(null, new ContactMessageReceived(new ContactMessage), 'test');
         $this->assertNotNull(app(SafeMailer::class)->lastError());
 
-        $this->post('/contact', $this->contactPayload())->assertSessionHas('success');
+        $this->submitVerifiedContact($this->contactPayload())->assertSessionHas('success');
 
         $this->assertNotNull(ContactMessage::sole()->notified_at);
         $this->assertNull(app(SafeMailer::class)->lastError());
@@ -82,7 +93,7 @@ class MailResilienceTest extends TestCase
     public function test_admin_is_warned_and_can_see_unsent_notifications(): void
     {
         config(['mail.default' => 'inexistant']);
-        $this->post('/contact', $this->contactPayload());
+        $this->submitVerifiedContact($this->contactPayload());
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->get(route('admin.dashboard'))

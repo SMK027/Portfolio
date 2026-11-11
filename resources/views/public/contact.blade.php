@@ -5,6 +5,13 @@
         <div class="card p-6 sm:p-8">
             <x-flash class="mb-6" />
 
+            @if ($blockedUntil)
+                <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+                    Vous avez atteint la limite de {{ \App\Models\ContactVerification::MAX_SENDS }} envois de code de vérification.
+                    Vous pourrez soumettre un nouveau message à partir du {{ $blockedUntil->timezone(config('app.timezone'))->translatedFormat('j F Y à H:i') }}.
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('contact.store') }}" x-data="contactForm({ siteKey: @js($recaptchaSiteKey) })" @submit.prevent="submit($event)" class="space-y-5">
                 @csrf
                 <input type="hidden" name="recaptcha_token" value="">
@@ -34,6 +41,10 @@
                     @error('consent')<p class="form-error">{{ $message }}</p>@enderror
                 </div>
 
+                <p class="text-xs text-slate-500">
+                    Un code de vérification à 6 chiffres vous sera envoyé par e-mail pour confirmer votre adresse avant l'envoi du message.
+                </p>
+
                 @error('recaptcha')<p class="form-error">{{ $message }}</p>@enderror
                 <p x-show="captchaError" x-cloak class="form-error">Impossible de joindre le service anti-robot. Vérifiez votre connexion et réessayez.</p>
 
@@ -43,7 +54,7 @@
                         <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" class="underline">règles de confidentialité</a> et les
                         <a href="https://policies.google.com/terms" target="_blank" rel="noopener" class="underline">conditions d'utilisation</a> de Google s'appliquent.
                     </p>
-                    <button type="submit" class="btn-primary flex-none px-6 py-3" :disabled="sending">
+                    <button type="submit" class="btn-primary flex-none px-6 py-3" :disabled="sending" @disabled($blockedUntil)>
                         <span x-show="!sending">Envoyer le message</span>
                         <span x-show="sending" x-cloak>Envoi…</span>
                         <x-icon name="arrow-right" class="h-4 w-4" />

@@ -105,7 +105,7 @@ class AuditLogTest extends TestCase
 
     public function test_public_actions_are_not_logged(): void
     {
-        $this->post('/contact', [
+        $this->submitVerifiedContact([
             'first_name' => 'Ada', 'last_name' => 'L', 'email' => 'ada@example.com', 'subject' => 'Bonjour', 'message' => 'Un message assez long.', 'consent' => '1',
         ]);
 

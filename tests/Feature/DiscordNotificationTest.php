@@ -73,7 +73,7 @@ class DiscordNotificationTest extends TestCase
         Http::fake(['discord.com/*' => Http::response(null, 204)]);
         $this->configure(['contact']);
 
-        $this->post(route('contact.store'), [
+        $this->submitVerifiedContact([
             'first_name' => 'Jean', 'last_name' => 'Dupont', 'email' => 'jean@example.com',
             'subject' => 'Proposition de stage', 'message' => 'Bonjour @everyone, un message suffisamment long.', 'consent' => '1',
         ])->assertSessionHas('success');
@@ -125,7 +125,7 @@ class DiscordNotificationTest extends TestCase
         Http::fake(['discord.com/*' => Http::response('rate limited', 429)]);
         $this->configure(['contact']);
 
-        $this->post(route('contact.store'), [
+        $this->submitVerifiedContact([
             'first_name' => 'Jean', 'last_name' => 'Dupont', 'email' => 'jean@example.com',
             'subject' => 'Bonjour', 'message' => 'Un message de test suffisamment long.', 'consent' => '1',
         ])->assertSessionHas('success');

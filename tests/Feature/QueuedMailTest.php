@@ -70,7 +70,7 @@ class QueuedMailTest extends TestCase
         config(['queue.default' => 'database']);
         Queue::fake();
 
-        $this->post(route('contact.store'), [
+        $this->submitVerifiedContact([
             'first_name' => 'Jean', 'last_name' => 'Dupont', 'email' => 'jean@example.com',
             'subject' => 'Bonjour', 'message' => 'Un message de test suffisamment long.', 'consent' => '1',
         ])->assertSessionHas('success');
