@@ -6,6 +6,9 @@ use App\Mail\ContactMessageReceived;
 use App\Mail\ContactVerificationCode;
 use App\Models\ContactMessage;
 use App\Models\ContactVerification;
+use App\Models\AuditLog;
+use App\Models\Supervisor;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -252,5 +255,68 @@ class ContactTest extends TestCase
         }
 
         $this->post('/contact', $this->payload())->assertStatus(429);
+    }
+
+    protected function contactSupervisor(array $permissions = ['contact.skip_verification'], array $extra = []): Supervisor
+    {
+        $supervisor = new Supervisor(['username' => 'chef', 'user_id' => User::factory()->admin()->create()->id, 'permissions' => $permissions, 'is_active' => true, ...$extra]);
+        $supervisor->setPin('4821');
+        $supervisor->save();
+
+        return $supervisor;
+    }
+
+    public function test_supervisor_can_send_the_message_without_the_code(): void
+    {
+        $supervisor = $this->contactSupervisor();
+        $this->post('/contact', $this->payload(), ['REMOTE_ADDR' => '203.0.113.7']);
+        $this->get('/contact/verification')->assertSee('Validation superviseur');
+
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '4821'])
+            ->assertRedirect(route('contact.show'))->assertSessionHas('success');
+
+        $message = ContactMessage::sole();
+        $this->assertSame('203.0.113.7', $message->ip_address);
+        $this->assertSame($message->id, ContactVerification::sole()->contact_message_id);
+        $this->assertNotNull($supervisor->fresh()->last_used_at);
+        Mail::assertSent(ContactMessageReceived::class);
+        $this->assertSame(1, AuditLog::where('action', 'supervision.granted')->where('subject_id', $supervisor->id)->count());
+    }
+
+    public function test_supervisor_bypass_requires_the_dedicated_permission_and_a_valid_pin(): void
+    {
+        $this->contactSupervisor(['skills.write']);
+        $this->post('/contact', $this->payload());
+
+        // Aucun superviseur habilité : formulaire masqué, validation refusée.
+        $this->get('/contact/verification')->assertDontSee('Validation superviseur');
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '4821'])->assertSessionHasErrors('pin');
+
+        Supervisor::query()->update(['permissions' => json_encode(['contact.skip_verification'])]);
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '0000'])->assertSessionHasErrors('pin');
+        $this->assertDatabaseCount('contact_messages', 0);
+        $this->assertSame(2, AuditLog::where('action', 'supervision.failed')->count());
+    }
+
+    public function test_inactive_supervisor_cannot_bypass_and_attempts_are_limited(): void
+    {
+        $this->contactSupervisor(extra: ['is_active' => false]);
+        $this->post('/contact', $this->payload());
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '4821'])->assertSessionHasErrors('pin');
+
+        Supervisor::query()->update(['is_active' => true]);
+        for ($i = 0; $i < 4; $i++) {
+            $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '0000']);
+        }
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '4821'])
+            ->assertSessionHasErrors(['pin' => 'Trop de tentatives : réessayez dans 5 minute(s).']);
+        $this->assertDatabaseCount('contact_messages', 0);
+    }
+
+    public function test_supervisor_bypass_needs_a_pending_request(): void
+    {
+        $this->contactSupervisor();
+        $this->post('/contact/verification/superviseur', ['username' => 'chef', 'pin' => '4821'])->assertRedirect(route('contact.show'));
+        $this->assertDatabaseCount('contact_messages', 0);
     }
 }

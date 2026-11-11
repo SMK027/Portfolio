@@ -39,6 +39,19 @@
                 @endif
                 <a href="{{ route('contact.show') }}" class="mt-3 inline-block text-slate-500 hover:underline">Revenir au formulaire</a>
             </div>
+
+            @if ($supervisable)
+                <details class="mt-6 border-t border-slate-100 pt-4 text-sm" @if ($errors->has('username') || $errors->has('pin')) open @endif>
+                    <summary class="cursor-pointer text-slate-500 hover:text-slate-700">Validation superviseur</summary>
+                    <form method="POST" action="{{ route('contact.supervise') }}" class="mt-4 space-y-4">
+                        @csrf
+                        <p class="text-xs text-slate-500">Un superviseur habilité peut valider l'envoi du message sans le code reçu par e-mail.</p>
+                        <x-form.input name="username" label="Identifiant superviseur" required maxlength="50" autocomplete="off" />
+                        <x-form.input name="pin" type="password" label="Code PIN" required inputmode="numeric" maxlength="8" autocomplete="off" />
+                        <button type="submit" class="btn-secondary w-full justify-center">Valider l'envoi</button>
+                    </form>
+                </details>
+            @endif
         </div>
     </div>
 </x-public-layout>

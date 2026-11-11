@@ -110,6 +110,9 @@ Route::middleware('page:contact')->group(function () {
     Route::post('/contact/verification', [ContactController::class, 'verify'])
         ->middleware('throttle:15,10')
         ->name('contact.verify');
+    Route::post('/contact/verification/superviseur', [ContactController::class, 'supervise'])
+        ->middleware('throttle:10,10')
+        ->name('contact.supervise');
     Route::post('/contact/verification/renvoyer', [ContactController::class, 'resend'])
         ->middleware('throttle:5,10')
         ->name('contact.resend');

@@ -8,11 +8,14 @@ use App\Mail\ContactVerificationCode;
 use App\Models\ContactMessage;
 use App\Models\ContactVerification;
 use App\Models\Profile;
+use App\Models\Supervisor;
+use App\Services\AuditTrail;
 use App\Services\DiscordNotifier;
 use App\Services\Recaptcha;
 use App\Services\SafeMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -22,10 +25,14 @@ use Illuminate\View\View;
  * à 6 chiffres est envoyé à l'adresse indiquée ; il n'est enregistré (et notifié) qu'une
  * fois ce code confirmé. Au-delà de ContactVerification::MAX_SENDS envois de code, l'adresse
  * IP et l'adresse e-mail sont bloquées pendant ContactVerification::BLOCK_HOURS heures.
+ * Un superviseur habilité (SKIP_OPERATION) peut valider l'envoi sans le code.
  */
 class ContactController extends Controller
 {
     private const SESSION_KEY = 'contact_verification_id';
+
+    /** Habilitation superviseur permettant de se passer du code de vérification. */
+    public const SKIP_OPERATION = 'contact.skip_verification';
 
     public function show(Request $request, Recaptcha $recaptcha): View
     {
@@ -76,6 +83,7 @@ class ContactController extends Controller
             'remaining'    => ContactVerification::remainingSends($request->ip(), $verification->email),
             'blockedUntil' => ContactVerification::blockedUntil($request->ip(), $verification->email),
             'minutes'      => ContactVerification::TTL_MINUTES,
+            'supervisable' => $this->anySupervisor(),
         ]);
     }
 
@@ -104,6 +112,69 @@ class ContactController extends Controller
                 : 'Code incorrect. Ce code n\'est plus valable : demandez-en un nouveau.']);
         }
 
+        return $this->complete($request, $mailer, $verification,
+            'Merci ! Votre adresse e-mail est confirmée et votre message a bien été envoyé, je vous répondrai rapidement.');
+    }
+
+    /** Envoi validé par un superviseur (identifiant + PIN) à la place du code reçu par e-mail. */
+    public function supervise(Request $request, SafeMailer $mailer, AuditTrail $audit): RedirectResponse
+    {
+        $verification = $this->pending($request);
+        if (! $verification) {
+            return redirect()->route('contact.show')
+                ->with('error', 'Votre demande a expiré : merci de remplir à nouveau le formulaire.');
+        }
+
+        $data = $request->validate([
+            'username' => ['required', 'string', 'max:50'],
+            'pin'      => ['required', 'digits_between:4,8'],
+        ], [], ['username' => 'identifiant superviseur', 'pin' => 'code PIN']);
+
+        $key = 'contact-supervision:'.$request->ip().'|'.strtolower($data['username']);
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $audit->record('supervision.locked', Supervisor::where('username', $data['username'])->first(), meta: [
+                'identifiant' => $data['username'],
+                'requête'     => 'POST /'.$request->path(),
+            ], force: true);
+
+            throw ValidationException::withMessages(['pin' => 'Trop de tentatives : réessayez dans '.ceil(RateLimiter::availableIn($key) / 60).' minute(s).']);
+        }
+
+        $supervisor = Supervisor::with('user')->where('username', $data['username'])->first();
+        $valid = $supervisor && $supervisor->checkPin($data['pin']) && $supervisor->isUsable();
+
+        if (! $valid || ! $supervisor->grantable([self::SKIP_OPERATION])) {
+            RateLimiter::hit($key, 300);
+            $audit->record('supervision.failed', $supervisor, meta: [
+                'identifiant' => $data['username'],
+                'raison'      => ! $valid ? 'identifiant, PIN ou superviseur invalide' : 'opération non autorisée pour ce superviseur',
+                'opération'   => 'POST /'.$request->path(),
+            ], force: true);
+
+            throw ValidationException::withMessages(['pin' => ! $valid
+                ? 'Identifiant ou code PIN incorrect, ou superviseur désactivé.'
+                : 'Ce superviseur n\'est pas habilité à valider cette opération.']);
+        }
+
+        RateLimiter::clear($key);
+        $supervisor->forceFill(['last_used_at' => now()])->saveQuietly();
+
+        $response = $this->complete($request, $mailer, $verification,
+            'Merci ! Votre message a bien été envoyé (validation superviseur), je vous répondrai rapidement.');
+
+        $audit->record('supervision.granted', $supervisor, meta: [
+            'opérations' => [self::SKIP_OPERATION],
+            'e-mail'     => $verification->email,
+            'message'    => $verification->contact_message_id,
+            'requête'    => 'POST /'.$request->path(),
+        ], force: true);
+
+        return $response;
+    }
+
+    /** Message enregistré et notifié, demande de vérification close. */
+    private function complete(Request $request, SafeMailer $mailer, ContactVerification $verification, string $success): RedirectResponse
+    {
         $message = ContactMessage::create([
             ...$verification->payload,
             'consented_at'    => now(),
@@ -115,8 +186,13 @@ class ContactController extends Controller
 
         $this->notify($mailer, $message);
 
-        return redirect()->route('contact.show')
-            ->with('success', 'Merci ! Votre adresse e-mail est confirmée et votre message a bien été envoyé, je vous répondrai rapidement.');
+        return redirect()->route('contact.show')->with('success', $success);
+    }
+
+    private function anySupervisor(): bool
+    {
+        return Supervisor::with('user')->where('is_active', true)->get()
+            ->contains(fn (Supervisor $s) => $s->isUsable() && $s->grantable([self::SKIP_OPERATION]));
     }
 
     public function resend(Request $request, SafeMailer $mailer): RedirectResponse

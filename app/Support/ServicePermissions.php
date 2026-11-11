@@ -99,6 +99,9 @@ final class ServicePermissions
         'Sécurité' => [
             'ip_bans.self' => 'Bannir sa propre adresse IP (super-administrateurs)',
         ],
+        'Formulaire de contact' => [
+            'contact.skip_verification' => 'Envoyer un message de contact sans le code de vérification reçu par e-mail',
+        ],
     ];
 
     /** Sections de contenu à lecture / écriture / suppression. */
