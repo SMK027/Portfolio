@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('address', 255);
             $table->string('contact_name', 150)->nullable();
             $table->date('contacted_on');
-            $table->string('contact_method', 20);           // email, call, letter, in_person
+            $table->string('contact_method', 20);           // email, call, letter, in_person, web_form
             $table->string('status', 20);                   // pending, refused, accepted, processing
             $table->date('follow_up_on')->nullable();       // seulement en attente / en cours
             $table->string('follow_up_method', 20)->nullable();

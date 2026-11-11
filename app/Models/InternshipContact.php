@@ -18,6 +18,7 @@ class InternshipContact extends Model
         'call'      => 'Appel',
         'letter'    => 'Lettre',
         'in_person' => 'Présentiel',
+        'web_form'  => 'Formulaire web',
     ];
 
     public const STATUSES = [
@@ -49,6 +50,7 @@ class InternshipContact extends Model
         'call'      => 'phone',
         'letter'    => 'document',
         'in_person' => 'map-pin',
+        'web_form'  => 'globe',
     ];
 
     /** Résultats pour lesquels une relance a un sens. */
