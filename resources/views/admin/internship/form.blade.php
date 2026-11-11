@@ -25,9 +25,11 @@
                 <x-form.select name="contact_method" label="Moyen de contact" :options="$methods" :value="$contact->contact_method" placeholder="—" required />
                 <x-form.select name="status" label="Résultat" :options="\App\Models\InternshipContact::STATUSES" :value="$contact->status" required x-model="status" />
             </div>
-            <div class="grid gap-5 sm:grid-cols-2" x-show="['pending', 'processing'].includes(status)" x-cloak>
-                <x-form.input name="follow_up_on" type="date" label="Date de relance" :value="$contact->follow_up_on?->toDateString()" />
-                <x-form.select name="follow_up_method" label="Moyen de relance" :options="$methods" :value="$contact->follow_up_method" placeholder="—" />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-form.input name="followed_up_on" type="date" label="Relance" :value="$contact->followed_up_on?->toDateString()" help="Date de la dernière relance effectuée, conservée quel que soit le résultat." />
+                <div x-show="['pending', 'processing'].includes(status)" x-cloak>
+                    <x-form.input name="follow_up_on" type="date" label="Relance prévue" :value="$contact->follow_up_on?->toDateString()" help="Facultatif : rappel tant qu'une réponse est attendue." />
+                </div>
             </div>
             <x-form.textarea name="notes" label="Notes" :value="$contact->notes" rows="5" maxlength="5000" />
         </x-admin.section>

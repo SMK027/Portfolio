@@ -131,23 +131,22 @@ class InternshipSearchController extends Controller
     /** @return array<string, mixed> */
     protected function validated(Request $request): array
     {
-        $methods = array_keys(InternshipContact::METHODS);
-
         $data = $request->validate([
             'company'          => ['required', 'string', 'max:150'],
             'address'          => ['required', 'string', 'max:255'],
             'contact_name'     => ['nullable', 'string', 'max:150'],
             'contacted_on'     => ['required', 'date'],
-            'contact_method'   => ['required', Rule::in($methods)],
+            'contact_method'   => ['required', Rule::in(array_keys(InternshipContact::METHODS))],
             'status'           => ['required', Rule::in(array_keys(InternshipContact::STATUSES))],
+            'followed_up_on'   => ['nullable', 'date', 'after_or_equal:contacted_on'],
             'follow_up_on'     => ['nullable', 'date', 'after_or_equal:contacted_on'],
-            'follow_up_method' => ['nullable', Rule::in($methods)],
             'notes'            => ['nullable', 'string', 'max:5000'],
         ]);
 
-        // La relance n'a de sens que tant qu'une réponse est attendue.
+        // La dernière relance est conservée quel que soit le résultat ; la relance prévue
+        // n'a de sens que tant qu'une réponse est attendue.
         if (! in_array($data['status'], InternshipContact::AWAITING, true)) {
-            $data['follow_up_on'] = $data['follow_up_method'] = null;
+            $data['follow_up_on'] = null;
         }
 
         return $data;

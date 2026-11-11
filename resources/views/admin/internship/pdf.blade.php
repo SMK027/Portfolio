@@ -94,9 +94,11 @@
                         </td>
                         <td><span class="pill" style="background: #{{ $background }}; color: #{{ $color }}">{{ $contact->statusLabel() }}</span></td>
                         <td class="nowrap">
-                            @if ($contact->isAwaiting() && $contact->follow_up_on)
-                                <span @class(['overdue' => $contact->followUpDue()])>{{ $contact->follow_up_on->format('d/m/Y') }}</span>
-                                @if ($contact->followUpMethodLabel())<div class="muted small">{{ $contact->followUpMethodLabel() }}</div>@endif
+                            @if ($contact->followed_up_on || ($contact->isAwaiting() && $contact->follow_up_on))
+                                {{ $contact->followed_up_on?->format('d/m/Y') ?? '—' }}
+                                @if ($contact->isAwaiting() && $contact->follow_up_on)
+                                    <div @class(['small', 'overdue' => $contact->followUpDue(), 'muted' => ! $contact->followUpDue()])>Prévue : {{ $contact->follow_up_on->format('d/m/Y') }}</div>
+                                @endif
                             @else
                                 <span class="muted">—</span>
                             @endif

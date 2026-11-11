@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /** Entreprise ou organisme contacté pendant la recherche de stage. */
-#[Fillable(['company', 'address', 'contact_name', 'contacted_on', 'contact_method', 'status', 'follow_up_on', 'follow_up_method', 'notes'])]
+#[Fillable(['company', 'address', 'contact_name', 'contacted_on', 'contact_method', 'status', 'followed_up_on', 'follow_up_on', 'notes'])]
 class InternshipContact extends Model
 {
     use Auditable;
@@ -53,12 +53,12 @@ class InternshipContact extends Model
         'web_form'  => 'globe',
     ];
 
-    /** Résultats pour lesquels une relance a un sens. */
+    /** Résultats pour lesquels une relance prévue a un sens. */
     public const AWAITING = ['pending', 'processing'];
 
     protected function casts(): array
     {
-        return ['contacted_on' => 'date', 'follow_up_on' => 'date'];
+        return ['contacted_on' => 'date', 'followed_up_on' => 'date', 'follow_up_on' => 'date'];
     }
 
     public function auditLabel(): string
@@ -79,11 +79,6 @@ class InternshipContact extends Model
     public function methodLabel(): string
     {
         return self::METHODS[$this->contact_method] ?? $this->contact_method;
-    }
-
-    public function followUpMethodLabel(): ?string
-    {
-        return $this->follow_up_method ? (self::METHODS[$this->follow_up_method] ?? $this->follow_up_method) : null;
     }
 
     public function statusShortLabel(): string
@@ -107,19 +102,19 @@ class InternshipContact extends Model
         return self::METHOD_ICONS[$method ?? $this->contact_method] ?? 'mail';
     }
 
-    /** Relance due (date atteinte) alors que la réponse est toujours attendue. */
+    /** Relance prévue due (date atteinte) alors que la réponse est toujours attendue. */
     public function followUpDue(): bool
     {
         return $this->isAwaiting() && $this->follow_up_on?->lte(today());
     }
 
-    /** Jours restants avant la relance (négatif : en retard), null sans relance prévue. */
+    /** Jours restants avant la relance prévue (négatif : en retard), null sans relance prévue. */
     public function followUpInDays(): ?int
     {
         return $this->isAwaiting() && $this->follow_up_on ? (int) today()->diffInDays($this->follow_up_on, false) : null;
     }
 
-    /** Échéance de relance lisible : « en retard de 3 j », « aujourd'hui », « dans 5 j ». */
+    /** Échéance de la relance prévue, lisible : « en retard de 3 j », « aujourd'hui », « dans 5 j ». */
     public function followUpHint(): ?string
     {
         return match (true) {

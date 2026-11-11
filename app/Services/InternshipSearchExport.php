@@ -24,7 +24,7 @@ class InternshipSearchExport
 {
     public const HEADINGS = [
         'Entreprise / organisme', 'Adresse', 'Interlocuteur', 'Date de contact', 'Moyen de contact',
-        'Résultat', 'Date de relance', 'Moyen de relance', 'Notes',
+        'Résultat', 'Dernière relance', 'Relance prévue', 'Notes',
     ];
 
     /** Couleurs communes aux deux formats. */
@@ -127,12 +127,13 @@ class InternshipSearchExport
             $values = [
                 $contact->company, $contact->address, $contact->contact_name,
                 ExcelDate::PHPToExcel($contact->contacted_on), $contact->methodLabel(), $contact->statusLabel(),
+                $contact->followed_up_on ? ExcelDate::PHPToExcel($contact->followed_up_on) : null,
                 $contact->isAwaiting() && $contact->follow_up_on ? ExcelDate::PHPToExcel($contact->follow_up_on) : null,
-                $contact->isAwaiting() ? $contact->followUpMethodLabel() : null, $contact->notes,
+                $contact->notes,
             ];
             foreach ($values as $col => $value) {
                 $cell = $sheet->getCell([$col + 1, $row]);
-                in_array($col, [3, 6], true) || $value === null
+                in_array($col, [3, 6, 7], true) || $value === null
                     ? $cell->setValue($value)
                     : $cell->setValueExplicit($value, DataType::TYPE_STRING); // pas de formule injectée
             }
@@ -147,18 +148,18 @@ class InternshipSearchExport
             $sheet->getStyle("A{$row}")->getFont()->setBold(true);
 
             if ($contact->followUpDue()) {
-                $sheet->getStyle("G{$row}")->getFont()->setBold(true)->getColor()->setRGB(self::OVERDUE);
+                $sheet->getStyle("H{$row}")->getFont()->setBold(true)->getColor()->setRGB(self::OVERDUE);
             }
         }
 
         $last = $header + max(1, $contacts->count());
         $sheet->getStyle("D".($header + 1).":D{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
-        $sheet->getStyle("G".($header + 1).":G{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
+        $sheet->getStyle("G".($header + 1).":H{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
         $sheet->getStyle("A".($header + 1).":I{$last}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
         $sheet->getStyle("D".($header + 1).":H{$last}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $this->borders($sheet, "A{$header}:I{$last}");
 
-        foreach (['A' => 28, 'B' => 30, 'C' => 20, 'D' => 13, 'E' => 14, 'F' => 22, 'G' => 13, 'H' => 14, 'I' => 55] as $col => $width) {
+        foreach (['A' => 28, 'B' => 30, 'C' => 20, 'D' => 13, 'E' => 14, 'F' => 22, 'G' => 14, 'H' => 14, 'I' => 55] as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
         $sheet->freezePane('B'.($header + 1));

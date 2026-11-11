@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('contacted_on');
             $table->string('contact_method', 20);           // email, call, letter, in_person, web_form
             $table->string('status', 20);                   // pending, refused, accepted, processing
-            $table->date('follow_up_on')->nullable();       // seulement en attente / en cours
+            $table->date('follow_up_on')->nullable();       // relance prévue, seulement en attente / en cours
             $table->string('follow_up_method', 20)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

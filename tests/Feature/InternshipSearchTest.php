@@ -22,18 +22,28 @@ class InternshipSearchTest extends TestCase
         $this->post(route('admin.internship.store'), [
             'company' => 'TechSolutions', 'address' => '12 rue des Lilas, 75011 Paris',
             'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending',
-            'follow_up_on' => '2026-10-08', 'follow_up_method' => 'call', 'notes' => 'CV envoyé.',
+            'followed_up_on' => '2026-10-03', 'follow_up_on' => '2026-10-08', 'notes' => 'CV envoyé.',
         ])->assertRedirect(route('admin.internship.index'));
 
         $contact = InternshipContact::sole();
         $this->assertSame('2026-10-08', $contact->follow_up_on->toDateString());
+        $this->assertSame('2026-10-03', $contact->followed_up_on->toDateString());
 
-        // Plus de relance une fois la réponse reçue
+        // Plus de relance prévue une fois la réponse reçue, la dernière relance est conservée
         $this->put(route('admin.internship.update', $contact), $contact->only(['company', 'address', 'contact_method']) + [
-            'contacted_on' => '2026-10-01', 'status' => 'refused', 'follow_up_on' => '2026-10-08', 'follow_up_method' => 'call',
+            'contacted_on' => '2026-10-01', 'status' => 'refused', 'followed_up_on' => '2026-10-03', 'follow_up_on' => '2026-10-08',
         ])->assertRedirect();
         $this->assertNull($contact->fresh()->follow_up_on);
-        $this->assertNull($contact->fresh()->follow_up_method);
+        $this->assertSame('2026-10-03', $contact->fresh()->followed_up_on->toDateString());
+
+        // Formulaire web accepté comme moyen de contact ; relance antérieure au contact refusée
+        $this->put(route('admin.internship.update', $contact), $contact->only(['company', 'address']) + [
+            'contacted_on' => '2026-10-01', 'contact_method' => 'web_form', 'status' => 'refused', 'followed_up_on' => '2026-09-30',
+        ])->assertSessionHasErrors('followed_up_on');
+        $this->put(route('admin.internship.update', $contact), $contact->only(['company', 'address']) + [
+            'contacted_on' => '2026-10-01', 'contact_method' => 'web_form', 'status' => 'refused', 'followed_up_on' => '2026-10-03',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('web_form', $contact->fresh()->contact_method);
 
         $this->post(route('admin.internship.remarks.store'), ['noted_on' => '2026-10-10', 'body' => 'Peu de réponses pour l\'instant.'])->assertRedirect();
 
