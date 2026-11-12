@@ -51,6 +51,18 @@
     ]);
 @endphp
 
+{{-- Commandes de la palette Ctrl+K (layouts/partials/admin-palette) : les liens de ce menu --}}
+@php
+    $commands = collect($sections)->flatMap(fn ($items, $section) => collect($items)->map(fn ($item) => [
+        'label' => $item[1], 'group' => $section, 'icon' => $item[2], 'url' => route($item[0]),
+    ]))->values()->all();
+    if (! $user->isMachine()) {
+        $commands[] = ['label' => 'Mon compte', 'group' => 'Compte', 'icon' => 'cog', 'url' => route('profile.edit')];
+    }
+    $commands[] = ['label' => 'Voir le site', 'group' => 'Compte', 'icon' => 'external', 'url' => url('/'), 'external' => true];
+@endphp
+<script type="application/json" id="admin-commands">@json($commands)</script>
+
 <div class="flex h-16 flex-none items-center justify-between gap-2 border-b border-white/10 px-5">
     <a href="{{ route('dashboard') }}" class="font-display text-lg font-bold text-white">Portfolio<span class="text-primary-400">.</span>admin</a>
     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 lg:hidden" @click="sidebar = false" aria-label="Fermer le menu">

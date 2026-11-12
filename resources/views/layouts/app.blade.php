@@ -20,6 +20,8 @@
         <div x-show="sidebar" x-cloak x-transition.opacity class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" @click="sidebar = false"></div>
 
         {{-- Barre latérale --}}
+        @include('layouts.partials.admin-palette')
+
         <aside :class="sidebar ? 'translate-x-0' : '-translate-x-full'"
                class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-slate-900 text-slate-300 transition-transform duration-200 lg:translate-x-0">
             @include('layouts.navigation')
@@ -35,6 +37,14 @@
                         <h1 class="truncate font-display text-lg font-semibold text-slate-900">{{ $header }}</h1>
                     @endisset
                 </div>
+                <button type="button" @click="$dispatch('admin-palette')" title="Aller à… (Ctrl+K)"
+                        class="hidden flex-none items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-700 md:flex">
+                    <x-icon name="search" class="h-4 w-4" /> Aller à…
+                    <kbd class="rounded border border-slate-200 px-1 font-sans text-[10px] text-slate-400">Ctrl K</kbd>
+                </button>
+                <button type="button" @click="$dispatch('admin-palette')" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 md:hidden" aria-label="Aller à…">
+                    <x-icon name="search" class="h-5 w-5" />
+                </button>
                 @isset($actions)
                     <div class="flex flex-none items-center gap-2">{{ $actions }}</div>
                 @endisset
