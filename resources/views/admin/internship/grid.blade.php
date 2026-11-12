@@ -20,18 +20,42 @@
         <x-empty-state icon="briefcase" message="Aucune entreprise contactée pour l'instant." />
     @else
         {{-- Seules les lignes modifiées sont envoyées (les autres champs sont désactivés à l'envoi). --}}
-        <form method="POST" action="{{ route('admin.internship.grid.update') }}" class="space-y-4"
-              x-data="{ dirty: {{ $errors->any() ? 'true' : 'false' }} }"
+        {{-- Plein écran : la fenêtre entière (mémorisé), et en option le plein écran du navigateur. --}}
+        <form method="POST" action="{{ route('admin.internship.grid.update') }}"
+              x-data="{
+                  dirty: {{ $errors->any() ? 'true' : 'false' }},
+                  full: (() => { try { return localStorage.getItem('internship-grid.full') !== '0' } catch { return true } })(),
+                  native: false,
+                  toggle() {
+                      this.full = ! this.full;
+                      try { localStorage.setItem('internship-grid.full', this.full ? '1' : '0') } catch {}
+                      if (! this.full && document.fullscreenElement) document.exitFullscreen();
+                  },
+                  browserFullscreen() {
+                      this.full = true;
+                      document.fullscreenElement ? document.exitFullscreen() : this.$el.requestFullscreen?.().catch(() => {});
+                  },
+              }"
+              x-init="document.addEventListener('fullscreenchange', () => native = !! document.fullscreenElement)"
+              :class="full ? 'fixed inset-0 z-[70] flex flex-col gap-3 bg-slate-100 p-3 sm:p-4' : 'space-y-4'"
+              @keydown.escape.window="full && ! native && ! $event.target.closest('input, select, textarea') && toggle()"
               @input="$event.target.closest('tr')?.setAttribute('data-dirty', ''); dirty = true"
               @submit="$el.querySelectorAll('tr[data-row]:not([data-dirty]) :is(input, select, textarea)').forEach(field => field.disabled = true)">
             @csrf
             @method('PUT')
 
-            <p class="text-sm text-slate-500">Modifiez directement les cellules, puis enregistrez : seules les lignes modifiées sont prises en compte. La relance prévue est ignorée pour un contact accepté ou refusé.</p>
+            <div class="flex flex-wrap items-center gap-3">
+                <p x-show="full" class="font-display text-base font-semibold text-slate-900">Modifier en masse — {{ $contacts->count() }} contact(s)</p>
+                <p class="flex-1 text-sm text-slate-500">Modifiez directement les cellules, puis enregistrez : seules les lignes modifiées sont prises en compte. La relance prévue est ignorée pour un contact accepté ou refusé.</p>
+                <button type="button" class="btn-secondary btn-sm" x-show="full" @click="browserFullscreen()" x-text="native ? 'Quitter le plein écran du navigateur' : 'Plein écran du navigateur'"></button>
+                <button type="button" class="btn-secondary btn-sm" @click="toggle()" :title="full ? 'Revenir à la page (Échap)' : 'Occuper toute la fenêtre'">
+                    <x-icon name="expand" class="h-4 w-4" /> <span x-text="full ? 'Réduire' : 'Plein écran'"></span>
+                </button>
+            </div>
 
-            <div class="card overflow-x-auto">
+            <div class="card overflow-auto" :class="full && 'min-h-0 flex-1'">
                 <table class="min-w-[90rem] w-full text-left text-xs">
-                    <thead class="border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wide text-slate-500">
+                    <thead class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wide text-slate-500">
                         <tr>
                             @foreach (['Entreprise *', 'Adresse *', 'Interlocuteur', 'Contact *', 'Moyen *', 'Résultat *', 'Relance', 'Relance prévue', 'Notes'] as $heading)
                                 <th class="px-2 py-2.5 first:pl-4">{{ $heading }}</th>
@@ -69,7 +93,8 @@
                 </table>
             </div>
 
-            <div class="sticky bottom-4 flex justify-end gap-2">
+            <div class="flex justify-end gap-2" :class="full ? '' : 'sticky bottom-4'">
+                <span x-show="dirty" x-cloak class="mr-auto self-center text-xs text-amber-700">Modifications non enregistrées</span>
                 <a href="{{ route('admin.internship.index') }}" class="btn-secondary">Annuler</a>
                 <button type="submit" class="btn-primary shadow-lg" :disabled="! dirty"><x-icon name="check" class="h-4 w-4" /> Enregistrer les modifications</button>
             </div>
