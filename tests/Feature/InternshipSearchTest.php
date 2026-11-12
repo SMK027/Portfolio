@@ -206,7 +206,8 @@ class InternshipSearchTest extends TestCase
         $beta = InternshipContact::create(['company' => 'Bêta'] + $base);
 
         $this->actingAs($admin)->get(route('admin.internship.grid'))->assertOk()
-            ->assertSee("contacts[{$alpha->id}][company]", false)->assertSee('Bêta');
+            ->assertSee("contacts[{$alpha->id}][company]", false)->assertSee('Bêta')
+            ->assertSee('Filtrer toutes les colonnes')->assertSee('x-model="filters.columns[5]"', false);
 
         $this->put(route('admin.internship.grid.update'), ['contacts' => [
             $alpha->id => ['company' => 'Alpha SA', 'contact_method' => 'other', 'status' => 'processing', 'followed_up_on' => '2026-10-05', 'follow_up_on' => '2026-10-15'] + $base,

@@ -22,35 +22,34 @@
         {{-- Seules les lignes modifiées sont envoyées (les autres champs sont désactivés à l'envoi). --}}
         {{-- Plein écran : la fenêtre entière (mémorisé), et en option le plein écran du navigateur. --}}
         <form method="POST" action="{{ route('admin.internship.grid.update') }}"
-              x-data="{
-                  dirty: {{ $errors->any() ? 'true' : 'false' }},
-                  full: (() => { try { return localStorage.getItem('internship-grid.full') !== '0' } catch { return true } })(),
-                  native: false,
-                  toggle() {
-                      this.full = ! this.full;
-                      try { localStorage.setItem('internship-grid.full', this.full ? '1' : '0') } catch {}
-                      if (! this.full && document.fullscreenElement) document.exitFullscreen();
-                  },
-                  browserFullscreen() {
-                      this.full = true;
-                      document.fullscreenElement ? document.exitFullscreen() : this.$el.requestFullscreen?.().catch(() => {});
-                  },
-              }"
-              x-init="document.addEventListener('fullscreenchange', () => native = !! document.fullscreenElement)"
+              x-data="internshipGrid({{ $errors->any() ? 'true' : 'false' }})"
               :class="full ? 'fixed inset-0 z-[70] flex flex-col gap-3 bg-slate-100 p-3 sm:p-4' : 'space-y-4'"
               @keydown.escape.window="full && ! native && ! $event.target.closest('input, select, textarea') && toggle()"
-              @input="$event.target.closest('tr')?.setAttribute('data-dirty', ''); dirty = true"
+              @input="markDirty($event)" @change="markDirty($event)"
               @submit="$el.querySelectorAll('tr[data-row]:not([data-dirty]) :is(input, select, textarea)').forEach(field => field.disabled = true)">
             @csrf
             @method('PUT')
 
             <div class="flex flex-wrap items-center gap-3">
                 <p x-show="full" class="font-display text-base font-semibold text-slate-900">Modifier en masse — {{ $contacts->count() }} contact(s)</p>
-                <p class="flex-1 text-sm text-slate-500">Modifiez directement les cellules, puis enregistrez : seules les lignes modifiées sont prises en compte. La relance prévue est ignorée pour un contact accepté ou refusé.</p>
+                <p class="flex-1 basis-80 text-sm text-slate-500">Modifiez directement les cellules, puis enregistrez : seules les lignes modifiées sont prises en compte. La relance prévue est ignorée pour un contact accepté ou refusé.</p>
                 <button type="button" class="btn-secondary btn-sm" x-show="full" @click="browserFullscreen()" x-text="native ? 'Quitter le plein écran du navigateur' : 'Plein écran du navigateur'"></button>
                 <button type="button" class="btn-secondary btn-sm" @click="toggle()" :title="full ? 'Revenir à la page (Échap)' : 'Occuper toute la fenêtre'">
                     <x-icon name="expand" class="h-4 w-4" /> <span x-text="full ? 'Réduire' : 'Plein écran'"></span>
                 </button>
+            </div>
+
+            {{-- Filtres dynamiques : appliqués aux valeurs actuelles des cellules, au fil de la frappe --}}
+            <div class="flex flex-wrap items-center gap-3 text-xs" @input.stop @change.stop>
+                <div class="relative w-full sm:w-72">
+                    <x-icon name="search" class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input type="search" x-model="filters.all" @input="apply()" placeholder="Filtrer toutes les colonnes…" class="form-input py-1.5 pl-8 text-xs" aria-label="Filtrer toutes les colonnes">
+                </div>
+                <label class="flex items-center gap-1.5 text-slate-600">
+                    <input type="checkbox" x-model="filters.dirtyOnly" @change="apply()" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"> Lignes modifiées seulement
+                </label>
+                <span class="text-slate-500" x-text="shown + ' / ' + total + ' ligne(s)'"></span>
+                <button type="button" x-show="active" x-cloak class="font-medium text-primary-600 hover:underline" @click="reset()">Effacer les filtres</button>
             </div>
 
             <div class="card overflow-auto" :class="full && 'min-h-0 flex-1'">
@@ -59,6 +58,22 @@
                         <tr>
                             @foreach (['Entreprise *', 'Adresse *', 'Interlocuteur', 'Contact *', 'Moyen *', 'Résultat *', 'Relance', 'Relance prévue', 'Notes'] as $heading)
                                 <th class="px-2 py-2.5 first:pl-4">{{ $heading }}</th>
+                            @endforeach
+                        </tr>
+                        <tr class="normal-case tracking-normal" @input.stop @change.stop>
+                            @foreach (['Entreprise', 'Adresse', 'Interlocuteur', 'Date de contact', 'Moyen', 'Résultat', 'Relance', 'Relance prévue', 'Notes'] as $column => $label)
+                                <th class="px-2 pb-2 font-normal first:pl-4">
+                                    @if ($column === 4 || $column === 5)
+                                        <select x-model="filters.columns[{{ $column }}]" @change="apply()" class="{{ $cell }} w-full" aria-label="Filtrer : {{ $label }}">
+                                            <option value="">Tous</option>
+                                            @foreach ($column === 4 ? InternshipContact::METHODS : InternshipContact::STATUSES as $key => $option)<option value="{{ $key }}">{{ $option }}</option>@endforeach
+                                        </select>
+                                    @elseif (in_array($column, [3, 6, 7], true))
+                                        <input type="search" x-model="filters.columns[{{ $column }}]" @input="apply()" placeholder="jj/mm, 2026-10, vide…" class="{{ $cell }} w-full" aria-label="Filtrer : {{ $label }}">
+                                    @else
+                                        <input type="search" x-model="filters.columns[{{ $column }}]" @input="apply()" placeholder="Filtrer…" class="{{ $cell }} w-full" aria-label="Filtrer : {{ $label }}">
+                                    @endif
+                                </th>
                             @endforeach
                         </tr>
                     </thead>
@@ -89,6 +104,7 @@
                                 <td class="px-2 py-1.5 pr-4"><textarea name="{{ $name('notes') }}" rows="1" class="{{ $cell }} w-72 {{ $error('notes') }}" maxlength="5000" aria-label="Notes">{{ $value('notes') }}</textarea></td>
                             </tr>
                         @endforeach
+                        <tr x-show="! shown" x-cloak><td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">Aucune ligne ne correspond aux filtres.</td></tr>
                     </tbody>
                 </table>
             </div>
