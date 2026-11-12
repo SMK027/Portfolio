@@ -29,7 +29,7 @@ export default (hasErrors = false) => ({
     },
 
     rows() {
-        return [...this.$el.querySelectorAll('tr[data-row]')];
+        return [...this.$root.querySelectorAll('tr[data-row]')];
     },
 
     get active() {
@@ -81,6 +81,6 @@ export default (hasErrors = false) => ({
 
     browserFullscreen() {
         this.full = true;
-        document.fullscreenElement ? document.exitFullscreen() : this.$el.requestFullscreen?.().catch(() => {});
+        document.fullscreenElement ? document.exitFullscreen() : this.$root.requestFullscreen?.().catch(() => {});
     },
 });
