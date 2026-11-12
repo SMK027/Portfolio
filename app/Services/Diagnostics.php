@@ -14,7 +14,10 @@ use Throwable;
  */
 class Diagnostics
 {
-    /** Battement du planificateur, enregistré chaque minute (routes/console.php). */
+    /**
+     * Battement du planificateur, enregistré chaque minute (routes/console.php) sous forme
+     * d'horodatage entier : le cache refuse de désérialiser les objets (serializable_classes).
+     */
     public const SCHEDULER_HEARTBEAT = 'diagnostics.scheduler';
 
     public function __construct(
@@ -129,11 +132,11 @@ class Diagnostics
     protected function scheduler(): array
     {
         $last = Cache::get(self::SCHEDULER_HEARTBEAT);
-        if (! $last) {
+        if (! is_int($last)) {
             return $this->check('Planificateur', 'warning', 'Jamais vu', 'Aucun passage enregistré : la tâche cron (schedule:run) est-elle en place ?');
         }
 
-        $age = (int) now()->diffInSeconds($last, true);
+        $age = max(0, now()->timestamp - $last);
 
         return $this->check('Planificateur', $age > 180 ? 'error' : 'ok', $age < 60 ? "il y a {$age} s" : 'il y a '.intdiv($age, 60).' min',
             $age > 180 ? 'Le planificateur ne passe plus : rappels, synchronisations et purges sont à l\'arrêt.' : null);

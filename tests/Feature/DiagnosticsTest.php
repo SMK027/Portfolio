@@ -26,10 +26,10 @@ class DiagnosticsTest extends TestCase
         $this->assertSame('warning', $checks['Planificateur']['status']); // jamais passé
 
         // Battement récent du planificateur, puis arrêt depuis 10 minutes
-        Cache::forever(Diagnostics::SCHEDULER_HEARTBEAT, now()->subSeconds(30));
+        Cache::forever(Diagnostics::SCHEDULER_HEARTBEAT, now()->subSeconds(30)->timestamp);
         $checks = collect($this->getJson(route('admin.diagnostics.data'))->json('groups'))->flatten(1)->keyBy('label');
         $this->assertSame('ok', $checks['Planificateur']['status']);
-        Cache::forever(Diagnostics::SCHEDULER_HEARTBEAT, now()->subMinutes(10));
+        Cache::forever(Diagnostics::SCHEDULER_HEARTBEAT, now()->subMinutes(10)->timestamp);
         $this->assertSame('error', $this->getJson(route('admin.diagnostics.data'))->json('overall'));
     }
 
@@ -38,5 +38,22 @@ class DiagnosticsTest extends TestCase
         $this->actingAs(User::factory()->admin()->create());
         $this->get(route('admin.diagnostics'))->assertForbidden();
         $this->getJson(route('admin.diagnostics.data'))->assertForbidden();
+    }
+
+    /** Production : cache en base, objets non désérialisables (serializable_classes = false). */
+    public function test_works_with_the_database_cache_store(): void
+    {
+        config(['cache.default' => 'database']);
+        $this->actingAs(User::factory()->superAdmin()->create());
+
+        // Ancien battement enregistré comme objet date : illisible, sans faire échouer la page
+        Cache::forever(Diagnostics::SCHEDULER_HEARTBEAT, now());
+        $this->get(route('admin.diagnostics'))->assertOk();
+
+        // Battement réellement enregistré par la tâche planifiée
+        $this->artisan('schedule:run')->assertSuccessful();
+        $checks = collect($this->getJson(route('admin.diagnostics.data'))->assertOk()->json('groups'))->flatten(1)->keyBy('label');
+        $this->assertSame('ok', $checks['Planificateur']['status']);
+        $this->assertSame('ok', $checks['Cache']['status']);
     }
 }
