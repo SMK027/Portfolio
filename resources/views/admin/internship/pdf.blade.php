@@ -68,42 +68,44 @@
     @if ($contacts->isEmpty())
         <p class="muted">Aucune entreprise contactée pour l'instant.</p>
     @else
+        @php
+            $fieldsMeta = \App\Services\InternshipSearchExport::FIELDS;
+            $dates = ['contacted_on', 'followed_up_on', 'follow_up_on'];
+        @endphp
         <table class="contacts">
             <thead>
                 <tr>
-                    <th style="width: 19%">Entreprise / organisme</th>
-                    <th style="width: 11%">Interlocuteur</th>
-                    <th style="width: 10%">Contact</th>
-                    <th style="width: 12%">Résultat</th>
-                    <th style="width: 11%">Relance</th>
-                    <th>Notes</th>
+                    @foreach ($fields as $field)
+                        <th @if ($field !== 'notes') style="width: {{ round($fieldsMeta[$field][1] / collect($fields)->sum(fn ($f) => $fieldsMeta[$f][1]) * 100) }}%" @endif>{{ $fieldsMeta[$field][0] }}</th>
+                    @endforeach
                 </tr>
             </thead>
             <tbody>
                 @foreach ($contacts as $contact)
                     @php [, $background, $color] = $contact->statusStyle(); @endphp
                     <tr>
-                        <td>
-                            <div class="company">{{ $contact->company }}</div>
-                            <div class="muted small">{{ $contact->address }}</div>
-                        </td>
-                        <td>{{ $contact->contact_name ?: '—' }}</td>
-                        <td class="nowrap">
-                            {{ $contact->contacted_on->format('d/m/Y') }}
-                            <div class="muted small">{{ $contact->methodLabel() }}</div>
-                        </td>
-                        <td><span class="pill" style="background: #{{ $background }}; color: #{{ $color }}">{{ $contact->statusLabel() }}</span></td>
-                        <td class="nowrap">
-                            @if ($contact->followed_up_on || ($contact->isAwaiting() && $contact->follow_up_on))
-                                {{ $contact->followed_up_on?->format('d/m/Y') ?? '—' }}
-                                @if ($contact->isAwaiting() && $contact->follow_up_on)
-                                    <div @class(['small', 'overdue' => $contact->followUpDue(), 'muted' => ! $contact->followUpDue()])>Prévue : {{ $contact->follow_up_on->format('d/m/Y') }}</div>
-                                @endif
-                            @else
-                                <span class="muted">—</span>
-                            @endif
-                        </td>
-                        <td class="pre">{{ $contact->notes }}</td>
+                        @foreach ($fields as $field)
+                            @php $value = \App\Services\InternshipSearchExport::value($contact, $field); @endphp
+                            @switch ($field)
+                                @case ('company')
+                                    <td class="company">{{ $value }}</td>
+                                    @break
+                                @case ('status')
+                                    <td><span class="pill" style="background: #{{ $background }}; color: #{{ $color }}">{{ $value }}</span></td>
+                                    @break
+                                @case ('notes')
+                                    <td class="pre">{{ $value }}</td>
+                                    @break
+                                @default
+                                    <td @class(['nowrap' => in_array($field, $dates, true), 'overdue' => $field === 'follow_up_on' && $contact->followUpDue()])>
+                                        @if ($value === null || $value === '')
+                                            <span class="muted">—</span>
+                                        @else
+                                            {{ in_array($field, $dates, true) ? $value->format('d/m/Y') : $value }}
+                                        @endif
+                                    </td>
+                            @endswitch
+                        @endforeach
                     </tr>
                 @endforeach
             </tbody>

@@ -7,6 +7,7 @@ use App\Models\InternshipRemark;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -22,10 +23,44 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /** Export du suivi de recherche de stage (contacts + remarques) en PDF ou Excel. */
 class InternshipSearchExport
 {
-    public const HEADINGS = [
-        'Entreprise / organisme', 'Adresse', 'Interlocuteur', 'Date de contact', 'Moyen de contact',
-        'Résultat', 'Dernière relance', 'Relance prévue', 'Notes',
+    /** Champs exportables, dans l'ordre des colonnes : clé => [intitulé, largeur Excel]. */
+    public const FIELDS = [
+        'company'        => ['Entreprise / organisme', 28],
+        'address'        => ['Adresse', 30],
+        'contact_name'   => ['Interlocuteur', 20],
+        'contacted_on'   => ['Date de contact', 13],
+        'contact_method' => ['Moyen de contact', 14],
+        'status'         => ['Résultat', 22],
+        'followed_up_on' => ['Dernière relance', 14],
+        'follow_up_on'   => ['Relance prévue', 14],
+        'notes'          => ['Notes', 55],
     ];
+
+    protected const DATES = ['contacted_on', 'followed_up_on', 'follow_up_on'];
+
+    /**
+     * Champs demandés, remis dans l'ordre des colonnes ; tous si aucun n'est valide.
+     *
+     * @param  array<int, string>|null  $fields
+     * @return array<int, string>
+     */
+    public static function fields(?array $fields): array
+    {
+        $fields = array_values(array_intersect(array_keys(self::FIELDS), array_filter($fields ?? [], 'is_string')));
+
+        return $fields ?: array_keys(self::FIELDS);
+    }
+
+    /** Valeur d'un champ pour l'export (dates en Carbon, relance prévue seulement si une réponse est attendue). */
+    public static function value(InternshipContact $contact, string $field): mixed
+    {
+        return match ($field) {
+            'contact_method' => $contact->methodLabel(),
+            'status'         => $contact->statusLabel(),
+            'follow_up_on'   => $contact->isAwaiting() ? $contact->follow_up_on : null,
+            default          => $contact->{$field},
+        };
+    }
 
     /** Couleurs communes aux deux formats. */
     protected const HEADER_BG = '1E293B';
@@ -60,7 +95,7 @@ class InternshipSearchExport
      * @param  Collection<int, InternshipContact>  $contacts
      * @param  Collection<int, InternshipRemark>  $remarks
      */
-    public function pdf(Collection $contacts, Collection $remarks): Response
+    public function pdf(Collection $contacts, Collection $remarks, ?array $fields = null): Response
     {
         $options = new Options;
         $options->setIsRemoteEnabled(false);
@@ -71,7 +106,7 @@ class InternshipSearchExport
             'contacts' => $contacts,
             'remarks'  => $remarks,
             'summary'  => $this->summary($contacts),
-            'headings' => self::HEADINGS,
+            'fields'   => self::fields($fields),
         ])->render(), 'UTF-8');
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
@@ -93,13 +128,13 @@ class InternshipSearchExport
      * @param  Collection<int, InternshipContact>  $contacts
      * @param  Collection<int, InternshipRemark>  $remarks
      */
-    public function excel(Collection $contacts, Collection $remarks): StreamedResponse
+    public function excel(Collection $contacts, Collection $remarks, ?array $fields = null): StreamedResponse
     {
         $spreadsheet = new Spreadsheet;
         $spreadsheet->getProperties()->setTitle('Recherche de stage')->setCreator(config('app.name'));
         $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(10);
 
-        $this->contactsSheet($spreadsheet->getActiveSheet(), $contacts);
+        $this->contactsSheet($spreadsheet->getActiveSheet(), $contacts, self::fields($fields));
         $this->remarksSheet($spreadsheet->createSheet(), $remarks);
         $this->summarySheet($spreadsheet->createSheet(), $contacts);
         $spreadsheet->setActiveSheetIndex(0);
@@ -112,58 +147,66 @@ class InternshipSearchExport
         ]);
     }
 
-    /** @param  Collection<int, InternshipContact>  $contacts */
-    protected function contactsSheet(Worksheet $sheet, Collection $contacts): void
+    /**
+     * @param  Collection<int, InternshipContact>  $contacts
+     * @param  array<int, string>  $fields
+     */
+    protected function contactsSheet(Worksheet $sheet, Collection $contacts, array $fields): void
     {
         $sheet->setTitle('Contacts');
-        $this->title($sheet, 'Suivi de la recherche de stage', 'I', $contacts->count().' entreprise(s) contactée(s) — édité le '.now()->format('d/m/Y'));
+        $lastCol = Coordinate::stringFromColumnIndex(count($fields));
+        $column = fn (string $field) => Coordinate::stringFromColumnIndex(array_search($field, $fields, true) + 1);
+        $this->title($sheet, 'Suivi de la recherche de stage', max('B', $lastCol), $contacts->count().' entreprise(s) contactée(s) — édité le '.now()->format('d/m/Y'));
 
         $header = self::HEADER_ROW;
-        $sheet->fromArray(self::HEADINGS, null, "A{$header}");
-        $this->styleHeader($sheet, "A{$header}:I{$header}");
+        $sheet->fromArray(array_map(fn ($field) => self::FIELDS[$field][0], $fields), null, "A{$header}");
+        $this->styleHeader($sheet, "A{$header}:{$lastCol}{$header}");
 
         foreach ($contacts->values() as $i => $contact) {
             $row = $header + 1 + $i;
-            $values = [
-                $contact->company, $contact->address, $contact->contact_name,
-                ExcelDate::PHPToExcel($contact->contacted_on), $contact->methodLabel(), $contact->statusLabel(),
-                $contact->followed_up_on ? ExcelDate::PHPToExcel($contact->followed_up_on) : null,
-                $contact->isAwaiting() && $contact->follow_up_on ? ExcelDate::PHPToExcel($contact->follow_up_on) : null,
-                $contact->notes,
-            ];
-            foreach ($values as $col => $value) {
+            foreach ($fields as $col => $field) {
+                $value = self::value($contact, $field);
                 $cell = $sheet->getCell([$col + 1, $row]);
-                in_array($col, [3, 6, 7], true) || $value === null
-                    ? $cell->setValue($value)
-                    : $cell->setValueExplicit($value, DataType::TYPE_STRING); // pas de formule injectée
+                match (true) {
+                    $value === null || $value === '' => null,
+                    in_array($field, self::DATES, true) => $cell->setValue(ExcelDate::PHPToExcel($value)),
+                    default => $cell->setValueExplicit($value, DataType::TYPE_STRING), // pas de formule injectée
+                };
             }
 
             if ($i % 2) {
-                $this->fill($sheet, "A{$row}:I{$row}", self::ZEBRA_BG);
+                $this->fill($sheet, "A{$row}:{$lastCol}{$row}", self::ZEBRA_BG);
             }
-
-            [, $background, $color] = $contact->statusStyle();
-            $this->fill($sheet, "F{$row}", $background);
-            $sheet->getStyle("F{$row}")->getFont()->setBold(true)->getColor()->setRGB($color);
-            $sheet->getStyle("A{$row}")->getFont()->setBold(true);
-
-            if ($contact->followUpDue()) {
-                $sheet->getStyle("H{$row}")->getFont()->setBold(true)->getColor()->setRGB(self::OVERDUE);
+            if (in_array('status', $fields, true)) {
+                [, $background, $color] = $contact->statusStyle();
+                $this->fill($sheet, $column('status').$row, $background);
+                $sheet->getStyle($column('status').$row)->getFont()->setBold(true)->getColor()->setRGB($color);
+            }
+            if (in_array('company', $fields, true)) {
+                $sheet->getStyle($column('company').$row)->getFont()->setBold(true);
+            }
+            if (in_array('follow_up_on', $fields, true) && $contact->followUpDue()) {
+                $sheet->getStyle($column('follow_up_on').$row)->getFont()->setBold(true)->getColor()->setRGB(self::OVERDUE);
             }
         }
 
+        $first = $header + 1;
         $last = $header + max(1, $contacts->count());
-        $sheet->getStyle("D".($header + 1).":D{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
-        $sheet->getStyle("G".($header + 1).":H{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
-        $sheet->getStyle("A".($header + 1).":I{$last}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
-        $sheet->getStyle("D".($header + 1).":H{$last}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $this->borders($sheet, "A{$header}:I{$last}");
-
-        foreach (['A' => 28, 'B' => 30, 'C' => 20, 'D' => 13, 'E' => 14, 'F' => 22, 'G' => 14, 'H' => 14, 'I' => 55] as $col => $width) {
-            $sheet->getColumnDimension($col)->setWidth($width);
+        $sheet->getStyle("A{$first}:{$lastCol}{$last}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+        foreach ($fields as $field) {
+            $col = $column($field);
+            $sheet->getColumnDimension($col)->setWidth(self::FIELDS[$field][1]);
+            if (in_array($field, [...self::DATES, 'contact_method', 'status'], true)) {
+                $sheet->getStyle("{$col}{$first}:{$col}{$last}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+            if (in_array($field, self::DATES, true)) {
+                $sheet->getStyle("{$col}{$first}:{$col}{$last}")->getNumberFormat()->setFormatCode('dd/mm/yyyy');
+            }
         }
-        $sheet->freezePane('B'.($header + 1));
-        $sheet->setAutoFilter("A{$header}:I{$last}");
+        $this->borders($sheet, "A{$header}:{$lastCol}{$last}");
+
+        $sheet->freezePane((count($fields) > 1 ? 'B' : 'A').$first);
+        $sheet->setAutoFilter("A{$header}:{$lastCol}{$last}");
         $this->printSetup($sheet, $header);
     }
 

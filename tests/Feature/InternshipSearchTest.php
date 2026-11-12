@@ -82,6 +82,18 @@ class InternshipSearchTest extends TestCase
         $this->assertSame('Accepté', $book->getSheetByName('Contacts')->getCell('F5')->getValue());
         $this->assertSame('Stage trouvé.', $book->getSheetByName('Remarques')->getCell('B5')->getValue());
         $this->assertSame(1, $book->getSheetByName('Synthèse')->getCell('B5')->getValue());
+        // Colonnes choisies : ordre des colonnes conservé, autres colonnes absentes
+        $response = $this->get(route('admin.internship.export', ['excel', 'champs' => ['status', 'company', 'inconnu']]))->assertOk();
+        $file = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($file, $response->streamedContent());
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file)->getSheetByName('Contacts');
+        unlink($file);
+        $this->assertSame(['Entreprise / organisme', 'Résultat', null], [$sheet->getCell('A4')->getValue(), $sheet->getCell('B4')->getValue(), $sheet->getCell('C4')->getValue()]);
+        $this->assertSame(['Mairie de Lyon', 'Accepté'], [$sheet->getCell('A5')->getValue(), $sheet->getCell('B5')->getValue()]);
+
+        $this->get(route('admin.internship.export', ['pdf', 'champs' => ['company', 'followed_up_on']]))->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+        $this->get(route('admin.internship.index'))->assertSee('name="champs[]"', false);
     }
 
     public function test_reserved_to_admins_and_authorized_accounts(): void

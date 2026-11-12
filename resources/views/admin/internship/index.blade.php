@@ -16,8 +16,7 @@
     <x-slot name="title">Recherche de stage</x-slot>
     <x-slot name="header">Recherche de stage</x-slot>
     <x-slot name="actions">
-        <a href="{{ route('admin.internship.export', 'pdf') }}" class="btn-secondary" title="Exporter en PDF"><x-icon name="download" class="h-4 w-4" /> PDF</a>
-        <a href="{{ route('admin.internship.export', 'excel') }}" class="btn-secondary" title="Exporter en Excel"><x-icon name="table" class="h-4 w-4" /> Excel</a>
+        @include('admin.internship.partials.export-menu')
         @if ($canUpdate && $stats['total'])
             <a href="{{ route('admin.internship.grid') }}" class="btn-secondary" title="Modifier tous les contacts dans un tableau"><x-icon name="pencil" class="h-4 w-4" /> Modifier en masse</a>
         @endif

@@ -131,12 +131,14 @@ class InternshipSearchController extends Controller
         return back()->with('success', 'Remarque supprimée.');
     }
 
-    public function export(string $format, InternshipSearchExport $export): Response
+    /** Export PDF ou Excel ; ?champs[]=… limite les colonnes du tableau des contacts. */
+    public function export(Request $request, string $format, InternshipSearchExport $export): Response
     {
         $contacts = InternshipContact::ordered()->get();
         $remarks = InternshipRemark::ordered()->get();
+        $fields = (array) $request->query('champs', []);
 
-        return $format === 'pdf' ? $export->pdf($contacts, $remarks) : $export->excel($contacts, $remarks);
+        return $format === 'pdf' ? $export->pdf($contacts, $remarks, $fields) : $export->excel($contacts, $remarks, $fields);
     }
 
     /** Action groupée sur les contacts cochés : mêmes valeurs appliquées à tous, ou suppression. */
