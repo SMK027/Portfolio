@@ -301,6 +301,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::prefix('recherche-stage')->name('internship.')->controller(Admin\InternshipSearchController::class)->group(function () use ($panel) {
         Route::get('/', 'index')->middleware($panel('internship.read'))->name('index');
         Route::get('/export/{format}', 'export')->whereIn('format', ['pdf', 'excel'])->middleware($panel('internship.read'))->name('export');
+        Route::post('/masse', 'bulk')->middleware($panel('internship.update|internship.delete'))->name('bulk');
+        Route::get('/tableau', 'grid')->middleware($panel('internship.update'))->name('grid');
+        Route::put('/tableau', 'updateGrid')->middleware($panel('internship.update'))->name('grid.update');
         Route::get('/nouveau', 'create')->middleware($panel('internship.create'))->name('create');
         Route::post('/', 'store')->middleware($panel('internship.create'))->name('store');
         Route::get('/{contact}/modifier', 'edit')->middleware($panel('internship.read|internship.update'))->name('edit');

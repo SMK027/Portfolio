@@ -1,7 +1,9 @@
 @php
     $user = auth()->user();
     $canCreate = $user->can('panel', 'internship.create');
+    $canUpdate = $user->can('panel', 'internship.update');
     $canDelete = $user->can('panel', 'internship.delete');
+    $canBulk = $canUpdate || $canDelete;
     $canRemark = $user->can('panel', 'internship_remarks.create');
     $canEditRemark = $user->can('panel', 'internship_remarks.update');
     $canDeleteRemark = $user->can('panel', 'internship_remarks.delete');
@@ -16,6 +18,9 @@
     <x-slot name="actions">
         <a href="{{ route('admin.internship.export', 'pdf') }}" class="btn-secondary" title="Exporter en PDF"><x-icon name="download" class="h-4 w-4" /> PDF</a>
         <a href="{{ route('admin.internship.export', 'excel') }}" class="btn-secondary" title="Exporter en Excel"><x-icon name="table" class="h-4 w-4" /> Excel</a>
+        @if ($canUpdate && $stats['total'])
+            <a href="{{ route('admin.internship.grid') }}" class="btn-secondary" title="Modifier tous les contacts dans un tableau"><x-icon name="pencil" class="h-4 w-4" /> Modifier en masse</a>
+        @endif
         @if ($canCreate)
             <a href="{{ route('admin.internship.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Ajouter</a>
         @endif
@@ -119,7 +124,7 @@
     </section>
 
     {{-- Entreprises contactées --}}
-    <section class="space-y-4" aria-labelledby="contacts-title">
+    <section class="space-y-4" aria-labelledby="contacts-title" x-data="{ selected: [], page: @js($contacts->pluck('id')->map(fn ($id) => (string) $id)) }">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <h2 id="contacts-title" class="font-display text-base font-semibold text-slate-900">Entreprises contactées</h2>
             <nav class="flex flex-wrap gap-1.5" aria-label="Filtrer par résultat">
@@ -153,6 +158,10 @@
         @else
             @if ($filtered)<p class="text-xs text-slate-500">{{ $contacts->total() }} résultat(s) sur {{ $stats['total'] }}.</p>@endif
 
+            @if ($canBulk)
+                @include('admin.internship.partials.bulk-actions')
+            @endif
+
             <div class="card overflow-hidden">
                 {{-- En-têtes (écrans larges) --}}
                 <div class="hidden grid-cols-[minmax(0,1.3fr)_9rem_8rem_9rem_minmax(0,1.4fr)_4.5rem] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid">
@@ -174,12 +183,18 @@
                     <ul class="divide-y divide-slate-100 border-b border-slate-100 last:border-b-0">
                         @foreach ($group as $contact)
                             <li class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 px-5 py-3 hover:bg-slate-50 lg:grid-cols-[minmax(0,1.3fr)_9rem_8rem_9rem_minmax(0,1.4fr)_4.5rem] lg:items-center">
-                                <div class="min-w-0">
+                                <div class="flex min-w-0 items-start gap-3">
+                                    @if ($canBulk)
+                                        <input type="checkbox" form="bulk-form" name="ids[]" value="{{ $contact->id }}" x-model="selected"
+                                               class="mt-1 rounded border-slate-300 text-primary-600 focus:ring-primary-500" aria-label="Sélectionner {{ $contact->company }}">
+                                    @endif
+                                    <div class="min-w-0">
                                     <p class="truncate font-semibold text-slate-900">{{ $contact->company }}</p>
                                     <p class="mt-0.5 flex min-w-0 items-center gap-x-3 text-xs text-slate-500">
                                         <span class="flex min-w-0 items-center gap-1"><x-icon name="map-pin" class="h-3.5 w-3.5 flex-none" /><span class="truncate">{{ $contact->address }}</span></span>
                                         @if ($contact->contact_name)<span class="flex min-w-0 items-center gap-1"><x-icon name="user" class="h-3.5 w-3.5 flex-none" /><span class="truncate">{{ $contact->contact_name }}</span></span>@endif
                                     </p>
+                                    </div>
                                 </div>
 
                                 {{-- Mobile : résultat en haut à droite --}}
