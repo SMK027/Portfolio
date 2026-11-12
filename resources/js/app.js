@@ -13,6 +13,7 @@ import searchPalette from './components/search-palette';
 import availabilityBlocks from './components/availability-blocks';
 import availabilityRange from './components/availability-range';
 import adminPalette from './components/admin-palette';
+import diagnostics from './components/diagnostics';
 import { securityKeyLogin, securityKeyPasswordless, securityKeyRegister } from './components/webauthn';
 
 window.Alpine = Alpine;
@@ -29,6 +30,7 @@ Alpine.data('searchPalette', searchPalette);
 Alpine.data('availabilityBlocks', availabilityBlocks);
 Alpine.data('availabilityRange', availabilityRange);
 Alpine.data('adminPalette', adminPalette);
+Alpine.data('diagnostics', diagnostics);
 Alpine.data('securityKeyRegister', securityKeyRegister);
 Alpine.data('securityKeyLogin', securityKeyLogin);
 Alpine.data('securityKeyPasswordless', securityKeyPasswordless);

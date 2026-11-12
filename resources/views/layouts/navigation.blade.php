@@ -37,6 +37,7 @@
             ['admin.blocked-countries.edit', 'Pays bloqués', 'no-symbol', 'admin.blocked-countries.*'],
             ['admin.ip-history', 'Historique d\'une IP', 'search', 'admin.ip-history'],
             ['admin.audit.index', 'Journal d\'activité', 'clock', 'admin.audit.*'],
+            ['admin.diagnostics', 'Diagnostic', 'wrench', 'admin.diagnostics*'],
         ];
     }
 

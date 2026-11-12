@@ -201,6 +201,12 @@ class Sandbox
         return count($failures);
     }
 
+    /** Vérification rapide de l'agent (diagnostic) : délai court, sans effet de bord. */
+    public function ping(): array
+    {
+        return $this->call('get', 'status', [], 3);
+    }
+
     public function status(): array
     {
         $status = $this->call('get', 'status');

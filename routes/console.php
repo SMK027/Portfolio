@@ -33,6 +33,9 @@ Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())-
 Schedule::call(fn () => app(\App\Services\GoogleCalendar::class)->syncBusy())->everyTenMinutes()->name('rendez-vous:google-agenda');
 
 // Comptes du personnel arrivés à leur date de désactivation programmée.
+// Battement du planificateur, contrôlé par la page de diagnostic.
+Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Services\Diagnostics::SCHEDULER_HEARTBEAT, now()))->everyMinute()->name('diagnostic:battement');
+
 Schedule::call(fn () => \App\Models\User::deactivateExpired())->everyMinute()->name('comptes:desactivation');
 // … et avertis quelques jours avant (STAFF_DEACTIVATION_WARNING_DAYS).
 Schedule::call(fn () => \App\Models\User::warnUpcomingDeactivations())->hourly()->name('comptes:avertissement');

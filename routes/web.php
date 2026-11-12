@@ -242,6 +242,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('superviseurs', Admin\SupervisorController::class)->except('show')
         ->parameters(['superviseurs' => 'supervisor'])->names('supervisors')->middleware('can:manage-service-accounts');
 
+    Route::get('/diagnostic', [Admin\DiagnosticsController::class, 'show'])->middleware('can:view-diagnostics')->name('diagnostics');
+    Route::get('/diagnostic/etat', [Admin\DiagnosticsController::class, 'data'])->middleware(['can:view-diagnostics', 'throttle:60,1'])->name('diagnostics.data');
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/historique-ip', Admin\IpHistoryController::class)->middleware('can:view-audit-log')->name('ip-history');
     Route::get('/journal/purge', [Admin\AuditLogController::class, 'purgeForm'])->name('audit.purge');
