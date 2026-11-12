@@ -102,6 +102,7 @@ class AppServiceProvider extends ServiceProvider
         // Double authentification : comptes humains uniquement (jamais bots ni services)
         Gate::define('use-two-factor', fn (User $user) => ! $user->isMachine());
         Gate::define('view-audit-log', fn (User $user) => $user->isSuperAdmin());
+        Gate::define('purge-audit-log', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-service-accounts', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-login-path', fn (User $user) => $user->isSuperAdmin());
         Gate::define('manage-ip-bans', fn (User $user) => $user->isSuperAdmin());

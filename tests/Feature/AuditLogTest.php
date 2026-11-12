@@ -150,4 +150,58 @@ class AuditLogTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.audit.index', ['archived' => 'only']))->assertSee('Thème Beta')->assertDontSee('Thème Alpha');
         $this->actingAs($this->admin)->get(route('admin.audit.index', ['archived' => 'all']))->assertSee('Thème Beta')->assertSee('Thème Alpha');
     }
+
+    public function test_super_admin_purges_a_period_and_the_purge_is_traced(): void
+    {
+        $at = fn (string $date, string $action = 'auth.login') => AuditLog::create(['action' => $action, 'via' => 'web', 'created_at' => $date]);
+        $before = $at('2026-09-30 23:59:59');
+        $at('2026-10-01 00:00:00');
+        $at('2026-10-31 23:59:59');
+        $after = $at('2026-11-01 00:00:00');
+        $oldPurge = $at('2026-10-15 12:00:00', AuditLog::PURGE_ACTION);
+
+        $this->actingAs($this->admin)->get(route('admin.audit.purge', ['from' => '2026-10-01', 'to' => '2026-10-31']))
+            ->assertOk()->assertSee('2 entrée(s)', false);
+
+        // Mot de passe et confirmation exigés
+        $period = ['from' => '2026-10-01', 'to' => '2026-10-31'];
+        $this->delete(route('admin.audit.purge.destroy'), $period + ['password' => 'mauvais', 'confirmation' => 'PURGER'])->assertSessionHasErrors('password');
+        $this->delete(route('admin.audit.purge.destroy'), $period + ['password' => 'password', 'confirmation' => 'oui'])->assertSessionHasErrors('confirmation');
+        $this->delete(route('admin.audit.purge.destroy'), ['from' => '2026-10-31', 'to' => '2026-10-01', 'password' => 'password', 'confirmation' => 'PURGER'])->assertSessionHasErrors('to');
+        $this->assertSame(5, AuditLog::where('action', '!=', 'auth.failed')->count());
+
+        $this->delete(route('admin.audit.purge.destroy'), $period + ['password' => 'password', 'confirmation' => 'PURGER'])
+            ->assertRedirect(route('admin.audit.index'))->assertSessionHas('success');
+
+        $this->assertModelExists($before);
+        $this->assertModelExists($after);
+        $this->assertModelExists($oldPurge);
+        $this->assertSame(0, AuditLog::where('action', 'auth.login')->whereBetween('created_at', ['2026-10-01', '2026-10-31 23:59:59'])->count());
+        $trace = $this->last(AuditLog::PURGE_ACTION);
+        $this->assertSame(['from' => '2026-10-01', 'to' => '2026-10-31', 'deleted' => 2], $trace->meta);
+        $this->assertSame($this->admin->id, $trace->user_id);
+    }
+
+    public function test_purge_is_reserved_to_super_admins(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())->get(route('admin.audit.purge'))->assertForbidden();
+        $this->delete(route('admin.audit.purge.destroy'), ['from' => '2026-10-01', 'to' => '2026-10-31', 'password' => 'password', 'confirmation' => 'PURGER'])
+            ->assertForbidden();
+    }
+
+    public function test_purge_command(): void
+    {
+        AuditLog::create(['action' => 'auth.login', 'via' => 'web', 'created_at' => '2026-10-10 10:00:00']);
+        AuditLog::create(['action' => 'auth.login', 'via' => 'web', 'created_at' => '2026-11-02 10:00:00']);
+
+        $this->artisan('portfolio:audit-purge')->assertFailed();
+        $this->artisan('portfolio:audit-purge', ['--du' => '2026-10-31', '--au' => '2026-10-01'])->assertFailed();
+        $this->artisan('portfolio:audit-purge', ['--du' => '2026-10-01', '--au' => '2026-10-31'])
+            ->expectsConfirmation('Supprimer définitivement 1 entrée(s) du 01/10/2026 au 31/10/2026 ?', 'no')->assertSuccessful();
+        $this->assertSame(2, AuditLog::where('action', 'auth.login')->count());
+
+        $this->artisan('portfolio:audit-purge', ['--du' => '2026-10-01', '--au' => '2026-10-31', '--force' => true])->assertSuccessful();
+        $this->assertSame(1, AuditLog::where('action', 'auth.login')->count());
+        $this->assertSame(1, $this->last(AuditLog::PURGE_ACTION)->meta['deleted']);
+    }
 }

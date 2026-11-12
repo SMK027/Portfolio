@@ -4,9 +4,13 @@
 
     <p class="text-sm text-slate-500">
         Toutes les opérations d'administration (panel, API des comptes de service, console) : connexions, créations, modifications,
-        suppressions, validations, imports… Les actions des visiteurs sur le site public ne sont pas enregistrées. Le journal ne peut être ni modifié ni effacé depuis le site.
+        suppressions, validations, imports… Les actions des visiteurs sur le site public ne sont pas enregistrées. Le journal ne peut pas être modifié ; seul un super-administrateur peut en purger une période (la purge reste tracée).
         Les entrées sont archivées au bout de {{ \App\Models\AuditLog::ARCHIVE_AFTER_MONTHS }} mois (masquées par défaut), puis supprimées définitivement au bout de {{ \App\Models\AuditLog::DELETE_AFTER_MONTHS }} mois.
     </p>
+
+    @can('purge-audit-log')
+        <div class="flex justify-end"><a href="{{ route('admin.audit.purge') }}" class="btn-secondary btn-sm"><x-icon name="trash" class="h-4 w-4" /> Purger une période</a></div>
+    @endcan
 
     <form method="GET" class="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Rechercher (élément, auteur, IP…)" class="form-input lg:col-span-2">

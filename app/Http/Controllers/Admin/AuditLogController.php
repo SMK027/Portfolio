@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -71,6 +73,46 @@ class AuditLogController extends Controller
         Gate::authorize('view-audit-log');
 
         return view('admin.audit.show', ['log' => $log->load('user')]);
+    }
+
+    /** Purge d'une période : aperçu du nombre d'entrées concernées avant confirmation. */
+    public function purgeForm(Request $request): View
+    {
+        Gate::authorize('purge-audit-log');
+
+        $period = $request->filled(['from', 'to']) ? $this->validatedPeriod($request) : null;
+
+        return view('admin.audit.purge', [
+            'period' => $period,
+            'count'  => $period ? AuditLog::period(...$period)->count() : null,
+        ]);
+    }
+
+    public function purge(Request $request): RedirectResponse
+    {
+        Gate::authorize('purge-audit-log');
+
+        [$from, $to] = $this->validatedPeriod($request);
+        $request->validate(
+            ['password' => ['required', 'current_password'], 'confirmation' => ['required', 'in:PURGER']],
+            ['password.current_password' => 'Mot de passe incorrect.', 'confirmation.in' => 'Saisissez PURGER pour confirmer.'],
+        );
+
+        $deleted = AuditLog::purgePeriod($from, $to);
+
+        return redirect()->route('admin.audit.index')
+            ->with('success', "{$deleted} entrée(s) du journal supprimée(s) (du {$from->format('d/m/Y')} au {$to->format('d/m/Y')}).");
+    }
+
+    /** @return array{0: Carbon, 1: Carbon} */
+    protected function validatedPeriod(Request $request): array
+    {
+        $data = $request->validate([
+            'from' => ['required', 'date', 'before_or_equal:today'],
+            'to'   => ['required', 'date', 'after_or_equal:from', 'before_or_equal:today'],
+        ], [], ['from' => 'début de la période', 'to' => 'fin de la période']);
+
+        return [Carbon::parse($data['from']), Carbon::parse($data['to'])];
     }
 
     protected function applyCategory($query, string $category): void

@@ -244,7 +244,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/journal', [Admin\AuditLogController::class, 'index'])->name('audit.index');
     Route::get('/historique-ip', Admin\IpHistoryController::class)->middleware('can:view-audit-log')->name('ip-history');
-    Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->name('audit.show');
+    Route::get('/journal/purge', [Admin\AuditLogController::class, 'purgeForm'])->name('audit.purge');
+    Route::delete('/journal/purge', [Admin\AuditLogController::class, 'purge'])->middleware('throttle:5,1')->name('audit.purge.destroy');
+    Route::get('/journal/{log}', [Admin\AuditLogController::class, 'show'])->whereNumber('log')->name('audit.show');
 });
 
 /*

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -103,6 +104,7 @@ class AuditLog extends Model
         'editor.image_uploaded' => 'Image envoyée (éditeur)',
         'mail.test'         => 'E-mail de test',
         'encoding.repaired' => 'Réparation d\'encodage',
+        'audit.purged'      => 'Journal purgé sur une période',
     ];
 
     public const VIAS = ['web' => 'Panel', 'api' => 'API', 'console' => 'Console'];
@@ -143,6 +145,36 @@ class AuditLog extends Model
             ->toBase()->update(['archived_at' => now()]);
 
         return ['archived' => $archived, 'deleted' => $deleted];
+    }
+
+    /** Traces de purge : jamais supprimées par une purge manuelle. */
+    public const PURGE_ACTION = 'audit.purged';
+
+    /**
+     * Entrées d'une période (bornes incluses, journées entières), hors traces de purge.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<static>
+     */
+    public static function period(CarbonInterface $from, CarbonInterface $to): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::query()
+            ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->where('action', '!=', self::PURGE_ACTION);
+    }
+
+    /**
+     * Seconde exception à l'inaltérabilité : purge manuelle d'une période par un
+     * super-administrateur (ou la console). Une trace de la purge est conservée.
+     */
+    public static function purgePeriod(CarbonInterface $from, CarbonInterface $to): int
+    {
+        $deleted = static::period($from, $to)->toBase()->delete();
+
+        app(\App\Services\AuditTrail::class)->record(self::PURGE_ACTION, meta: [
+            'from' => $from->toDateString(), 'to' => $to->toDateString(), 'deleted' => $deleted,
+        ], force: true, label: 'Du '.$from->format('d/m/Y').' au '.$to->format('d/m/Y').' : '.$deleted.' entrée(s)');
+
+        return $deleted;
     }
 
     public function user(): BelongsTo
