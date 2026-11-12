@@ -13,7 +13,12 @@
     // Administrateurs : tout ; bots et personnel : sections couvertes par leurs autorisations ;
     // contributeurs : rédaction d'articles.
     $sections = match (true) {
-        $user->isAdmin()       => ['' => [['admin.dashboard', 'Tableau de bord', 'squares', 'admin.dashboard']]] + \App\Support\PanelSections::for($user),
+        $user->isAdmin()       => (function () use ($user) {
+            $sections = \App\Support\PanelSections::for($user);
+            $sections['Suivi'] = [['admin.dashboard', 'Tableau de bord', 'home', 'admin.dashboard'], ...($sections['Suivi'] ?? [])];
+
+            return ['Suivi' => $sections['Suivi']] + $sections;
+        })(),
         $user->hasLimitedAccess() => \App\Support\PanelSections::for($user),
         $user->isContributor() => ['Rédaction' => [['admin.articles.index', 'Articles de veille', 'newspaper', 'admin.articles.*']]],
         default                => [],
@@ -59,11 +64,7 @@
         @php
             $groupActive = collect($items)->contains(fn ($item) => request()->routeIs($item[3]));
             $groupBadges = collect($items)->map(fn ($item) => $badges[$item[0]] ?? null)->filter();
-            $groupKey = \Illuminate\Support\Str::slug($section ?: 'principal');
-            // Groupe d'un seul lien : affiché directement, sans sous-menu.
-            if (count($items) === 1) {
-                $section = '';
-            }
+            $groupKey = \Illuminate\Support\Str::slug($section);
         @endphp
         <div @if ($section) x-data="{
                  open: @js($groupActive) || (() => { try { return localStorage.getItem('nav.{{ $groupKey }}') === '1' } catch (e) { return false } })(),
