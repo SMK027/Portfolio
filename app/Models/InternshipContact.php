@@ -27,6 +27,7 @@ class InternshipContact extends Model
         'processing' => 'En cours de traitement',
         'accepted'   => 'Accepté',
         'refused'    => 'Refusé',
+        'no_response' => 'Sans réponse',
     ];
 
     /** Libellés courts (badges du panel). */
@@ -35,6 +36,7 @@ class InternshipContact extends Model
         'processing' => 'En cours',
         'accepted'   => 'Accepté',
         'refused'    => 'Refusé',
+        'no_response' => 'Sans réponse',
     ];
 
     /** Couleurs de chaque résultat : classe de badge (panel), fond et texte (exports). */
@@ -43,6 +45,7 @@ class InternshipContact extends Model
         'processing' => ['badge-primary', 'E0E7FF', '3730A3'],
         'accepted'   => ['badge-green', 'D1FAE5', '065F46'],
         'refused'    => ['badge-red', 'FEE2E2', '991B1B'],
+        'no_response' => ['badge-slate', 'E2E8F0', '475569'],
     ];
 
     /** Icône de chaque moyen de contact. */
@@ -54,6 +57,12 @@ class InternshipContact extends Model
         'web_form'  => 'globe',
         'other'     => 'ellipsis',
     ];
+
+    /** Résultats comptés comme un refus : « Sans réponse » vaut refus à défaut de réponse. */
+    public const REFUSALS = ['refused', 'no_response'];
+
+    /** Résultats définitifs (réponse obtenue ou considérée comme telle). */
+    public const CLOSED = ['accepted', ...self::REFUSALS];
 
     /** Résultats pour lesquels une relance prévue a un sens. */
     public const AWAITING = ['pending', 'processing'];

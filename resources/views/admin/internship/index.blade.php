@@ -10,7 +10,7 @@
     $filtered = $status || $search !== '';
     $latest = $remarks->first();
     $older = $remarks->slice(1);
-    $barColors = ['pending' => 'bg-amber-400', 'processing' => 'bg-primary-500', 'accepted' => 'bg-emerald-500', 'refused' => 'bg-red-400'];
+    $barColors = ['pending' => 'bg-amber-400', 'processing' => 'bg-primary-500', 'accepted' => 'bg-emerald-500', 'refused' => 'bg-red-400', 'no_response' => 'bg-slate-400'];
 @endphp
 <x-app-layout>
     <x-slot name="title">Recherche de stage</x-slot>
@@ -48,7 +48,7 @@
                 <dd class="mt-1 text-2xl font-bold text-emerald-600">{{ $stats['accepted'] }}</dd>
             </div>
             <div>
-                <dt class="text-xs font-medium text-slate-500">Taux de réponse</dt>
+                <dt class="text-xs font-medium text-slate-500" title="« Sans réponse » compte comme un refus">Taux de réponse</dt>
                 <dd class="mt-1 text-2xl font-bold text-slate-900">{{ $stats['responses'] }} <span class="text-base font-semibold text-slate-400">%</span></dd>
             </div>
         </dl>

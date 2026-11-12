@@ -55,7 +55,7 @@ class InternshipSearchController extends Controller
             ->orderBy(...self::SORTS[$sort])->orderByDesc('id')
             ->paginate(25)->withQueryString();
 
-        $answered = $all->whereIn('status', ['accepted', 'refused'])->count();
+        $answered = $all->whereIn('status', InternshipContact::CLOSED)->count(); // « Sans réponse » vaut refus
 
         return view('admin.internship.index', [
             'contacts' => $contacts,

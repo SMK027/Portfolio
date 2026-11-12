@@ -222,4 +222,29 @@ class InternshipSearchTest extends TestCase
         ]])->assertRedirect(route('admin.internship.grid'))->assertSessionHasErrors("contacts.{$beta->id}.company");
         $this->assertSame('Alpha SA', $alpha->fresh()->company);
     }
+
+    public function test_no_response_counts_as_a_refusal(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $base = ['address' => 'Paris', 'contacted_on' => '2026-10-01', 'contact_method' => 'email'];
+        InternshipContact::create(['company' => 'Alpha', 'status' => 'pending'] + $base);
+        InternshipContact::create(['company' => 'Bêta', 'status' => 'accepted'] + $base);
+        InternshipContact::create(['company' => 'Gamma', 'status' => 'refused'] + $base);
+
+        // Passage en « Sans réponse » : plus de relance prévue, dernière relance conservée
+        $this->actingAs($admin)->post(route('admin.internship.store'), [
+            'company' => 'Delta', 'status' => 'no_response', 'followed_up_on' => '2026-10-10', 'follow_up_on' => '2026-10-20',
+        ] + $base)->assertSessionHasNoErrors();
+        $delta = InternshipContact::where('company', 'Delta')->sole();
+        $this->assertFalse($delta->isAwaiting());
+        $this->assertNull($delta->follow_up_on);
+        $this->assertSame('2026-10-10', $delta->followed_up_on->toDateString());
+
+        $summary = app(\App\Services\InternshipSearchExport::class)->summary(InternshipContact::all());
+        $this->assertSame(2, $summary['Refusées']);
+        $this->assertSame(1, $summary['Réponses attendues']);
+        $this->assertSame('75 %', $summary['Taux de réponse']);
+
+        $this->get(route('admin.internship.index', ['statut' => 'no_response']))->assertOk()->assertSee('Delta')->assertDontSee('Gamma');
+    }
 }

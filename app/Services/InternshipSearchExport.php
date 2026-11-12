@@ -79,14 +79,14 @@ class InternshipSearchExport
      */
     public function summary(Collection $contacts): array
     {
-        $answered = $contacts->whereIn('status', ['accepted', 'refused'])->count();
+        $answered = $contacts->whereIn('status', InternshipContact::CLOSED)->count();
 
         return [
             'Entreprises contactées' => $contacts->count(),
             'Réponses attendues'     => $contacts->filter->isAwaiting()->count(),
             'Relances à faire'       => $contacts->filter->followUpDue()->count(),
             'Acceptées'              => $contacts->where('status', 'accepted')->count(),
-            'Refusées'               => $contacts->where('status', 'refused')->count(),
+            'Refusées'               => $contacts->whereIn('status', InternshipContact::REFUSALS)->count(), // dont sans réponse
             'Taux de réponse'        => ($contacts->count() ? (int) round($answered / $contacts->count() * 100) : 0).' %',
         ];
     }
