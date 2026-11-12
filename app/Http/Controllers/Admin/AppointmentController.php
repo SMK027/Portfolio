@@ -122,22 +122,33 @@ class AppointmentController extends Controller
         $status = ['pending' => ['#f59e0b', 'En attente'], 'confirmed' => ['#10b981', 'Confirmé']];
 
         return response()->json([
-            ...AvailabilityRule::all()->map(fn (AvailabilityRule $rule) => [
+            ...AvailabilityRule::all()->map(fn (AvailabilityRule $rule) => array_filter([
                 'id'         => 'weekly-'.$rule->id,
-                'title'      => 'Chaque semaine',
+                'title'      => $rule->hasPeriod() ? 'Du '.$rule->starts_on->format('d/m').' au '.$rule->ends_on->format('d/m') : 'Chaque semaine',
                 'daysOfWeek' => [$rule->weekday % 7],
                 'startTime'  => substr($rule->start_time, 0, 5),
                 'endTime'    => substr($rule->end_time, 0, 5),
-                'classNames' => ['availability', 'availability-weekly'],
-                'extendedProps' => ['kind' => 'weekly', 'key' => $rule->id],
-            ]),
+                // Période : fin exclusive pour FullCalendar.
+                'startRecur' => $rule->starts_on?->toDateString(),
+                'endRecur'   => $rule->ends_on?->copy()->addDay()->toDateString(),
+                'classNames' => ['availability', $rule->hasPeriod() ? 'availability-period' : 'availability-weekly'],
+                'extendedProps' => [
+                    'kind' => 'weekly', 'key' => $rule->id, 'weekday' => (int) $rule->weekday,
+                    'from' => $rule->starts_on?->toDateString(), 'until' => $rule->ends_on?->toDateString(),
+                    'label' => AvailabilityRule::WEEKDAYS[$rule->weekday].' '.substr($rule->start_time, 0, 5).'–'.substr($rule->end_time, 0, 5)
+                        .' — '.($rule->periodLabel() ?? 'toutes les semaines'),
+                ],
+            ], fn ($value) => $value !== null)),
             ...AvailabilitySlot::where('ends_at', '>', $start)->where('starts_at', '<', $end)->get()->map(fn (AvailabilitySlot $slot) => [
                 'id'         => 'date-'.$slot->id,
                 'title'      => 'Ce jour uniquement',
                 'start'      => $slot->starts_at->format('Y-m-d\TH:i:s'),
                 'end'        => $slot->ends_at->format('Y-m-d\TH:i:s'),
                 'classNames' => ['availability', 'availability-date'],
-                'extendedProps' => ['kind' => 'date', 'key' => $slot->id],
+                'extendedProps' => [
+                    'kind' => 'date', 'key' => $slot->id, 'date' => $slot->starts_at->toDateString(),
+                    'label' => ucfirst($slot->starts_at->translatedFormat('l j F Y')).', '.$slot->starts_at->format('H:i').'–'.$slot->ends_at->format('H:i'),
+                ],
             ]),
             ...AvailabilityClosure::whereBetween('date', [$start->toDateString(), $end->toDateString()])->get()->map(fn (AvailabilityClosure $closure) => [
                 'id'         => 'closed-'.$closure->id,
@@ -200,16 +211,71 @@ class AppointmentController extends Controller
         ]);
     }
 
-    /** Nouvelle plage : chaque semaine (même jour) ou uniquement à cette date. */
+    /** Nouvelle plage : chaque semaine (même jour, éventuellement sur une période) ou uniquement à cette date. */
     public function storeRange(Request $request): JsonResponse
     {
         [$kind, $start, $end] = $this->validatedRange($request);
 
         $kind === 'weekly'
-            ? AvailabilityRule::create(['weekday' => $start->isoWeekday(), 'start_time' => $start->format('H:i'), 'end_time' => $end->format('H:i')])
+            ? AvailabilityRule::create(['weekday' => $start->isoWeekday(), 'start_time' => $start->format('H:i'), 'end_time' => $end->format('H:i')]
+                + $this->validatedPeriod($request))
             : AvailabilitySlot::create(['starts_at' => $start, 'ends_at' => $end]);
 
         return response()->json(['ok' => true], 201);
+    }
+
+    /**
+     * Duplique une plage, aux mêmes horaires : une plage hebdomadaire vers d'autres jours de
+     * la semaine (même période), une plage ponctuelle vers d'autres dates.
+     */
+    public function duplicateRange(Request $request, string $kind, int $id): JsonResponse
+    {
+        abort_unless(in_array($kind, ['weekly', 'date'], true), 404);
+
+        if ($kind === 'weekly') {
+            $rule = AvailabilityRule::findOrFail($id);
+            $weekdays = $request->validate([
+                'weekdays'   => ['required', 'array', 'min:1', 'max:7'],
+                'weekdays.*' => ['integer', 'between:1,7', 'distinct'],
+            ], ['weekdays.required' => 'Choisissez au moins un jour.'])['weekdays'];
+
+            foreach ($weekdays as $weekday) {
+                $rule->replicate()->fill(['weekday' => $weekday])->save();
+            }
+
+            return response()->json(['ok' => true, 'count' => count($weekdays)], 201);
+        }
+
+        $slot = AvailabilitySlot::findOrFail($id);
+        $dates = $request->validate([
+            'dates'   => ['required', 'array', 'min:1', 'max:60'],
+            'dates.*' => ['date_format:Y-m-d', 'distinct'],
+        ], ['dates.required' => 'Choisissez au moins une date.'])['dates'];
+
+        foreach ($dates as $date) {
+            $day = Carbon::parse($date, config('app.timezone'));
+            AvailabilitySlot::create([
+                'starts_at' => $day->copy()->setTimeFrom($slot->starts_at),
+                'ends_at'   => $day->copy()->setTimeFrom($slot->ends_at),
+            ]);
+        }
+
+        return response()->json(['ok' => true, 'count' => count($dates)], 201);
+    }
+
+    /** Période facultative d'une plage hebdomadaire (bornes incluses). @return array{starts_on?: string, ends_on?: string} */
+    protected function validatedPeriod(Request $request): array
+    {
+        $data = $request->validate([
+            'from'  => ['nullable', 'required_with:until', 'date_format:Y-m-d'],
+            'until' => ['nullable', 'required_with:from', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ], [
+            'until.after_or_equal' => 'La période doit finir après son début.',
+            'from.required_with'   => 'Indiquez le début de la période.',
+            'until.required_with'  => 'Indiquez la fin de la période.',
+        ]);
+
+        return empty($data['from']) ? [] : ['starts_on' => $data['from'], 'ends_on' => $data['until']];
     }
 
     /** Plage déplacée ou redimensionnée dans le calendrier. */

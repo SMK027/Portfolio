@@ -154,6 +154,7 @@ html.dark .from-primary-100, html.dark .from-slate-200 { background-image: linea
 .availability-calendar a.fc-col-header-cell-cushion:hover { @apply text-primary-700 underline; }
 .availability-calendar .availability { @apply cursor-pointer border-0; }
 .availability-calendar .availability-weekly { background-color: theme('colors.primary.500 / 85%'); }
+.availability-calendar .availability-period { background-color: theme('colors.primary.800 / 85%'); }
 .availability-calendar .availability-date { background-color: theme('colors.accent.500 / 90%'); }
 .availability-calendar .appointment { @apply cursor-pointer shadow-md ring-2 ring-white; }
 .availability-calendar .availability-block, .availability-block-swatch { @apply cursor-pointer border-0 text-white; background: repeating-linear-gradient(135deg, theme('colors.slate.600'), theme('colors.slate.600') 6px, theme('colors.slate.700') 6px, theme('colors.slate.700') 12px); }

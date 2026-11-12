@@ -164,6 +164,61 @@ class AppointmentTest extends TestCase
         $this->postJson(route('admin.appointments.availability.ranges.store'), ['kind' => 'date', 'start' => '2026-10-08T17:00', 'end' => '2026-10-09T09:00'])->assertUnprocessable();
     }
 
+    public function test_weekly_range_limited_to_a_period(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+        AvailabilityRule::query()->delete();
+
+        // Chaque mercredi, du 07/10 au 14/10 seulement (bornes incluses).
+        $this->postJson(route('admin.appointments.availability.ranges.store'), [
+            'kind' => 'weekly', 'start' => '2026-10-07T10:00', 'end' => '2026-10-07T11:00', 'from' => '2026-10-07', 'until' => '2026-10-14',
+        ])->assertCreated();
+        $rule = AvailabilityRule::sole();
+        $this->assertSame(['2026-10-07', '2026-10-14'], [$rule->starts_on->toDateString(), $rule->ends_on->toDateString()]);
+
+        $slots = app(AppointmentSlots::class)->available();
+        $this->assertSame(['2026-10-07', '2026-10-14'], $slots->keys()->all()); // pas le 21
+
+        // Flux du calendrier : récurrence bornée (fin exclusive)
+        $event = collect($this->getJson(route('admin.appointments.availability.events', ['start' => '2026-10-05T00:00:00', 'end' => '2026-10-12T00:00:00']))->json())
+            ->firstWhere('id', 'weekly-'.$rule->id);
+        $this->assertSame(['2026-10-07', '2026-10-15'], [$event['startRecur'], $event['endRecur']]);
+
+        // Déplacement : la période est conservée
+        $this->putJson(route('admin.appointments.availability.ranges.update', ['kind' => 'weekly', 'id' => $rule->id]), ['start' => '2026-10-08T10:00', 'end' => '2026-10-08T11:00'])->assertOk();
+        $this->assertSame([4, '2026-10-14'], [$rule->fresh()->weekday, $rule->fresh()->ends_on->toDateString()]);
+
+        // Période invalide ou incomplète
+        $store = fn (array $period) => $this->postJson(route('admin.appointments.availability.ranges.store'), ['kind' => 'weekly', 'start' => '2026-10-07T10:00', 'end' => '2026-10-07T11:00'] + $period);
+        $store(['from' => '2026-10-14', 'until' => '2026-10-07'])->assertUnprocessable()->assertJsonValidationErrors('until');
+        $store(['from' => '2026-10-14'])->assertUnprocessable()->assertJsonValidationErrors('until');
+        $this->assertSame(1, AvailabilityRule::count());
+    }
+
+    public function test_calendar_duplicates_ranges(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+        $rule = AvailabilityRule::sole(); // mardi 14:00–15:30
+        $rule->update(['starts_on' => '2026-10-01', 'ends_on' => '2026-10-31']);
+
+        $this->postJson(route('admin.appointments.availability.ranges.duplicate', ['kind' => 'weekly', 'id' => $rule->id]), ['weekdays' => [4, 5]])
+            ->assertCreated()->assertJson(['count' => 2]);
+        $copies = AvailabilityRule::whereKeyNot($rule->id)->orderBy('weekday')->get();
+        $this->assertSame([4, 5], $copies->pluck('weekday')->map(fn ($d) => (int) $d)->all());
+        $this->assertSame('2026-10-31', $copies->first()->ends_on->toDateString());
+        $this->assertSame('15:30', substr($copies->first()->end_time, 0, 5));
+
+        $slot = \App\Models\AvailabilitySlot::create(['starts_at' => '2026-10-08 16:00', 'ends_at' => '2026-10-08 17:00']);
+        $this->postJson(route('admin.appointments.availability.ranges.duplicate', ['kind' => 'date', 'id' => $slot->id]), ['dates' => ['2026-10-09', '2026-10-12']])
+            ->assertCreated();
+        $this->assertSame(['2026-10-08 16:00', '2026-10-09 16:00', '2026-10-12 16:00'],
+            \App\Models\AvailabilitySlot::orderBy('starts_at')->get()->map(fn ($s) => $s->starts_at->format('Y-m-d H:i'))->all());
+
+        $this->postJson(route('admin.appointments.availability.ranges.duplicate', ['kind' => 'date', 'id' => $slot->id]), ['dates' => []])->assertUnprocessable();
+        $this->postJson(route('admin.appointments.availability.ranges.duplicate', ['kind' => 'weekly', 'id' => $rule->id]), ['weekdays' => [9]])->assertUnprocessable();
+        $this->postJson(route('admin.appointments.availability.ranges.duplicate', ['kind' => 'closure', 'id' => $rule->id]), ['weekdays' => [3]])->assertNotFound();
+    }
+
     public function test_calendar_toggles_closed_days(): void
     {
         $this->actingAs(User::factory()->admin()->create());

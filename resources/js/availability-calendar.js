@@ -55,7 +55,7 @@ export function mountAvailabilityCalendar(element) {
         eventResize: (info) => save(info),
 
         // Clic sur un rendez-vous : détails et décision ; sur un horaire bloqué : détails ;
-        // sur une plage : suppression.
+        // sur une plage : fenêtre « dupliquer / supprimer ».
         eventClick: (info) => {
             const { kind, key } = info.event.extendedProps;
             if (kind === 'appointment' || kind === 'block') {
@@ -63,11 +63,8 @@ export function mountAvailabilityCalendar(element) {
                 return;
             }
             if (! editable || ! ['weekly', 'date'].includes(kind)) return;
-            const what = kind === 'weekly' ? 'cette plage hebdomadaire (toutes les semaines)' : 'cette disponibilité ponctuelle';
-            if (! window.confirm(`Supprimer ${what} ?`)) return;
-            window.axios.delete(urls.range.replace('__KIND__', kind).replace('__ID__', key))
-                .then(() => { calendar.refetchEvents(); notify('Plage supprimée.', 'success'); })
-                .catch((e) => notify(errorOf(e)));
+            const url = urls.range.replace('__KIND__', kind).replace('__ID__', key);
+            window.dispatchEvent(new CustomEvent('range-open', { detail: { ...info.event.extendedProps, url, duplicateUrl: `${url}/dupliquer` } }));
         },
 
         // Clic sur l'en-tête d'un jour : fermer / rouvrir la journée. Des rendez-vous prévus ce

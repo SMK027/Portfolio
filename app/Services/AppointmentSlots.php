@@ -27,7 +27,9 @@ class AppointmentSlots
         $earliest = CarbonImmutable::now()->addHours((int) $settings['notice_hours']);
         $last = CarbonImmutable::today()->addDays((int) $settings['horizon_days']);
 
-        $rules = AvailabilityRule::orderBy('start_time')->get()->groupBy('weekday');
+        $rules = AvailabilityRule::orderBy('start_time')
+            ->where(fn ($q) => $q->whereNull('ends_on')->orWhere('ends_on', '>=', today()->toDateString()))
+            ->get();
         $oneOffs = AvailabilitySlot::where('ends_at', '>', $earliest)->where('starts_at', '<', $last->addDay())->get()
             ->groupBy(fn ($slot) => $slot->starts_at->toDateString());
         $closed = AvailabilityClosure::where('date', '>=', today())->pluck('date')->map->toDateString()->flip();
@@ -43,8 +45,8 @@ class AppointmentSlots
                 continue;
             }
 
-            // Plages du jour : hebdomadaires + ponctuelles.
-            $ranges = collect($rules->get($day->isoWeekday(), []))
+            // Plages du jour : hebdomadaires (dans leur période éventuelle) + ponctuelles.
+            $ranges = $rules->toBase()->filter(fn ($rule) => $rule->appliesOn($day))
                 ->map(fn ($rule) => [$day->setTimeFromTimeString($rule->start_time), $day->setTimeFromTimeString($rule->end_time)])
                 ->merge(collect($oneOffs->get($day->toDateString(), []))->map(fn ($slot) => [$slot->starts_at->toImmutable(), $slot->ends_at->toImmutable()]));
 

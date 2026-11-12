@@ -14,15 +14,16 @@
 
     {{-- Calendrier --}}
     <section class="card space-y-4 p-4 sm:p-6"
-             x-data="{ choice: null, notice: null, timer: null, appointment: null, deciding: null }"
-             @availability-choose.window="choice = $event.detail"
+             x-data="{ choice: null, period: null, notice: null, timer: null, appointment: null, deciding: null }"
+             @availability-choose.window="choice = $event.detail; period = null"
              @appointment-open.window="appointment = $event.detail; deciding = null"
              @availability-notice.window="notice = $event.detail; clearTimeout(timer); timer = setTimeout(() => notice = null, $event.detail.type === 'error' ? 10000 : 3500)">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="max-w-2xl text-sm text-slate-600">
                 @if ($editable)
                     <p><strong>Glissez sur la grille</strong> pour ajouter une plage, puis choisissez « chaque semaine » ou « ce jour uniquement ».
-                        <strong>Déplacez ou étirez</strong> une plage pour la modifier, <strong>cliquez</strong> dessus pour la supprimer.
+                        Une plage peut aussi se répéter chaque semaine <strong>sur une période</strong> seulement (ex. : du 01/11 au 14/11).
+                        <strong>Déplacez ou étirez</strong> une plage pour la modifier, <strong>cliquez</strong> dessus pour la dupliquer ou la supprimer.
                         <strong>Cliquez sur la date</strong> en haut d'une colonne pour fermer ou rouvrir la journée (congés…) ; si des rendez-vous sont prévus ce jour-là, ils sont listés avant confirmation.</p>
                     <p class="mt-1"><strong>Bloquer un horaire</strong> (rendez-vous pris par e-mail ou téléphone, imprévu) : glissez sur la grille puis choisissez « Bloquer ce créneau ».
                         Les rendez-vous déjà prévus sur l'horaire sont listés avant confirmation ; ils sont alors annulés et les visiteurs invités par e-mail à en réserver un autre.</p>
@@ -32,6 +33,7 @@
             </div>
             <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-primary-500"></span> Chaque semaine</li>
+                <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-primary-800"></span> Sur une période</li>
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-accent-500"></span> Ce jour uniquement</li>
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-amber-500"></span> RDV en attente</li>
                 <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded bg-emerald-500"></span> RDV confirmé</li>
@@ -55,6 +57,20 @@
                     <button type="button" class="btn-primary justify-start" @click="$dispatch('availability-create', { kind: 'weekly', start: choice.start, end: choice.end }); choice = null">
                         <x-icon name="arrows-updown" class="h-4 w-4" /> <span>Chaque <span x-text="choice?.weekday"></span></span>
                     </button>
+                    <button type="button" class="btn-secondary justify-start" x-show="! period" @click="period = { from: choice.start.slice(0, 10), until: '' }">
+                        <x-icon name="calendar" class="h-4 w-4" /> <span>Chaque <span x-text="choice?.weekday"></span> sur une période…</span>
+                    </button>
+                    <form x-show="period" class="space-y-3 rounded-lg border border-slate-200 p-3" @submit.prevent="$dispatch('availability-create', { kind: 'weekly', start: choice.start, end: choice.end, from: period.from, until: period.until }); choice = null">
+                        <p class="text-sm font-medium text-slate-700">Chaque <span x-text="choice?.weekday"></span>, uniquement sur cette période :</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="text-xs font-medium text-slate-600">Du <input type="date" x-model="period.from" required class="form-input mt-1"></label>
+                            <label class="text-xs font-medium text-slate-600">Au <input type="date" x-model="period.until" :min="period?.from" required class="form-input mt-1"></label>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" class="btn-ghost btn-sm" @click="period = null">Retour</button>
+                            <button class="btn-primary btn-sm">Ajouter</button>
+                        </div>
+                    </form>
                     <button type="button" class="btn-secondary justify-start" @click="$dispatch('availability-create', { kind: 'date', start: choice.start, end: choice.end }); choice = null">
                         <x-icon name="calendar" class="h-4 w-4" /> Ce jour uniquement
                     </button>
@@ -65,6 +81,62 @@
                 </div>
             </div>
         </div>
+
+        {{-- Plage cliquée : dupliquer (autres jours / autres dates, mêmes horaires) ou supprimer --}}
+        @if ($editable)
+            <div x-data="availabilityRange" @range-open.window="open($event.detail)">
+                <div x-show="range" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="busy || (range = null)">
+                    <template x-if="range">
+                        <div @click.outside="busy || (range = null)" class="max-h-full w-full max-w-md space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="range-title">
+                            <div>
+                                <h2 id="range-title" class="font-display text-lg font-semibold text-slate-900" x-text="range.kind === 'weekly' ? 'Plage hebdomadaire' : 'Disponibilité ponctuelle'"></h2>
+                                <p class="text-sm text-slate-600" x-text="range.label"></p>
+                            </div>
+
+                            <form class="space-y-3 rounded-lg border border-slate-200 p-3" @submit.prevent="duplicate()">
+                                <p class="text-sm font-medium text-slate-700">Dupliquer aux mêmes horaires</p>
+                                <template x-if="range.kind === 'weekly'">
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach (\App\Models\AvailabilityRule::WEEKDAYS as $number => $day)
+                                            <label class="cursor-pointer" x-show="range.weekday !== {{ $number }}">
+                                                <input type="checkbox" value="{{ $number }}" x-model.number="weekdays" class="peer sr-only">
+                                                <span class="inline-block rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 peer-checked:border-primary-600 peer-checked:bg-primary-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500">{{ mb_substr($day, 0, 3) }}.</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </template>
+                                <template x-if="range.kind === 'date'">
+                                    <div class="space-y-2">
+                                        <div class="flex gap-2">
+                                            <input type="date" x-model="newDate" class="form-input" aria-label="Date de la copie" @keydown.enter.prevent="addDate()">
+                                            <button type="button" class="btn-secondary btn-sm" @click="addDate()">Ajouter</button>
+                                        </div>
+                                        <ul class="flex flex-wrap gap-1.5">
+                                            <template x-for="date in dates" :key="date">
+                                                <li class="badge-primary">
+                                                    <span x-text="new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })"></span>
+                                                    <button type="button" @click="dates = dates.filter(d => d !== date)" aria-label="Retirer">&times;</button>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </template>
+                                <p class="text-xs text-slate-500" x-show="range.kind === 'weekly' && range.from">La copie garde la même période.</p>
+                                <div class="flex justify-end">
+                                    <button class="btn-primary btn-sm" :disabled="busy || ! (range.kind === 'weekly' ? weekdays.length : dates.length)"><x-icon name="plus" class="h-4 w-4" /> Dupliquer</button>
+                                </div>
+                            </form>
+
+                            <p x-show="error" class="form-error" x-text="error"></p>
+                            <div class="flex flex-wrap justify-between gap-2">
+                                <button type="button" class="btn-secondary btn-sm text-red-600" :disabled="busy" @click="remove()"><x-icon name="trash" class="h-4 w-4" /> Supprimer</button>
+                                <button type="button" class="btn-ghost btn-sm" @click="range = null">Fermer</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        @endif
 
         {{-- Rendez-vous cliqué dans le calendrier : détails et décision --}}
         <div x-show="appointment" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @keydown.escape.window="appointment = null">

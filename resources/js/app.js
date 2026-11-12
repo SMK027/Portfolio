@@ -11,6 +11,7 @@ import articleReactions from './components/article-reactions';
 import sandboxTerminal from './components/sandbox-terminal';
 import searchPalette from './components/search-palette';
 import availabilityBlocks from './components/availability-blocks';
+import availabilityRange from './components/availability-range';
 import { securityKeyLogin, securityKeyPasswordless, securityKeyRegister } from './components/webauthn';
 
 window.Alpine = Alpine;
@@ -25,6 +26,7 @@ Alpine.data('articleReactions', articleReactions);
 Alpine.data('sandboxTerminal', sandboxTerminal);
 Alpine.data('searchPalette', searchPalette);
 Alpine.data('availabilityBlocks', availabilityBlocks);
+Alpine.data('availabilityRange', availabilityRange);
 Alpine.data('securityKeyRegister', securityKeyRegister);
 Alpine.data('securityKeyLogin', securityKeyLogin);
 Alpine.data('securityKeyPasswordless', securityKeyPasswordless);
