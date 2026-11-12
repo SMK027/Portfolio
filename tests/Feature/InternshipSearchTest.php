@@ -154,4 +154,60 @@ class InternshipSearchTest extends TestCase
             ->assertSee('>example.com/offres/recherche</a>)', false)
             ->assertSee('&lt;b&gt;gras&lt;/b&gt;', false);
     }
+
+    public function test_bulk_actions_update_or_delete_selected_contacts(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $base = ['address' => 'Paris', 'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending'];
+        $alpha = InternshipContact::create(['company' => 'Alpha', 'follow_up_on' => '2026-10-10'] + $base);
+        $beta = InternshipContact::create(['company' => 'Bêta', 'followed_up_on' => '2026-10-04'] + $base);
+        $gamma = InternshipContact::create(['company' => 'Gamma'] + $base);
+
+        $this->actingAs($admin)->get(route('admin.internship.index'))->assertOk()->assertSee('bulk-form', false);
+
+        // Résultat appliqué à deux contacts : relance prévue effacée, dernière relance conservée
+        $this->post(route('admin.internship.bulk'), [
+            'ids' => [$alpha->id, $beta->id], 'action' => 'update', 'status' => 'refused', 'followed_up_on' => '2026-10-12',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('refused', $alpha->fresh()->status);
+        $this->assertNull($alpha->fresh()->follow_up_on);
+        $this->assertSame('2026-10-12', $beta->fresh()->followed_up_on->toDateString());
+        $this->assertSame('pending', $gamma->fresh()->status);
+
+        // Effacement d'une date ; relance antérieure au contact refusée pour tout le lot
+        $this->post(route('admin.internship.bulk'), ['ids' => [$beta->id], 'action' => 'update', 'clear_followed_up_on' => '1'])->assertSessionHasNoErrors();
+        $this->assertNull($beta->fresh()->followed_up_on);
+        $this->post(route('admin.internship.bulk'), ['ids' => [$beta->id, $gamma->id], 'action' => 'update', 'followed_up_on' => '2026-09-01'])
+            ->assertSessionHasErrors();
+        $this->assertNull($gamma->fresh()->followed_up_on);
+        $this->post(route('admin.internship.bulk'), ['ids' => [$gamma->id], 'action' => 'update'])->assertSessionHasErrors('bulk');
+
+        $this->post(route('admin.internship.bulk'), ['ids' => [$alpha->id, $gamma->id], 'action' => 'delete'])->assertSessionHasNoErrors();
+        $this->assertSame(['Bêta'], InternshipContact::pluck('company')->all());
+    }
+
+    public function test_grid_updates_only_submitted_rows(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $base = ['address' => 'Paris', 'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending'];
+        $alpha = InternshipContact::create(['company' => 'Alpha'] + $base);
+        $beta = InternshipContact::create(['company' => 'Bêta'] + $base);
+
+        $this->actingAs($admin)->get(route('admin.internship.grid'))->assertOk()
+            ->assertSee("contacts[{$alpha->id}][company]", false)->assertSee('Bêta');
+
+        $this->put(route('admin.internship.grid.update'), ['contacts' => [
+            $alpha->id => ['company' => 'Alpha SA', 'contact_method' => 'other', 'status' => 'processing', 'followed_up_on' => '2026-10-05', 'follow_up_on' => '2026-10-15'] + $base,
+        ]])->assertRedirect(route('admin.internship.index'))->assertSessionHasNoErrors();
+        $alpha->refresh();
+        $this->assertSame(['Alpha SA', 'other', 'processing', '2026-10-05'], [$alpha->company, $alpha->contact_method, $alpha->status, $alpha->followed_up_on->toDateString()]);
+        $this->assertSame('Bêta', $beta->fresh()->company);
+
+        // Une ligne invalide bloque tout l'enregistrement
+        $this->from(route('admin.internship.grid'))->put(route('admin.internship.grid.update'), ['contacts' => [
+            $alpha->id => ['company' => 'Alpha'] + $base,
+            $beta->id  => ['company' => ''] + $base,
+        ]])->assertRedirect(route('admin.internship.grid'))->assertSessionHasErrors("contacts.{$beta->id}.company");
+        $this->assertSame('Alpha SA', $alpha->fresh()->company);
+    }
 }
