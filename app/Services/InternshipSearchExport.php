@@ -38,6 +38,25 @@ class InternshipSearchExport
 
     protected const DATES = ['contacted_on', 'followed_up_on', 'follow_up_on'];
 
+    /** Intitulé par défaut, ajustable selon le contexte (stage, alternance, emploi…). */
+    public const DEFAULT_TITLE = 'Suivi de la recherche de stage';
+
+    protected string $documentTitle = self::DEFAULT_TITLE;
+
+    /** Intitulé du document (titre, pied de page, nom du fichier) ; vide : intitulé par défaut. */
+    public function titled(?string $title): static
+    {
+        $title = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $title)));
+        $this->documentTitle = $title !== '' ? mb_substr($title, 0, 120) : self::DEFAULT_TITLE;
+
+        return $this;
+    }
+
+    public function documentTitle(): string
+    {
+        return $this->documentTitle;
+    }
+
     /**
      * Champs demandés, remis dans l'ordre des colonnes ; tous si aucun n'est valide.
      *
@@ -107,6 +126,7 @@ class InternshipSearchExport
             'remarks'  => $remarks,
             'summary'  => $this->summary($contacts),
             'fields'   => self::fields($fields),
+            'title'    => $this->documentTitle,
         ])->render(), 'UTF-8');
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
@@ -114,7 +134,7 @@ class InternshipSearchExport
         // Pied de page : date d'édition et pagination
         $canvas = $dompdf->getCanvas();
         $font = $dompdf->getFontMetrics()->getFont('DejaVu Sans');
-        $canvas->page_text(34, $canvas->get_height() - 24, 'Recherche de stage — édité le '.now()->format('d/m/Y à H:i'), $font, 7, [0.39, 0.45, 0.55]);
+        $canvas->page_text(34, $canvas->get_height() - 24, $this->documentTitle.' — édité le '.now()->format('d/m/Y à H:i'), $font, 7, [0.39, 0.45, 0.55]);
         $canvas->page_text($canvas->get_width() - 90, $canvas->get_height() - 24, 'Page {PAGE_NUM} / {PAGE_COUNT}', $font, 7, [0.39, 0.45, 0.55]);
 
         return response($dompdf->output(), 200, [
@@ -131,7 +151,7 @@ class InternshipSearchExport
     public function excel(Collection $contacts, Collection $remarks, ?array $fields = null): StreamedResponse
     {
         $spreadsheet = new Spreadsheet;
-        $spreadsheet->getProperties()->setTitle('Recherche de stage')->setCreator(config('app.name'));
+        $spreadsheet->getProperties()->setTitle($this->documentTitle)->setCreator(config('app.name'));
         $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(10);
 
         $this->contactsSheet($spreadsheet->getActiveSheet(), $contacts, self::fields($fields));
@@ -156,7 +176,7 @@ class InternshipSearchExport
         $sheet->setTitle('Contacts');
         $lastCol = Coordinate::stringFromColumnIndex(count($fields));
         $column = fn (string $field) => Coordinate::stringFromColumnIndex(array_search($field, $fields, true) + 1);
-        $this->title($sheet, 'Suivi de la recherche de stage', max('B', $lastCol), $contacts->count().' entreprise(s) contactée(s) — édité le '.now()->format('d/m/Y'));
+        $this->title($sheet, $this->documentTitle, max('B', $lastCol), $contacts->count().' entreprise(s) contactée(s) — édité le '.now()->format('d/m/Y'));
 
         $header = self::HEADER_ROW;
         $sheet->fromArray(array_map(fn ($field) => self::FIELDS[$field][0], $fields), null, "A{$header}");
@@ -313,11 +333,11 @@ class InternshipSearchExport
             ->setFitToWidth(1)->setFitToHeight(0)
             ->setRowsToRepeatAtTopByStartAndEnd($headerRow, $headerRow);
         $sheet->getPageMargins()->setLeft(0.4)->setRight(0.4)->setTop(0.5)->setBottom(0.6);
-        $sheet->getHeaderFooter()->setOddFooter('&L&8Recherche de stage — &A&R&8Page &P / &N');
+        $sheet->getHeaderFooter()->setOddFooter('&L&8'.str_replace('&', '&&', $this->documentTitle).' — &A&R&8Page &P / &N');
     }
 
     protected function filename(string $extension): string
     {
-        return 'recherche-stage-'.now()->format('Y-m-d').'.'.$extension;
+        return (\Illuminate\Support\Str::slug($this->documentTitle) ?: 'recherche-stage').'-'.now()->format('Y-m-d').'.'.$extension;
     }
 }

@@ -94,6 +94,21 @@ class InternshipSearchTest extends TestCase
         $this->get(route('admin.internship.export', ['pdf', 'champs' => ['company', 'followed_up_on']]))->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
         $this->get(route('admin.internship.index'))->assertSee('name="champs[]"', false);
+
+        // Intitulé ajusté : titre de la feuille et nom du fichier ; vide → intitulé par défaut
+        $response = $this->get(route('admin.internship.export', ['excel', 'titre' => '  Suivi de la recherche <b>d\'alternance</b> ']))->assertOk();
+        $this->assertStringContainsString('suivi-de-la-recherche-dalternance-', $response->headers->get('Content-Disposition'));
+        $file = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($file, $response->streamedContent());
+        $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+        unlink($file);
+        $this->assertSame('Suivi de la recherche d\'alternance', $book->getSheetByName('Contacts')->getCell('A1')->getValue());
+        $this->assertSame('Suivi de la recherche d\'alternance', $book->getProperties()->getTitle());
+
+        $this->get(route('admin.internship.export', ['pdf', 'titre' => 'Candidatures entreprise']))->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="candidatures-entreprise-'.now()->format('Y-m-d').'.pdf"');
+        $this->get(route('admin.internship.export', ['pdf', 'titre' => '']))->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="suivi-de-la-recherche-de-stage-'.now()->format('Y-m-d').'.pdf"');
     }
 
     public function test_reserved_to_admins_and_authorized_accounts(): void

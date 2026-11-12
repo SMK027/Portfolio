@@ -137,6 +137,7 @@ class InternshipSearchController extends Controller
         $contacts = InternshipContact::ordered()->get();
         $remarks = InternshipRemark::ordered()->get();
         $fields = (array) $request->query('champs', []);
+        $export->titled(is_string($request->query('titre')) ? $request->query('titre') : null);
 
         return $format === 'pdf' ? $export->pdf($contacts, $remarks, $fields) : $export->excel($contacts, $remarks, $fields);
     }

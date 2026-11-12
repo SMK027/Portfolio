@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Recherche de stage</title>
+    <title>{{ $title }}</title>
     <style>
         @page { margin: 14mm 12mm 16mm; }
         body { font-family: "DejaVu Sans", sans-serif; font-size: 8pt; color: #1e293b; line-height: 1.35; }
@@ -40,7 +40,7 @@
     </style>
 </head>
 <body>
-    <h1>Suivi de la recherche de stage</h1>
+    <h1>{{ $title }}</h1>
     <p class="muted subtitle">Situation au {{ now()->translatedFormat('j F Y') }}</p>
 
     <table class="stats">
