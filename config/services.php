@@ -42,6 +42,13 @@ return [
         'verify_url' => 'https://www.google.com/recaptcha/api/siteverify',
     ],
 
+    // Sauvegardes faites hors du site (cron de l'hôte, NAS…) : la page de diagnostic
+    // contrôle l'âge du fichier le plus récent de ce dossier (monté dans le conteneur).
+    'backup' => [
+        'path'          => env('BACKUP_PATH'),
+        'max_age_hours' => (int) env('BACKUP_MAX_AGE_HOURS', 26),
+    ],
+
     'contact' => [
         'recipient' => env('CONTACT_RECIPIENT'),
     ],

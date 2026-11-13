@@ -33,6 +33,31 @@ class DiagnosticsTest extends TestCase
         $this->assertSame('error', $this->getJson(route('admin.diagnostics.data'))->json('overall'));
     }
 
+    public function test_backup_folder_is_monitored(): void
+    {
+        $this->actingAs(User::factory()->superAdmin()->create());
+        $check = fn () => collect($this->getJson(route('admin.diagnostics.data'))->json('groups'))->flatten(1)->keyBy('label')['Sauvegardes'];
+
+        $this->assertSame('Non surveillées', $check()['value']);
+
+        $dir = sys_get_temp_dir().'/backups-'.uniqid();
+        config(['services.backup.path' => $dir]);
+        $this->assertSame('error', $check()['status']);
+
+        mkdir($dir.'/db', 0777, true);
+        $this->assertSame('Aucune', $check()['value']);
+
+        file_put_contents($dir.'/db/ancienne.sql.gz', 'x');
+        touch($dir.'/db/ancienne.sql.gz', now()->subDays(3)->timestamp);
+        $this->assertSame('error', $check()['status']);
+
+        file_put_contents($dir.'/recente.tar.gz', 'xx');
+        $this->assertSame('ok', $check()['status']);
+        $this->assertStringContainsString('recente.tar.gz', $check()['detail']);
+
+        \Illuminate\Support\Facades\File::deleteDirectory($dir);
+    }
+
     public function test_reserved_to_super_admins(): void
     {
         $this->actingAs(User::factory()->admin()->create());

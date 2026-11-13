@@ -33,7 +33,7 @@ class Diagnostics
         $groups = [
             'Application' => [$this->environment(), $this->maintenanceCheck()],
             'Services'    => [$this->database(), $this->cache(), $this->queue(), $this->scheduler()],
-            'Stockage'    => [$this->disk(), $this->writable()],
+            'Stockage'    => [$this->disk(), $this->writable(), $this->backup()],
             'Intégrations' => [$this->mail(), $this->googleCalendar(), $this->sandboxCheck()],
         ];
         $states = collect($groups)->flatten(1)->pluck('status');
@@ -164,6 +164,35 @@ class Diagnostics
 
         return $this->check('Droits d\'écriture', $blocked ? 'error' : 'ok', $blocked ? count($blocked).' dossier(s) bloqué(s)' : 'OK',
             $blocked ? implode(', ', $blocked) : null);
+    }
+
+    /** Âge de la sauvegarde la plus récente du dossier surveillé (BACKUP_PATH, 2 niveaux). */
+    protected function backup(): array
+    {
+        $path = config('services.backup.path');
+        if (! $path) {
+            return $this->check('Sauvegardes', 'warning', 'Non surveillées', 'Renseignez BACKUP_PATH (dossier des sauvegardes monté dans le conteneur).');
+        }
+        if (! File::isDirectory($path) || ! is_readable($path)) {
+            return $this->check('Sauvegardes', 'error', 'Dossier introuvable', $path.' n\'existe pas ou n\'est pas lisible.');
+        }
+
+        $latest = null;
+        foreach ([...File::files($path), ...collect(File::directories($path))->flatMap(fn ($dir) => File::files($dir))] as $file) {
+            if (! $latest || $file->getMTime() > $latest->getMTime()) {
+                $latest = $file;
+            }
+        }
+        if (! $latest) {
+            return $this->check('Sauvegardes', 'error', 'Aucune', 'Aucun fichier dans '.$path.'.');
+        }
+
+        $hours = (now()->timestamp - $latest->getMTime()) / 3600;
+        $max = (int) config('services.backup.max_age_hours', 26);
+        $age = $hours < 1 ? 'il y a '.max(1, (int) round($hours * 60)).' min' : ($hours < 48 ? 'il y a '.(int) floor($hours).' h' : 'il y a '.(int) floor($hours / 24).' j');
+
+        return $this->check('Sauvegardes', $hours > $max ? 'error' : 'ok', $age,
+            ($hours > $max ? "Plus récente que {$max} h attendue. " : '').$latest->getFilename().' · '.$this->bytes($latest->getSize()));
     }
 
     protected function mail(): array
