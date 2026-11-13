@@ -16,6 +16,7 @@ use Throwable;
  * Chaque échec (mot de passe, clé de sécurité, code de bot, second facteur) est
  * compté par IP sur une fenêtre glissante. Au-delà du seuil (config auth.login_ban),
  * l'IP est bannie de tout le site (App\Http\Middleware\BlockBannedIp), API comprise.
+ * La durée augmente en cas de récidive (config auth.login_ban.escalation).
  * Bannissements, modifications et levées sont écrits dans storage/logs/security-*.log
  * et dans le journal d'activité. Les super-administrateurs les gèrent depuis le panel.
  */
@@ -85,16 +86,33 @@ class LoginBan
         }
     }
 
+    /**
+     * Durée du prochain bannissement automatique de l'IP : durée de base, puis
+     * paliers de récidive selon les bannissements automatiques récents.
+     *
+     * @return array{0: int, 1: int}  [minutes, nombre de bannissements précédents]
+     */
+    public function nextDuration(string $ip): array
+    {
+        $previous = IpBan::where('ip_address', $ip)->where('is_manual', false)
+            ->where('created_at', '>=', now()->subDays((int) config('auth.login_ban.escalation_days', 30)))
+            ->count();
+        $steps = [(int) config('auth.login_ban.duration'), ...(array) config('auth.login_ban.escalation', [])];
+
+        return [$steps[min($previous, count($steps) - 1)], $previous];
+    }
+
     protected function ban(string $ip, int $attempts, string $method): IpBan
     {
-        $minutes = (int) config('auth.login_ban.duration');
+        [$minutes, $previous] = $this->nextDuration($ip);
         $window = (int) config('auth.login_ban.window');
+        $repeat = $previous ? ' — récidive n° '.$previous : '';
 
         // Création sans journalisation automatique : l'événement est enregistré ci-dessous.
         $ban = $this->audit->withoutRecording(fn () => IpBan::create([
             'ip_address'   => $ip,
             'attempts'     => $attempts,
-            'reason'       => "{$attempts} échecs de connexion en {$window} min (dernier : {$method})",
+            'reason'       => "{$attempts} échecs de connexion en {$window} min (dernier : {$method}){$repeat}",
             'banned_until' => now()->addMinutes($minutes),
         ]));
 

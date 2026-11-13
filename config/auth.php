@@ -142,6 +142,10 @@ return [
         'max_attempts' => (int) env('LOGIN_BAN_MAX_ATTEMPTS', 3),
         'window'       => (int) env('LOGIN_BAN_WINDOW', 15),
         'duration'     => (int) env('LOGIN_BAN_DURATION', 45),
+        // Récidive : durées (minutes) des bannissements automatiques suivants sur la période
+        // ci-dessous (par défaut 6 h, 24 h puis 7 jours ; la dernière s'applique ensuite).
+        'escalation'      => array_values(array_filter(array_map('intval', explode(',', (string) env('LOGIN_BAN_ESCALATION', '360,1440,10080'))))),
+        'escalation_days' => (int) env('LOGIN_BAN_ESCALATION_DAYS', 30),
         // Adresses jamais bannies, séparées par des virgules (IP ou plages CIDR : 203.0.113.7, 192.168.1.0/24)
         'whitelist'    => array_values(array_filter(array_map('trim', explode(',', (string) env('LOGIN_BAN_WHITELIST', ''))))),
         // Canal de log (config/logging.php) ; LOGIN_BAN_LOG_CHANNEL=null (tests) : aucun log

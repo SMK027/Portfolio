@@ -48,6 +48,30 @@ class IpBanTest extends TestCase
         $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])->get('/')->assertOk();
     }
 
+    public function test_repeat_offenders_are_banned_longer(): void
+    {
+        $durations = [];
+        foreach (range(1, 5) as $i) {
+            $this->failLogin();
+            $this->failLogin();
+            $this->failLogin();
+            $ban = IpBan::latest('id')->first();
+            $durations[] = (int) round($ban->created_at->diffInMinutes($ban->banned_until));
+            $this->travel($durations[$i - 1] + 1)->minutes();
+        }
+
+        $this->assertSame([45, 360, 1440, 10080, 10080], $durations);
+        $this->assertStringContainsString('récidive n° 1', IpBan::orderBy('id')->skip(1)->first()->reason);
+
+        // Après 30 jours sans bannissement, on repart de la durée de base.
+        $this->travel(31)->days();
+        $this->failLogin();
+        $this->failLogin();
+        $this->failLogin();
+        $ban = IpBan::latest('id')->first();
+        $this->assertSame(45, (int) round($ban->created_at->diffInMinutes($ban->banned_until)));
+    }
+
     public function test_failures_older_than_fifteen_minutes_do_not_count(): void
     {
         $this->failLogin();
