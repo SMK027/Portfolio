@@ -15,8 +15,8 @@
                 <li role="option" :aria-selected="(i === active).toString()">
                     <a :href="result.url" @mouseenter="active = i" :class="i === active ? 'bg-primary-50' : ''" class="block px-4 py-2.5">
                         <span class="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600" x-text="result.type"></span>
-                        <span class="text-sm font-medium text-slate-900" x-text="result.title"></span>
-                        <span class="mt-0.5 line-clamp-1 block text-xs text-slate-500" x-text="result.excerpt"></span>
+                        <span class="text-sm font-medium text-slate-900" x-html="result.title_html"></span>
+                        <span class="mt-0.5 line-clamp-1 block text-xs text-slate-500" x-html="result.excerpt_html"></span>
                     </a>
                 </li>
             </template>

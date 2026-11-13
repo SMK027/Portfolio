@@ -10,7 +10,10 @@
 
         @if ($query !== '' && mb_strlen(trim($query)) < \App\Services\SiteSearch::MIN_LENGTH)
             <p class="text-sm text-slate-500">Saisissez au moins {{ \App\Services\SiteSearch::MIN_LENGTH }} caractères.</p>
-        @elseif ($query !== '' && $results->isEmpty())
+        @endif
+        @if ($suggestion && $results->isNotEmpty())
+            <p class="text-sm text-slate-600">Aucun résultat exact. Résultats pour <a href="{{ route('search', ['q' => $suggestion]) }}" class="font-medium text-primary-700 underline">« {{ $suggestion }} »</a>.</p>
+        @elseif ($query !== '' && mb_strlen(trim($query)) >= \App\Services\SiteSearch::MIN_LENGTH && $results->isEmpty())
             <x-empty-state icon="search" message="Aucun résultat. Essayez un autre mot ou une orthographe différente." />
         @endif
 
@@ -19,8 +22,8 @@
                 <li>
                     <a href="{{ $result['url'] }}" class="card block p-4 transition hover:border-primary-200 hover:shadow-md">
                         <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">{{ $result['type'] }}</span>
-                        <span class="ml-1 font-medium text-slate-900">{{ $result['title'] }}</span>
-                        @if ($result['excerpt'])<p class="mt-1 text-sm text-slate-500">{{ $result['excerpt'] }}</p>@endif
+                        <span class="ml-1 font-medium text-slate-900">{{ \App\Services\SiteSearch::highlight($result['title'], $terms) }}</span>
+                        @if ($result['excerpt'])<p class="mt-1 text-sm text-slate-500">{{ \App\Services\SiteSearch::highlight($result['excerpt'], $terms) }}</p>@endif
                     </a>
                 </li>
             @endforeach

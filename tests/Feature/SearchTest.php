@@ -27,16 +27,37 @@ class SearchTest extends TestCase
         Skill::create(['name' => 'Docker', 'category' => 'DevOps']);
 
         $this->get(route('search', ['q' => 'docker']))->assertOk()
-            ->assertSee('Sécuriser Docker')->assertSee('Compétence')
+            ->assertSeeText('Sécuriser Docker')->assertSee('Compétence')
             ->assertDontSee('Brouillon Docker');
 
-        $this->get(route('search', ['q' => 'rootless']))->assertSee('Les conteneurs rootless');
+        $this->get(route('search', ['q' => 'rootless']))->assertSeeText('Les conteneurs rootless');
         $this->get(route('search', ['q' => 'paragraph']))->assertSee('Aucun résultat'); // clé JSON, pas du texte
 
         // Les réglages des blocs (alignement d'une citation…) ne sont ni cherchés ni affichés.
         Article::first()->update(['content' => ['blocks' => [['type' => 'quote', 'data' => ['text' => 'Simplicité', 'caption' => 'Vinci', 'alignment' => 'left']]]]]);
-        $this->get(route('search', ['q' => 'simplicité']))->assertSee('Simplicité Vinci')->assertDontSee('Vinci left');
+        $this->get(route('search', ['q' => 'simplicité']))->assertSeeText('Simplicité Vinci')->assertDontSee('Vinci left');
         $this->get(route('search', ['q' => 'left']))->assertSee('Aucun résultat');
+    }
+
+    public function test_typos_are_tolerated_and_terms_highlighted(): void
+    {
+        $this->article('Sécuriser Docker', 'Les conteneurs rootless limitent les risques.');
+
+        // Accents ignorés, termes surlignés dans le titre et l'extrait.
+        $this->get(route('search', ['q' => 'securiser']))->assertOk()
+            ->assertSee('<mark class="rounded bg-amber-100 px-0.5 text-inherit">Sécuriser</mark>', false);
+
+        // Faute de frappe : seconde passe et suggestion.
+        $this->get(route('search', ['q' => 'conteneur rotless']))->assertOk()
+            ->assertSeeText('Sécuriser Docker')->assertSee('Aucun résultat exact')->assertSee('conteneur rootless')
+            ->assertSee('<mark class="rounded bg-amber-100 px-0.5 text-inherit">rootless</mark>', false);
+        $this->getJson(route('search', ['q' => 'dockr']))->assertJsonPath('suggestion', 'docker')
+            ->assertJsonPath('results.0.title_html', 'Sécuriser <mark class="rounded bg-amber-100 px-0.5 text-inherit">Docker</mark>');
+
+        // Trop éloigné : aucun résultat.
+        $this->get(route('search', ['q' => 'kubernetes']))->assertSee('Aucun résultat');
+        // Le HTML du contenu est échappé avant surlignage.
+        $this->assertSame('&lt;b&gt;<mark class="rounded bg-amber-100 px-0.5 text-inherit">x</mark>&lt;/b&gt;', (string) \App\Services\SiteSearch::highlight('<b>x</b>', ['x']));
     }
 
     public function test_private_pages_are_not_searched_for_visitors(): void
@@ -65,7 +86,7 @@ class SearchTest extends TestCase
     {
         $project = \App\Models\Project::create(['title' => 'Supervision Zabbix', 'published_on' => now(), 'description' => ['blocks' => []]]);
         \App\Models\Theme::create(['name' => 'Zabbix et supervision']);
-        $this->get(route('search', ['q' => 'zabbix']))->assertSee('Supervision Zabbix')->assertSee('Zabbix et supervision');
+        $this->get(route('search', ['q' => 'zabbix']))->assertSeeText('Supervision Zabbix')->assertSeeText('Zabbix et supervision');
 
         Page::where('key', 'projets')->update(['is_public' => false]);
         Page::flushCache();
