@@ -145,6 +145,46 @@ class MaintenanceTest extends TestCase
         $this->assertFalse(\App\Models\Setting::get(Maintenance::ENABLED));
     }
 
+    public function test_maintenance_can_be_scheduled_and_notifies_its_start_and_end(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        app(\App\Services\DiscordNotifier::class)->save('https://discord.com/api/webhooks/1/abc', ['site_status']);
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->put(route('admin.maintenance.update'), [
+            'enabled'   => '1',
+            'starts_at' => now()->addHour()->format('Y-m-d\TH:i'),
+            'ends_at'   => now()->addMinutes(30)->format('Y-m-d\TH:i'),
+        ])->assertSessionHasErrors('ends_at');
+
+        $this->actingAs($admin)->put(route('admin.maintenance.update'), [
+            'enabled'   => '1',
+            'starts_at' => now()->addHour()->format('Y-m-d\TH:i'),
+            'ends_at'   => now()->addHours(3)->format('Y-m-d\TH:i'),
+        ])->assertSessionHasNoErrors()->assertSessionHas('success', fn ($m) => str_contains($m, 'programmée'));
+        auth()->logout();
+
+        $this->assertTrue($this->maintenance()->isScheduled());
+        $this->get('/')->assertDontSee('Site en maintenance');
+
+        $this->travel(61)->minutes();
+        $this->get('/')->assertSee('Site en maintenance');
+        $this->assertFalse($this->maintenance()->isScheduled());
+
+        $this->travel(2)->hours();
+        $this->get('/')->assertDontSee('Site en maintenance');
+
+        $titles = [];
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendDiscordNotification::class, function ($job) use (&$titles) {
+            $titles[] = json_encode((array) $job);
+
+            return true;
+        });
+        $this->assertCount(2, $titles);
+        $this->assertStringContainsString('Maintenance commenc', $titles[0]);
+        $this->assertStringContainsString('Maintenance termin', $titles[1]);
+    }
+
     public function test_admin_enables_and_disables_maintenance(): void
     {
         $admin = User::factory()->admin()->create();

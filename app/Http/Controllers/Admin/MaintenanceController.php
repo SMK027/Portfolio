@@ -17,6 +17,7 @@ class MaintenanceController extends Controller
             'active' => $maintenance->isActive(),
             'endsAt' => $maintenance->endsAt(),
             'reason' => $maintenance->reason(),
+            'startsAt' => $maintenance->isScheduled() ? $maintenance->startsAt() : null,
         ]);
     }
 
@@ -24,11 +25,14 @@ class MaintenanceController extends Controller
     {
         $data = $request->validate([
             'enabled' => ['required', 'boolean'],
-            'ends_at' => ['nullable', 'date', 'after:now'],
+            'starts_at' => ['nullable', 'date', 'after:now'],
+            'ends_at' => ['nullable', 'date', 'after:now', ...($request->filled('starts_at') ? ['after:starts_at'] : [])],
             'reason'  => ['nullable', 'string', 'max:1000'],
         ], [
-            'ends_at.after' => 'La date de fin doit être dans le futur.',
+            'ends_at.after' => 'La date de fin doit être dans le futur et après le début.',
+            'starts_at.after' => 'Le début programmé doit être dans le futur.',
         ], [
+            'starts_at' => 'début programmé',
             'ends_at' => 'date de fin',
             'reason'  => 'motif',
         ]);
@@ -42,8 +46,11 @@ class MaintenanceController extends Controller
         $maintenance->enable(
             filled($data['ends_at'] ?? null) ? Carbon::parse($data['ends_at']) : null,
             $data['reason'] ?? null,
+            filled($data['starts_at'] ?? null) ? Carbon::parse($data['starts_at']) : null,
         );
 
-        return back()->with('success', 'Maintenance activée : les visiteurs voient la page de maintenance.');
+        return back()->with('success', $maintenance->isScheduled()
+            ? 'Maintenance programmée le '.$maintenance->startsAt()->translatedFormat('j F Y à H:i').'.'
+            : 'Maintenance activée : les visiteurs voient la page de maintenance.');
     }
 }

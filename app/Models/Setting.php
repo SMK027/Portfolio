@@ -46,6 +46,7 @@ class Setting extends Model
             'maintenance.enabled'       => 'Maintenance : activation',
             'maintenance.ends_at'       => 'Maintenance : date de fin',
             'maintenance.reason'        => 'Maintenance : motif',
+            'maintenance.starts_at'     => 'Maintenance : début programmé',
             'waiting_room.settings'     => 'File d\'attente',
             'security.blocked_countries' => 'Pays bloqués',
             'appointments.google'       => 'Google Agenda',

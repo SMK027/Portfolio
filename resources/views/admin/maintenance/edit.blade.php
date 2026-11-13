@@ -3,7 +3,7 @@
     <x-slot name="header">Mode maintenance</x-slot>
 
     <form method="POST" action="{{ route('admin.maintenance.update') }}" class="space-y-6"
-          x-data="{ enabled: @js((bool) old('enabled', $active)) }">
+          x-data="{ enabled: @js((bool) old('enabled', $active || $startsAt)) }">
         @csrf
         @method('PUT')
         <input type="hidden" name="enabled" :value="enabled ? 1 : 0">
@@ -28,7 +28,13 @@
                     <span :class="enabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition"></span>
                 </button>
             </div>
-            @if ($active && $endsAt)
+            @if ($startsAt)
+                <p class="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                    Maintenance programmée : début le <strong>{{ $startsAt->translatedFormat('j F Y à H:i') }}</strong> ({{ $startsAt->diffForHumans() }}).
+                    D'ici là, le site reste accessible.
+                </p>
+            @endif
+            @if (($active || $startsAt) && $endsAt)
                 <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                     Fin automatique prévue le <strong>{{ $endsAt->translatedFormat('j F Y à H:i') }}</strong> ({{ $endsAt->diffForHumans() }}).
                 </p>
@@ -37,6 +43,9 @@
 
         <div x-show="enabled" x-cloak>
             <x-admin.section title="Options (facultatives)">
+                <x-form.input name="starts_at" type="datetime-local" label="Début programmé"
+                              :value="$startsAt?->format('Y-m-d\TH:i')" :min="now()->format('Y-m-d\TH:i')" class="sm:w-72"
+                              help="Le site passe en maintenance à cette date (heure de Paris). Vide = immédiatement." />
                 <x-form.input name="ends_at" type="datetime-local" label="Désactivation automatique"
                               :value="$endsAt?->format('Y-m-d\TH:i')" :min="now()->format('Y-m-d\TH:i')" class="sm:w-72"
                               help="Le site redevient accessible à cette date (heure de Paris). Vide = jusqu'à désactivation manuelle." />
