@@ -23,6 +23,10 @@ use Illuminate\Support\Str;
  *            et levée dès que tout le monde est entré et qu'il reste de la place ;
  * - manual : file imposée à tous les nouveaux visiteurs (fin automatique facultative).
  *
+ * En mode automatique, la file se déclenche aussi quand le serveur peine
+ * (temps de réponse moyen ou charge par cœur au-delà des seuils facultatifs) :
+ * les admissions sont alors suspendues jusqu'au retour à la normale.
+ *
  * Les personnes connectées ne sont jamais mises en attente.
  */
 class WaitingRoom
@@ -39,13 +43,68 @@ class WaitingRoom
         'session_minutes' => 5,
         'ends_at'         => null,
         'message'         => null,
+        'max_response_ms' => null,
+        'max_load'        => null,
     ];
+
+    /** Déclenchement automatique en cours (pour les notifications). */
+    protected const TRIGGERED = 'waiting-room:triggered';
+
+    /** Temps de réponse moyen récent : [moyenne en ms, horodatage]. */
+    protected const RESPONSE_TIME = 'waiting-room:response-time';
+
+    /** Une mesure plus ancienne est ignorée (plus de trafic admis pour la renouveler). */
+    protected const RESPONSE_TIME_TTL = 60;
 
     /** Un visiteur en attente qui ne s'est pas manifesté depuis ce délai a quitté la page. */
     public const ABANDON_SECONDS = 90;
 
     /** Délai entre deux mises à jour de « last_seen_at » (limite les écritures). */
     protected const TOUCH_SECONDS = 30;
+
+    /** Règles de validation des réglages (administration et API). */
+    public static function rules(): array
+    {
+        return [
+            'mode'            => ['required', \Illuminate\Validation\Rule::in(array_keys(self::MODES))],
+            'capacity'        => ['required', 'integer', 'min:1', 'max:100000'],
+            'session_minutes' => ['required', 'integer', 'min:1', 'max:120'],
+            'ends_at'         => ['nullable', 'date', 'after:now'],
+            'message'         => ['nullable', 'string', 'max:1000'],
+            'max_response_ms' => ['nullable', 'integer', 'min:50', 'max:60000'],
+            'max_load'        => ['nullable', 'numeric', 'min:0.1', 'max:50'],
+        ];
+    }
+
+    /** Réglages validés → valeurs enregistrées. */
+    public static function normalize(array $data): array
+    {
+        return [
+            'mode'            => $data['mode'],
+            'capacity'        => (int) $data['capacity'],
+            'session_minutes' => (int) $data['session_minutes'],
+            'ends_at'         => filled($data['ends_at'] ?? null) ? Carbon::parse($data['ends_at'])->toIso8601String() : null,
+            'message'         => $data['message'] ?? null,
+            'max_response_ms' => filled($data['max_response_ms'] ?? null) ? (int) $data['max_response_ms'] : null,
+            'max_load'        => filled($data['max_load'] ?? null) ? round((float) $data['max_load'], 2) : null,
+        ];
+    }
+
+    /** État exposé (administration et API). */
+    public function status(): array
+    {
+        $enabled = $this->isEnabled();
+
+        return [
+            'queueing'         => $enabled && $this->isQueueing(),
+            'overloaded'       => $this->isOverloaded(),
+            'admitted'         => $enabled ? $this->admittedCount() : 0,
+            'waiting'          => $enabled ? $this->waitingCount() : 0,
+            'queueing_since'   => $this->queueingSince(),
+            'response_time_ms' => ($ms = $this->averageResponseTime()) !== null ? (int) round($ms) : null,
+            'load_per_core'    => $this->loadPerCore(),
+        ];
+    }
 
     public function settings(): array
     {
@@ -68,6 +127,10 @@ class WaitingRoom
         }
 
         Setting::set(self::SETTINGS, $settings);
+
+        if ($settings['mode'] !== 'auto') {
+            Cache::forget(self::TRIGGERED);
+        }
 
         if ($settings['mode'] === 'off') {
             WaitingRoomTicket::query()->delete();
@@ -106,7 +169,7 @@ class WaitingRoom
     {
         return match ($this->mode()) {
             'manual' => true,
-            'auto'   => $this->waitingCount() > 0 || $this->admittedCount() >= $this->capacity(),
+            'auto'   => $this->waitingCount() > 0 || $this->admittedCount() >= $this->capacity() || $this->isOverloaded(),
             default  => false,
         };
     }
@@ -179,7 +242,9 @@ class WaitingRoom
         Cache::lock('waiting-room:advance', 10)->get(function () {
             $this->prune();
 
-            $free = $this->capacity() - $this->admittedCount();
+            $this->checkLifted();
+
+            $free = $this->isOverloaded() ? 0 : $this->capacity() - $this->admittedCount();
             if ($free <= 0) {
                 return;
             }
@@ -188,6 +253,92 @@ class WaitingRoom
             if ($ids->isNotEmpty()) {
                 WaitingRoomTicket::whereIn('id', $ids)->update(['admitted_at' => now()]);
             }
+        });
+    }
+
+    /**
+     * Mesure d'une requête admise (moyenne glissante). Échantillonnée : une
+     * requête sur cinq, pour limiter les écritures dans le cache.
+     */
+    public function recordResponseTime(float $milliseconds): void
+    {
+        if (! $this->settings()['max_response_ms'] || random_int(1, 5) !== 1) {
+            return;
+        }
+
+        [$average, $at] = Cache::get(self::RESPONSE_TIME, [null, 0]);
+        $average = $average === null || $at < now()->timestamp - self::RESPONSE_TIME_TTL
+            ? $milliseconds
+            : $average * 0.8 + $milliseconds * 0.2;
+
+        Cache::put(self::RESPONSE_TIME, [$average, now()->timestamp], self::RESPONSE_TIME_TTL * 2);
+    }
+
+    public function averageResponseTime(): ?float
+    {
+        [$average, $at] = Cache::get(self::RESPONSE_TIME, [null, 0]);
+
+        return $at >= now()->timestamp - self::RESPONSE_TIME_TTL ? $average : null;
+    }
+
+    /** Charge moyenne sur 1 minute rapportée au nombre de cœurs (null si indisponible). */
+    public function loadPerCore(): ?float
+    {
+        $load = function_exists('sys_getloadavg') ? sys_getloadavg() : false;
+        if (! $load) {
+            return null;
+        }
+
+        return round($load[0] / max(1, $this->cpuCount()), 2);
+    }
+
+    /** Le serveur dépasse-t-il un des seuils de charge réglés ? */
+    public function isOverloaded(): bool
+    {
+        if ($this->mode() !== 'auto') {
+            return false;
+        }
+
+        $settings = $this->settings();
+        $response = $this->averageResponseTime();
+        $load = $settings['max_load'] ? $this->loadPerCore() : null;
+
+        return ($settings['max_response_ms'] && $response !== null && $response > $settings['max_response_ms'])
+            || ($settings['max_load'] && $load !== null && $load > $settings['max_load']);
+    }
+
+    /** Un visiteur vient d'être mis en attente : notification au premier déclenchement automatique. */
+    public function markTriggered(): void
+    {
+        if ($this->mode() === 'auto' && Cache::add(self::TRIGGERED, now()->timestamp, now()->addDay())) {
+            app(DiscordNotifier::class)->notify('site_status', 'File d\'attente déclenchée',
+                $this->isOverloaded() ? 'Le serveur est surchargé : les nouveaux visiteurs patientent.' : 'La capacité est atteinte : les nouveaux visiteurs patientent.',
+                ['Visiteurs sur le site' => (string) $this->admittedCount(), 'Capacité' => (string) $this->capacity()],
+                route('admin.waiting-room.edit'));
+        }
+    }
+
+    /** Fin d'un déclenchement automatique : notification. */
+    protected function checkLifted(): void
+    {
+        $since = Cache::get(self::TRIGGERED);
+        if ($since === null || ($this->mode() === 'auto' && $this->isQueueing())) {
+            return;
+        }
+
+        Cache::forget(self::TRIGGERED);
+        app(DiscordNotifier::class)->notify('site_status', 'File d\'attente levée',
+            'Tous les visiteurs sont entrés : le site est de nouveau en accès libre.',
+            ['Durée' => Carbon::createFromTimestamp($since)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_ABSOLUTE)],
+            route('admin.waiting-room.edit'));
+    }
+
+    protected function cpuCount(): int
+    {
+        return Cache::rememberForever('waiting-room:cpus', function () {
+            $info = @file_get_contents('/proc/cpuinfo');
+
+            return $info ? max(1, substr_count($info, "\nprocessor") + (str_starts_with($info, 'processor') ? 1 : 0)) : 1;
         });
     }
 

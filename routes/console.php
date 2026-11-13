@@ -32,6 +32,9 @@ Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())-
 // Google Agenda : périodes occupées importées (elles bloquent les créneaux de rendez-vous).
 Schedule::call(fn () => app(\App\Services\GoogleCalendar::class)->syncBusy())->everyTenMinutes()->name('rendez-vous:google-agenda');
 
+// Maintenance : début et fin programmés appliqués (et notifiés) même sans visite.
+Schedule::call(fn () => app(\App\Services\Maintenance::class)->isActive())->everyMinute()->name('maintenance:programmation');
+
 // File d'attente : places des visiteurs inactifs libérées et visiteurs suivants admis.
 Schedule::call(function () {
     $room = app(\App\Services\WaitingRoom::class);

@@ -9,23 +9,27 @@
                     <p class="text-sm text-slate-500">État</p>
                     @if ($settings['mode'] === 'off')
                         <p class="mt-1 font-medium text-slate-900">Désactivée</p>
-                    @elseif ($queueing)
-                        <p class="mt-1 font-medium text-amber-700">En cours{{ $settings['mode'] === 'manual' ? ' (forcée)' : '' }}</p>
-                        @if ($since)<p class="text-xs text-slate-500">Saturé depuis {{ $since->diffForHumans() }}</p>@endif
+                    @elseif ($status['queueing'])
+                        <p class="mt-1 font-medium text-amber-700">En cours{{ $settings['mode'] === 'manual' ? ' (forcée)' : ($status['overloaded'] ? ' (serveur surchargé)' : '') }}</p>
+                        @if ($status['queueing_since'])<p class="text-xs text-slate-500">Saturé depuis {{ $status['queueing_since']->diffForHumans() }}</p>@endif
                     @else
                         <p class="mt-1 font-medium text-emerald-700">En veille — accès libre</p>
                     @endif
                 </div>
                 <div>
                     <p class="text-sm text-slate-500">Visiteurs sur le site</p>
-                    <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $admitted }} <span class="text-sm font-normal text-slate-500">/ {{ $settings['capacity'] }}</span></p>
+                    <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $status['admitted'] }} <span class="text-sm font-normal text-slate-500">/ {{ $settings['capacity'] }}</span></p>
                 </div>
                 <div>
                     <p class="text-sm text-slate-500">En attente</p>
-                    <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $waiting }}</p>
+                    <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $status['waiting'] }}</p>
                 </div>
             </div>
-            @if ($waiting > 0)
+            <p class="text-sm text-slate-500">
+                Charge du serveur : {{ $status['load_per_core'] !== null ? number_format($status['load_per_core'], 2, ',', ' ').' par cœur' : 'indisponible' }}
+                · Temps de réponse moyen : {{ $status['response_time_ms'] !== null ? $status['response_time_ms'].' ms' : 'non mesuré' }}
+            </p>
+            @if ($status['waiting'] > 0)
                 @can('panel', 'waiting_room.manage')
                     <form method="POST" action="{{ route('admin.waiting-room.admit') }}" class="mt-2">
                         @csrf
@@ -47,6 +51,12 @@
                     <x-form.input name="capacity" type="number" min="1" max="100000" label="Visiteurs simultanés maximum" :value="$settings['capacity']" required
                                   help="Au-delà, les nouveaux visiteurs patientent." />
                     <x-form.input name="session_minutes" type="number" min="1" max="120" label="Libération d'une place après (minutes d'inactivité)" :value="$settings['session_minutes']" required />
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2" x-show="mode === 'auto'" x-cloak>
+                    <x-form.input name="max_response_ms" type="number" min="50" max="60000" label="Temps de réponse maximal (ms)" :value="$settings['max_response_ms']"
+                                  help="Facultatif. Au-delà (moyenne récente), les admissions sont suspendues." />
+                    <x-form.input name="max_load" type="number" step="0.1" min="0.1" max="50" label="Charge maximale par cœur" :value="$settings['max_load']"
+                                  help="Facultatif. Ex. : 1,5 = processeur saturé avec file d'exécution. Linux uniquement." />
                 </div>
                 <div x-show="mode === 'manual'" x-cloak>
                     <x-form.input name="ends_at" type="datetime-local" label="Retour au mode automatique"

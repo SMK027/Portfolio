@@ -107,6 +107,28 @@ class WaitingRoomTest extends TestCase
         $this->assertSame(0, WaitingRoomTicket::waiting()->count());
     }
 
+    public function test_auto_mode_queues_when_the_server_is_slow_and_notifies(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        app(\App\Services\DiscordNotifier::class)->save('https://discord.com/api/webhooks/1/abc', ['site_status']);
+        $this->room()->update(['mode' => 'auto', 'capacity' => 100, 'max_response_ms' => 500]);
+
+        $this->visit()->assertDontSee('Votre position');
+        \Illuminate\Support\Facades\Cache::put('waiting-room:response-time', [900.0, now()->timestamp], 120);
+        $this->assertTrue($this->room()->isOverloaded());
+
+        $waiting = $this->visit()->assertSee('Votre position');
+        $this->visit()->assertSee('Votre position'); // une seule notification de déclenchement
+
+        // La mesure expire (plus de requêtes lentes) : les visiteurs entrent, la file est levée.
+        $this->travel(2)->minutes();
+        $this->withCookie(WaitingRoom::COOKIE, $this->tokenOf($waiting));
+        $this->withCredentials()->getJson(route('waiting-room.status'))->assertJson(['admitted' => true]);
+        $this->room()->advance();
+
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendDiscordNotification::class, 2);
+    }
+
     public function test_admin_can_configure_and_release_the_queue(): void
     {
         $admin = User::factory()->admin()->create();

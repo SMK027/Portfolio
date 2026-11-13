@@ -40,7 +40,7 @@ class HandleWaitingRoom
         if ($ticket?->isAdmitted()) {
             $this->room->touch($ticket);
 
-            return $next($request);
+            return $this->measured($request, $next);
         }
 
         // Robots : jamais de ticket (ils ne gardent pas les cookies et occuperaient des places).
@@ -51,12 +51,16 @@ class HandleWaitingRoom
                 return $next($request);
             }
 
-            return $this->withTicket($next($request), $this->room->issue(admitted: true)->token);
+            $token = $this->room->issue(admitted: true)->token;
+
+            return $this->withTicket($this->measured($request, $next), $token);
         }
 
         if (! $ticket && ! $isBot) {
             $ticket = $this->room->issue(admitted: false);
         }
+
+        $this->room->markTriggered();
 
         if ($ticket) {
             $this->room->touch($ticket);
@@ -80,6 +84,16 @@ class HandleWaitingRoom
             ->header('Retry-After', '10');
 
         return $ticket ? $this->withTicket($response, $ticket->token) : $response;
+    }
+
+    /** Réponse d'un visiteur admis, dont la durée alimente le déclenchement selon la charge. */
+    protected function measured(Request $request, Closure $next): Response
+    {
+        $start = microtime(true);
+        $response = $next($request);
+        $this->room->recordResponseTime((microtime(true) - $start) * 1000);
+
+        return $response;
     }
 
     protected function withTicket(Response $response, string $token): Response

@@ -125,6 +125,7 @@ final class ServicePermissions
         'projects.read', 'projects.write', 'projects.delete',
         'announcements.read', 'announcements.write', 'announcements.delete',
         'messages.read', 'content.export', 'content.import', 'maintenance.read', 'maintenance.manage',
+        'waiting_room.read', 'waiting_room.manage',
     ];
 
     /** @return list<string> */

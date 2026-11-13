@@ -56,4 +56,9 @@ Route::prefix('v1')->middleware('auth.service')->group(function () {
     // Maintenance
     Route::get('/maintenance', [Api\MaintenanceController::class, 'show'])->middleware('service.can:maintenance.read|maintenance.manage');
     Route::put('/maintenance', [Api\MaintenanceController::class, 'update'])->middleware('service.can:maintenance.manage');
+
+    // File d'attente
+    Route::get('/file-attente', [Api\WaitingRoomController::class, 'show'])->middleware('service.can:waiting_room.read|waiting_room.manage');
+    Route::put('/file-attente', [Api\WaitingRoomController::class, 'update'])->middleware('service.can:waiting_room.manage');
+    Route::post('/file-attente/admettre', [Api\WaitingRoomController::class, 'admit'])->middleware('service.can:waiting_room.manage');
 });

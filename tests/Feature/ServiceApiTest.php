@@ -167,6 +167,23 @@ class ServiceApiTest extends TestCase
         $this->putJson('/api/v1/maintenance', ['enabled' => true, 'reason' => 'Mise à jour'], $headers)->assertJsonPath('data.enabled', true);
         $this->getJson('/api/v1/maintenance', $headers)->assertJsonPath('data.reason', 'Mise à jour');
         app(Maintenance::class)->disable();
+
+        $this->putJson('/api/v1/maintenance', ['enabled' => true, 'starts_at' => now()->addDay()->toIso8601String()], $headers)
+            ->assertJsonPath('data.enabled', false)->assertJsonPath('data.scheduled', true);
+        app(Maintenance::class)->disable();
+    }
+
+    public function test_waiting_room_api(): void
+    {
+        [, $headers] = $this->account(['waiting_room.read']);
+        $this->getJson('/api/v1/file-attente', $headers)->assertOk()->assertJsonPath('data.mode', 'off');
+        $this->putJson('/api/v1/file-attente', ['mode' => 'auto'], $headers)->assertForbidden();
+
+        [, $headers] = $this->account(['waiting_room.manage']);
+        $this->putJson('/api/v1/file-attente', ['mode' => 'manual', 'capacity' => 0], $headers)->assertJsonValidationErrors('capacity');
+        $this->putJson('/api/v1/file-attente', ['mode' => 'manual', 'capacity' => 50], $headers)
+            ->assertOk()->assertJsonPath('data.mode', 'manual')->assertJsonPath('data.capacity', 50)->assertJsonPath('data.session_minutes', 5);
+        $this->postJson('/api/v1/file-attente/admettre', [], $headers)->assertOk()->assertJsonPath('data.admitted', 0);
     }
 
     public function test_requests_are_rate_limited_per_code(): void
