@@ -23,6 +23,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+// File d'attente : rang du visiteur, interrogé par la page d'attente.
+Route::get('/file-attente/statut', [\App\Http\Controllers\WaitingRoomController::class, 'status'])->middleware('throttle:30,1')->name('waiting-room.status');
+
 Route::post('/stats/duree', \App\Http\Controllers\PageViewDurationController::class)->middleware('throttle:120,1')->name('stats.duration');
 Route::get('/cv', \App\Http\Controllers\CvController::class)->middleware('throttle:30,1')->name('cv.download');
 Route::post('/cv', [\App\Http\Controllers\CvController::class, 'download'])->middleware('throttle:5,1')->name('cv.download.submit');
@@ -361,6 +364,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/maintenance', [Admin\MaintenanceController::class, 'edit'])->middleware($panel('maintenance.read|maintenance.manage'))->name('maintenance.edit');
     Route::put('/maintenance', [Admin\MaintenanceController::class, 'update'])->middleware($panel('maintenance.manage'))->name('maintenance.update');
+
+    Route::get('/file-attente', [Admin\WaitingRoomController::class, 'edit'])->middleware($panel('waiting_room.read|waiting_room.manage'))->name('waiting-room.edit');
+    Route::put('/file-attente', [Admin\WaitingRoomController::class, 'update'])->middleware($panel('waiting_room.manage'))->name('waiting-room.update');
+    Route::post('/file-attente/admettre', [Admin\WaitingRoomController::class, 'admitAll'])->middleware($panel('waiting_room.manage'))->name('waiting-room.admit');
 
     // Comptes : consultation par les admins ; création, modification et suppression
     // par les super-admins, ou par les bots autorisés pour les contributeurs (voir UserController).

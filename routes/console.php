@@ -32,6 +32,12 @@ Schedule::call(fn () => app(\App\Services\AppointmentReminders::class)->send())-
 // Google Agenda : périodes occupées importées (elles bloquent les créneaux de rendez-vous).
 Schedule::call(fn () => app(\App\Services\GoogleCalendar::class)->syncBusy())->everyTenMinutes()->name('rendez-vous:google-agenda');
 
+// File d'attente : places des visiteurs inactifs libérées et visiteurs suivants admis.
+Schedule::call(function () {
+    $room = app(\App\Services\WaitingRoom::class);
+    $room->isEnabled() ? $room->advance() : $room->prune();
+})->everyMinute()->name('file-attente:avancer');
+
 // Comptes du personnel arrivés à leur date de désactivation programmée.
 // Battement du planificateur, contrôlé par la page de diagnostic.
 Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Services\Diagnostics::SCHEDULER_HEARTBEAT, now()->timestamp))->everyMinute()->name('diagnostic:battement');

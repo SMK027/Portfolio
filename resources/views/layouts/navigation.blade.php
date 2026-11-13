@@ -3,6 +3,9 @@
     $unread = $user->can('panel', 'messages.read') ? \App\Models\ContactMessage::whereNull('read_at')->count() : 0;
     $maintenanceActive = $user->can('panel', 'maintenance.read|maintenance.manage') && app(\App\Services\Maintenance::class)->isActive();
 
+    $waitingRoom = $user->can('panel', 'waiting_room.read|waiting_room.manage') ? app(\App\Services\WaitingRoom::class) : null;
+    $waitingRoomQueueing = $waitingRoom?->isEnabled() && $waitingRoom->isQueueing();
+
     $activeBans = $user->isSuperAdmin() ? \App\Models\IpBan::active()->count() : 0;
     $pendingRecommendations = $user->can('panel', 'recommendations.read|recommendations.write')
         ? \App\Models\Recommendation::where('status', \App\Models\Recommendation::PENDING)->count() : 0;
@@ -49,6 +52,7 @@
         'admin.messages.index'     => $unread ? [$unread, 'bg-primary-500 text-white', 'Messages non lus'] : null,
         'admin.ip-bans.index'      => $activeBans ? [$activeBans, 'bg-red-500 text-white', 'Adresses IP bannies'] : null,
         'admin.maintenance.edit'   => $maintenanceActive ? ['Active', 'bg-amber-400 text-amber-950', 'Maintenance active'] : null,
+        'admin.waiting-room.edit'  => $waitingRoomQueueing ? ['Active', 'bg-amber-400 text-amber-950', 'File d\'attente en cours'] : null,
     ]);
 @endphp
 

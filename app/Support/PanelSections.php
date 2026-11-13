@@ -42,6 +42,7 @@ final class PanelSections
             ['admin.seo.edit', 'Référencement', 'globe', 'admin.seo.*', 'seo.read|seo.write'],
             ['admin.easter-eggs.index', 'Easter eggs', 'sparkles', 'admin.easter-eggs.*', 'easter_eggs.read|easter_eggs.write|easter_eggs.delete'],
             ['admin.maintenance.edit', 'Maintenance', 'wrench', 'admin.maintenance.*', 'maintenance.read|maintenance.manage'],
+            ['admin.waiting-room.edit', 'File d\'attente', 'users', 'admin.waiting-room.*', 'waiting_room.read|waiting_room.manage'],
             ['admin.transfer.index', 'Import / export', 'arrows-updown', 'admin.transfer.*', 'content.export|content.import'],
         ],
         'Comptes et sécurité' => [

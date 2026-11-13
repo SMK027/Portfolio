@@ -84,6 +84,10 @@ final class ServicePermissions
             'maintenance.manage' => 'Activer, programmer et désactiver le mode maintenance',
             'maintenance.bypass' => 'Accéder aux pages publiques pendant une maintenance',
         ],
+        'File d\'attente' => [
+            'waiting_room.read'   => 'Consulter l\'état de la file d\'attente',
+            'waiting_room.manage' => 'Régler, déclencher et lever la file d\'attente',
+        ],
         'Comptes' => [
             'users.read'   => 'Consulter la liste des comptes',
             'users.write'  => 'Créer et modifier des comptes contributeurs (jamais d\'administrateurs)',
