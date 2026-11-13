@@ -87,6 +87,31 @@ class AppointmentTest extends TestCase
         $this->assertTrue(app(AppointmentSlots::class)->isAvailable(CarbonImmutable::parse('2026-10-06 14:30')));
     }
 
+    public function test_visitor_reschedules_with_the_emailed_link(): void
+    {
+        $this->book('2026-10-06 14:30');
+        $appointment = Appointment::sole();
+        $appointment->update(['status' => 'confirmed']);
+        $this->book('2026-10-06 15:00', ['email' => 'autre@example.com']);
+
+        $this->get($appointment->cancelUrl())->assertOk()->assertSee('Déplacer le rendez-vous')->assertSee('2026-10-13 14:00');
+        $this->post(route('appointments.reschedule', $appointment->cancel_token), ['slot' => '2026-10-06 15:00'])->assertSessionHasErrors('slot');
+
+        $this->post(route('appointments.reschedule', $appointment->cancel_token), ['slot' => '2026-10-13 14:00'])
+            ->assertRedirect($appointment->cancelUrl())->assertSessionHas('success');
+
+        $appointment->refresh();
+        $this->assertSame('2026-10-13 14:00', $appointment->starts_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-13 14:30', $appointment->ends_at->format('Y-m-d H:i'));
+        $this->assertSame('pending', $appointment->status);
+        Mail::assertSent(AppointmentOwnerMail::class, fn ($m) => $m->event === 'rescheduled' && $m->previousStart->format('H:i') === '14:30');
+        $this->assertTrue(app(AppointmentSlots::class)->isAvailable(CarbonImmutable::parse('2026-10-06 14:30')));
+        $this->assertStringContainsString('Ancien créneau', (new AppointmentOwnerMail($appointment, 'rescheduled', CarbonImmutable::parse('2026-10-06 14:30')))->render());
+
+        $appointment->update(['status' => 'cancelled']);
+        $this->post(route('appointments.reschedule', $appointment->cancel_token), ['slot' => '2026-10-13 15:00'])->assertStatus(409);
+    }
+
     public function test_admin_confirms_with_calendar_invitation_or_declines(): void
     {
         $this->book('2026-10-06 14:30');

@@ -96,6 +96,8 @@ Route::get('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentCon
     ->where('token', '[A-Za-z0-9]{48}')->name('appointments.cancel');
 Route::post('/rendez-vous/annuler/{token}', [\App\Http\Controllers\AppointmentController::class, 'cancel'])
     ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1');
+Route::post('/rendez-vous/annuler/{token}/deplacer', [\App\Http\Controllers\AppointmentController::class, 'reschedule'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:5,10')->name('appointments.reschedule');
 
 Route::get('/recommandations', [\App\Http\Controllers\RecommendationController::class, 'index'])->middleware('page:recommandations')->name('recommendations.index');
 // Rédaction par l'auteur invité : lien personnel (indépendant de la visibilité de la page)

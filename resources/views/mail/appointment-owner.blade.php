@@ -1,6 +1,10 @@
 <x-mail::message>
 @if ($event === 'cancelled')
 # Rendez-vous annulé par le visiteur
+@elseif ($event === 'rescheduled')
+# Rendez-vous déplacé par le visiteur
+
+Ancien créneau : ~~{{ \Illuminate\Support\Carbon::instance($previousStart)->translatedFormat('l j F Y à H:i') }}~~
 @else
 # Nouvelle demande de rendez-vous
 @endif

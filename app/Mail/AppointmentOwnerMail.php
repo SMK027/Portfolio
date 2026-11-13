@@ -15,7 +15,10 @@ class AppointmentOwnerMail extends Mailable
 
     public const CANCELLED = 'cancelled';
 
-    public function __construct(public Appointment $appointment, public string $event)
+    public const RESCHEDULED = 'rescheduled';
+
+    /** @param  \DateTimeInterface|null  $previousStart  ancien créneau (déplacement) */
+    public function __construct(public Appointment $appointment, public string $event, public ?\DateTimeInterface $previousStart = null)
     {
     }
 
@@ -23,7 +26,7 @@ class AppointmentOwnerMail extends Mailable
     {
         return new Envelope(
             replyTo: [new Address($this->appointment->email, $this->appointment->name)],
-            subject: ($this->event === self::CANCELLED ? '[Rendez-vous annulé] ' : '[Rendez-vous] ')
+            subject: match ($this->event) { self::CANCELLED => '[Rendez-vous annulé] ', self::RESCHEDULED => '[Rendez-vous déplacé] ', default => '[Rendez-vous] ' }
                 .$this->appointment->starts_at->translatedFormat('j F à H:i').' — '.$this->appointment->name,
         );
     }
