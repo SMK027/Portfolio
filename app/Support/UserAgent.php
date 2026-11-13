@@ -7,6 +7,14 @@ final class UserAgent
 {
     public const DEVICES = ['desktop' => 'Ordinateur', 'mobile' => 'Mobile', 'tablet' => 'Tablette', 'other' => 'Autre'];
 
+    /** Robots, aperçus de liens, sondes et clients en ligne de commande. */
+    public const BOTS = '/bot|crawl|spider|slurp|facebookexternalhit|preview|monitor|uptime|curl|wget|python|httpclient|headless|lighthouse|pingdom/i';
+
+    public static function isBot(?string $ua): bool
+    {
+        return (bool) preg_match(self::BOTS, (string) $ua);
+    }
+
     /** @return array{device: string, browser: ?string, os: ?string} */
     public static function parse(?string $ua): array
     {

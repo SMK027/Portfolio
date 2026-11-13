@@ -34,8 +34,6 @@ class RecordPageView
         'contact.show', 'appointments.show', 'search', 'recommendations.index', 'terminal', 'sandbox.show',
     ];
 
-    protected const BOTS = '/bot|crawl|spider|slurp|facebookexternalhit|preview|monitor|uptime|curl|wget|python|httpclient|headless|lighthouse|pingdom/i';
-
     /** Cookie visiteur (13 mois max., exemption CNIL) et cookie de visite (30 min d'inactivité). */
     public const VISITOR_COOKIE = 'pv_vid';
 
@@ -153,7 +151,7 @@ class RecordPageView
             && ! $request->header('X-Livewire') && ! $request->ajax() && ! $request->wantsJson()
             && ! in_array(strtolower((string) $request->header('Sec-Purpose', $request->header('Purpose', ''))), ['prefetch', 'prerender'], true)
             && $request->header('DNT') !== '1' && $request->header('Sec-GPC') !== '1'
-            && ! preg_match(self::BOTS, (string) $request->userAgent())
+            && ! UserAgent::isBot($request->userAgent())
             && filled($request->userAgent());
     }
 

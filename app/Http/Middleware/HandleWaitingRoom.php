@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Profile;
 use App\Services\WaitingRoom;
+use App\Support\UserAgent;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,9 +21,6 @@ class HandleWaitingRoom
         'admin', 'admin/*', 'dashboard', 'profile', 'profile/*', 'supervision', 'robots.txt', 'sitemap.xml', 'up',
         'file-attente/*', 'rendez-vous/annuler/*',
     ];
-
-    /** Robots : jamais de ticket (ils ne gardent pas les cookies et occuperaient des places). */
-    protected const BOTS = '/bot|crawl|spider|slurp|facebookexternalhit|preview|monitor|uptime|curl|wget|python|httpclient|headless|lighthouse|pingdom/i';
 
     public function __construct(protected WaitingRoom $room)
     {
@@ -45,7 +43,8 @@ class HandleWaitingRoom
             return $next($request);
         }
 
-        $isBot = (bool) preg_match(self::BOTS, (string) $request->userAgent());
+        // Robots : jamais de ticket (ils ne gardent pas les cookies et occuperaient des places).
+        $isBot = UserAgent::isBot($request->userAgent());
 
         if (! $ticket && ! $this->room->isQueueing()) {
             if ($isBot) {
