@@ -31,7 +31,7 @@ class Diagnostics
     public function run(): array
     {
         $groups = [
-            'Application' => [$this->environment(), $this->maintenanceCheck()],
+            'Application' => [$this->environment(), $this->configuration(), $this->maintenanceCheck()],
             'Services'    => [$this->database(), $this->cache(), $this->queue(), $this->scheduler()],
             'Stockage'    => [$this->disk(), $this->writable(), $this->backup()],
             'Intégrations' => [$this->mail(), $this->googleCalendar(), $this->sandboxCheck()],
@@ -68,6 +68,24 @@ class Diagnostics
 
         return $this->check('Environnement', $risky ? 'error' : 'ok', app()->environment().(config('app.debug') ? ' · debug' : ''),
             $risky ? 'APP_DEBUG est actif en production : les erreurs détaillées sont visibles des visiteurs.' : 'PHP '.PHP_VERSION.' · Laravel '.app()->version());
+    }
+
+    /** Configuration comparée à .env.example (voir App\Services\EnvironmentCheck). */
+    protected function configuration(): array
+    {
+        try {
+            $result = Cache::remember('diagnostics.env-check', 300, fn () => app(EnvironmentCheck::class)->run());
+        } catch (Throwable $e) {
+            return $this->check('Configuration (.env)', 'warning', 'Non vérifiée', $e->getMessage());
+        }
+
+        ['error' => $errors, 'warning' => $warnings] = $result['counts'];
+        $first = collect($result['issues'])->where('level', $errors ? 'error' : 'warning')->take(3)
+            ->map(fn ($i) => $i['key'].' : '.$i['message'])->implode(' · ');
+
+        return $this->check('Configuration (.env)', $errors ? 'error' : ($warnings ? 'warning' : 'ok'),
+            $errors || $warnings ? "{$errors} erreur(s) · {$warnings} avertissement(s)" : 'Complète',
+            $first !== '' ? $first.' — détail : php artisan portfolio:env-check' : null);
     }
 
     protected function maintenanceCheck(): array

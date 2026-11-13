@@ -71,3 +71,22 @@ Schedule::command('portfolio:geoip-update')->monthlyOn(3, '04:00')->name('geoip:
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// Configuration : comparaison avec .env.example (variables critiques, manquantes, inconnues…).
+Artisan::command('portfolio:env-check {--production : Appliquer les règles de production quel que soit APP_ENV} {--strict : Échouer aussi sur les avertissements} {--all : Afficher aussi les informations}', function () {
+    $result = app(\App\Services\EnvironmentCheck::class)->run($this->option('production') ? true : null);
+    $labels = ['error' => '<fg=red>Erreur</>', 'warning' => '<fg=yellow>Avertissement</>', 'info' => '<fg=blue>Info</>'];
+
+    $this->line('Configuration comparée à .env.example'.($result['production'] ? ' (règles de production)' : '').'.');
+    $shown = array_filter($result['issues'], fn ($i) => $this->option('all') || $i['level'] !== 'info');
+    if ($shown) {
+        $this->table(['Niveau', 'Variable', 'Problème'], array_map(fn ($i) => [$labels[$i['level']], $i['key'], $i['message']], $shown));
+    }
+
+    $c = $result['counts'];
+    $summary = "{$c['error']} erreur(s), {$c['warning']} avertissement(s), {$c['info']} information(s)".($c['info'] && ! $this->option('all') ? ' (--all pour les afficher)' : '').'.';
+    $failed = $c['error'] > 0 || ($this->option('strict') && $c['warning'] > 0);
+    $failed ? $this->error($summary) : $this->info($c['error'] + $c['warning'] + $c['info'] ? $summary : 'Configuration complète.');
+
+    return $failed ? 1 : 0;
+})->purpose('Compare la configuration (.env et environnement) avec .env.example');

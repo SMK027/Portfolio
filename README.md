@@ -333,6 +333,18 @@ Sans clés reCAPTCHA, la vérification est **ignorée en local et en test** (ave
 
 Pour changer la couleur principale du site, modifiez `primary` / `accent` dans `tailwind.config.js`.
 
+### Vérifier la configuration
+
+`portfolio:env-check` compare la configuration réelle (`.env` et variables du conteneur) avec `.env.example` : variables critiques absentes ou vides, variables documentées manquantes, règles de production (`APP_DEBUG`, HTTPS, reCAPTCHA, mots de passe d'exemple…), variables inconnues (fautes de frappe) et variables non transmises par `docker-compose.yml`. Le code de sortie vaut 1 en cas d'erreur, ce qui permet de l'utiliser avant un déploiement. Le résumé figure aussi sur la page de diagnostic.
+
+```bash
+php artisan portfolio:env-check                  # erreurs et avertissements
+php artisan portfolio:env-check --all            # avec les informations
+php artisan portfolio:env-check --production     # règles de production, quel que soit APP_ENV
+php artisan portfolio:env-check --strict         # échoue aussi sur les avertissements
+docker compose exec app php artisan portfolio:env-check   # en production
+```
+
 ## Tests
 
 ```bash
