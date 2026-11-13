@@ -30,7 +30,12 @@ class SiteStatistics
             'visitors' => (int) ($daily[$date->toDateString()]->visitors ?? 0),
         ]);
 
-        $previousViews = PageView::whereBetween('viewed_on', [$previousFrom, now()->subDays($days)->toDateString()])->count();
+        $previous = fn () => PageView::whereBetween('viewed_on', [$previousFrom, now()->subDays($days)->toDateString()]);
+        $previousViews = $previous()->count();
+        $previousVisitors = (int) DB::query()->fromSub($previous()->selectRaw('viewed_on, count(distinct visitor) as visitors')->groupBy('viewed_on'), 'd')->sum('visitors');
+        $previousVisits = $previous()->whereNotNull('session_id')->distinct()->count('session_id');
+        $previousReferrers = $previous()->whereNotNull('referrer_host')->select('referrer_host', DB::raw('count(*) as views'))
+            ->groupBy('referrer_host')->pluck('views', 'referrer_host');
 
         // Visites (cookie de visite) : nombre, pages et durée totale par visite.
         $visits = $base()->whereNotNull('session_id')
@@ -42,6 +47,8 @@ class SiteStatistics
             'views'         => $series->sum('views'),
             'visitors'      => $series->sum('visitors'),
             'previousViews' => $previousViews,
+            'previousVisitors' => $previousVisitors,
+            'previousVisits' => $previousVisits,
             'series'        => $series,
             'topPages'      => $this->withTitles($base()->select('path', 'route', DB::raw('count(*) as views'), DB::raw('avg(duration) as avg_duration'))
                 ->groupBy('path', 'route')->orderByDesc('views')->limit(10)->get()),
@@ -58,8 +65,71 @@ class SiteStatistics
             'browsers'      => $base()->whereNotNull('browser')->select('browser', DB::raw('count(*) as views'))->groupBy('browser')->orderByDesc('views')->limit(8)->get(),
             'systems'       => $base()->whereNotNull('os')->select('os', DB::raw('count(*) as views'))->groupBy('os')->orderByDesc('views')->limit(8)->get(),
             'referrers'     => $base()->whereNotNull('referrer_host')->select('referrer_host', DB::raw('count(*) as views'))
-                ->groupBy('referrer_host')->orderByDesc('views')->limit(10)->get(),
+                ->groupBy('referrer_host')->orderByDesc('views')->limit(10)->get()
+                ->each(fn ($row) => $row->previous_views = (int) ($previousReferrers[$row->referrer_host] ?? 0)),
+            'referrerSeries' => $this->referrerSeries($from, $days),
         ];
+    }
+
+    /** Évolution % entre deux valeurs (null sans base de comparaison). */
+    public static function trend(int|float $current, int|float $previous): ?int
+    {
+        return $previous ? (int) round(($current - $previous) / $previous * 100) : null;
+    }
+
+    /**
+     * Visites venues des principaux sites d'origine, par semaine (ou par jour sur 7 jours) :
+     * [libellés des intervalles, [site => [vues par intervalle]]].
+     */
+    protected function referrerSeries(string $from, int $days): array
+    {
+        $bucket = $days <= 7 ? 1 : ($days <= 90 ? 7 : 30);
+        $start = \Illuminate\Support\Carbon::parse($from);
+        $count = (int) ceil($days / $bucket);
+        $labels = collect(range(0, $count - 1))->map(fn ($i) => $start->copy()->addDays($i * $bucket)->translatedFormat('j M'))->all();
+
+        $rows = PageView::where('viewed_on', '>=', $from)->whereNotNull('referrer_host')
+            ->select('referrer_host', 'viewed_on', DB::raw('count(*) as views'))->groupBy('referrer_host', 'viewed_on')->get();
+        $top = $rows->groupBy('referrer_host')->map->sum('views')->sortDesc()->take(5)->keys();
+
+        $series = $top->mapWithKeys(function ($host) use ($rows, $start, $bucket, $count) {
+            $values = array_fill(0, $count, 0);
+            foreach ($rows->where('referrer_host', $host) as $row) {
+                $index = min($count - 1, intdiv((int) $start->diffInDays($row->viewed_on), $bucket));
+                $values[$index] += $row->views;
+            }
+
+            return [$host => $values];
+        })->all();
+
+        return ['labels' => $labels, 'series' => $series, 'bucket' => $bucket];
+    }
+
+    /**
+     * Pages vues de la période, pour l'export CSV (adresses IP pour les administrateurs uniquement).
+     *
+     * @return \Generator<int, list<string|int|null>>
+     */
+    public function exportRows(int $days, bool $withIps): \Generator
+    {
+        yield array_values(array_filter([
+            'Date', 'Heure', 'Page', 'Route', 'Site d\'origine', 'Pays', 'Région', 'Ville', 'Appareil', 'Navigateur', 'Système',
+            'Durée (s)', 'Nouveau visiteur', 'Visite', $withIps ? 'Adresse IP' : null,
+        ]));
+
+        $query = PageView::where('viewed_on', '>=', now()->subDays($days - 1)->toDateString())->orderBy('id');
+        foreach ($query->lazyById(1000) as $view) {
+            $row = [
+                $view->created_at?->format('Y-m-d'), $view->created_at?->format('H:i:s'), $view->path, $view->route, $view->referrer_host,
+                $view->country, $view->region, $view->city, $view->device, $view->browser, $view->os,
+                $view->duration, $view->session_id ? ($view->is_new_visitor ? 'oui' : 'non') : null, $view->session_id,
+            ];
+            if ($withIps) {
+                $row[] = $view->ip_address;
+            }
+
+            yield $row;
+        }
     }
 
     /** Titre lisible de chaque page (article, projet ou page du menu). */

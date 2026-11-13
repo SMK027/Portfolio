@@ -231,4 +231,41 @@ class StatisticsTest extends TestCase
             ->getJson(route('admin.statistics', ['onglet' => 'temps-reel', 'depuis' => $view->id]))
             ->assertJsonPath('active', 1)->assertJsonPath('online', fn ($html) => str_contains($html, '/projets'));
     }
+
+    public function test_csv_export_trends_and_referrer_evolution(): void
+    {
+        $make = fn ($daysAgo, $ref, $ip = '1.2.3.4') => PageView::create([
+            'path' => '/', 'route' => 'home', 'visitor' => substr(md5($daysAgo.$ref), 0, 16), 'viewed_on' => now()->subDays($daysAgo)->toDateString(),
+            'referrer_host' => $ref, 'ip_address' => $ip, 'country' => 'FR',
+        ]);
+        $make(1, 'github.com');
+        $make(2, 'github.com');
+        $make(10, 'github.com'); // période précédente (7 jours)
+
+        $stats = app(\App\Services\SiteStatistics::class)->summary(7);
+        $this->assertSame(1, $stats['previousVisitors']);
+        $this->assertSame(1, $stats['referrers']->first()->previous_views);
+        $this->assertSame(['github.com'], array_keys($stats['referrerSeries']['series']));
+        $this->assertSame(2, array_sum($stats['referrerSeries']['series']['github.com']));
+        $this->assertSame(100, \App\Services\SiteStatistics::trend(2, 1));
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get(route('admin.statistics', ['periode' => 7]))->assertOk()->assertSee('Évolution des sites d')->assertSee('+100 %');
+
+        $csv = $this->actingAs($admin)->get(route('admin.statistics.export', ['periode' => 7]))->assertOk()->streamedContent();
+        $lines = array_values(array_filter(explode("\n", $csv)));
+        $this->assertCount(3, $lines);
+        $this->assertStringContainsString('Adresse IP', $lines[0]);
+        $this->assertStringContainsString('github.com', $lines[1]);
+        $this->assertStringContainsString('1.2.3.4', $lines[1]);
+
+        $this->actingAs(User::factory()->create())->get(route('admin.statistics.export'))->assertForbidden();
+    }
+
+    public function test_dashboard_shows_online_visitors(): void
+    {
+        $this->get('/', self::BROWSER);
+
+        $this->actingAs(User::factory()->admin()->create())->get(route('admin.dashboard'))->assertOk()->assertSee('1 visiteur(s) en ligne');
+    }
 }

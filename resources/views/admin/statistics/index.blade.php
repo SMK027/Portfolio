@@ -1,6 +1,7 @@
 @php
     $max = max(1, $stats['series']->max('views'));
-    $trend = $stats['previousViews'] ? round(($stats['views'] - $stats['previousViews']) / $stats['previousViews'] * 100) : null;
+    $trendOf = fn ($current, $previous) => \App\Services\SiteStatistics::trend($current, $previous);
+    $trend = $trendOf($stats['views'], $stats['previousViews']);
     $fmt = fn ($s) => \App\Services\SiteStatistics::duration($s);
 @endphp
 <x-app-layout>
@@ -12,13 +13,17 @@
                 <a href="{{ route('admin.statistics', ['periode' => $value]) }}" @class(['rounded-md px-3 py-1 font-medium', 'bg-primary-50 text-primary-700' => $days === $value, 'text-slate-500 hover:text-slate-900' => $days !== $value])>{{ $label }}</a>
             @endforeach
         </div>
+        <a href="{{ route('admin.statistics.export', ['periode' => $days]) }}" class="btn-secondary">
+            <x-icon name="arrows-updown" class="h-4 w-4" /> Export CSV
+        </a>
     </x-slot>
 
     @include('admin.statistics._tabs', ['tab' => 'overview'])
 
     <p class="text-sm text-slate-500">
-        Mesure d'audience à usage statistique uniquement : cookie propre au site (13 mois) pour reconnaître un visiteur qui revient,
-        adresses IP effacées après 3 mois, pays déduit localement (aucun service tiers). Les personnes connectées, les robots et les
+        Mesure d'audience à usage statistique uniquement : avec l'accord du visiteur (bandeau de cookies), cookie propre au site (13 mois)
+        pour reconnaître un visiteur qui revient ; sans accord, mesure anonyme sans cookie, sans IP ni ville (visites et nouveaux visiteurs
+        non comptés). Adresses IP effacées après 3 mois, pays déduit localement (aucun service tiers). Les personnes connectées, les robots et les
         navigateurs demandant à ne pas être suivis (DNT / GPC) ne sont pas comptés. Données conservées 13 mois.
     </p>
     @unless ($geoipReady)
@@ -36,6 +41,10 @@
         <div class="card p-5">
             <p class="text-sm text-slate-500">Visiteurs <span class="text-xs">(uniques par jour)</span></p>
             <p class="mt-1 font-display text-3xl font-bold text-slate-900">{{ number_format($stats['visitors'], 0, ',', ' ') }}</p>
+            @php $t = $trendOf($stats['visitors'], $stats['previousVisitors']); @endphp
+            @if ($t !== null)
+                <p @class(['mt-1 text-xs font-semibold', 'text-emerald-600' => $t >= 0, 'text-red-600' => $t < 0])>{{ $t >= 0 ? '+' : '' }}{{ $t }} % vs période précédente</p>
+            @endif
         </div>
         <div class="card p-5">
             <p class="text-sm text-slate-500">Pages par visiteur</p>
@@ -48,6 +57,10 @@
             <p class="text-sm text-slate-500">Visites</p>
             <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ number_format($stats['visits'], 0, ',', ' ') }}</p>
             <p class="mt-1 text-xs text-slate-500">{{ $stats['pagesPerVisit'] ? number_format($stats['pagesPerVisit'], 1, ',', ' ') : '—' }} page(s) par visite</p>
+            @php $t = $trendOf($stats['visits'], $stats['previousVisits']); @endphp
+            @if ($t !== null)
+                <p @class(['mt-1 text-xs font-semibold', 'text-emerald-600' => $t >= 0, 'text-red-600' => $t < 0])>{{ $t >= 0 ? '+' : '' }}{{ $t }} % vs période précédente</p>
+            @endif
         </div>
         <div class="card p-5">
             <p class="text-sm text-slate-500">Nouveaux / récurrents</p>
@@ -100,13 +113,49 @@
             @forelse ($stats['referrers'] as $row)
                 <div class="flex items-center justify-between gap-3 text-sm">
                     <span class="min-w-0 truncate text-slate-700">{{ $row->referrer_host }}</span>
-                    <span class="font-semibold text-slate-900">{{ $row->views }}</span>
+                    <span class="whitespace-nowrap">
+                        <span class="font-semibold text-slate-900">{{ $row->views }}</span>
+                        @php $t = $trendOf($row->views, $row->previous_views); @endphp
+                        <span @class(['text-xs', 'text-emerald-600' => $t === null || $t >= 0, 'text-red-600' => $t !== null && $t < 0])>{{ $t === null ? 'nouveau' : ($t >= 0 ? '+' : '').$t.' %' }}</span>
+                    </span>
                 </div>
             @empty
                 <p class="text-sm text-slate-500">Aucun lien externe (visites directes ou depuis le site).</p>
             @endforelse
         </x-admin.section>
     </div>
+
+    @if ($stats['referrerSeries']['series'])
+        @php
+            $rs = $stats['referrerSeries'];
+            $rsMax = max(1, max(array_map('max', $rs['series'])));
+        @endphp
+        <x-admin.section title="Évolution des sites d'origine ({{ ['1' => 'par jour', '7' => 'par semaine', '30' => 'par mois'][$rs['bucket']] }})">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs text-slate-500">
+                            <th class="py-1 pr-3 font-medium">Site</th>
+                            @foreach ($rs['labels'] as $label)<th class="px-1 py-1 text-center font-medium">{{ $label }}</th>@endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($rs['series'] as $host => $values)
+                            <tr class="border-t border-slate-100">
+                                <td class="max-w-[12rem] truncate py-1.5 pr-3 text-slate-700">{{ $host }}</td>
+                                @foreach ($values as $value)
+                                    <td class="px-1 py-1.5 text-center">
+                                        <span class="inline-block min-w-[2rem] rounded px-1 text-xs font-semibold {{ $value ? 'text-primary-900' : 'text-slate-300' }}"
+                                              style="background-color: rgb(99 102 241 / {{ $value ? round(0.1 + $value / $rsMax * 0.5, 2) : 0 }})">{{ $value }}</span>
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-admin.section>
+    @endif
 
     @php
         $bars = function ($rows, $key, $labels = null) {

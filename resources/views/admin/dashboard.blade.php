@@ -62,6 +62,20 @@
         <div>
             <p class="text-sm text-slate-500">Visites des 7 derniers jours</p>
             <p class="mt-1 font-display text-2xl font-bold text-slate-900">{{ $visits['views'] }} pages vues · {{ $visits['visitors'] }} visiteurs</p>
+            @can('panel', 'stats.read')
+                {{-- Visiteurs en ligne, actualisés toutes les 30 s (point d'accès de l'onglet « Temps réel ») --}}
+                <p class="mt-1 inline-flex items-center gap-1.5 text-sm text-slate-600"
+                   x-data="{ active: {{ $online }} }"
+                   x-init="setInterval(async () => {
+                       try {
+                           const r = await fetch(@js(route('admin.statistics', ['onglet' => 'temps-reel', 'depuis' => PHP_INT_MAX])), { headers: { Accept: 'application/json' } });
+                           if (r.ok) active = (await r.json()).active;
+                       } catch (e) {}
+                   }, 30000)">
+                    <span class="h-2 w-2 rounded-full" :class="active ? 'animate-pulse bg-emerald-500' : 'bg-slate-300'"></span>
+                    <span x-text="active + (active > 1 ? ' visiteurs en ligne' : ' visiteur en ligne')">{{ $online }} visiteur(s) en ligne</span>
+                </p>
+            @endcan
         </div>
         <div class="flex h-12 items-end gap-1" aria-hidden="true">
             @php $peak = max(1, $visits['series']->max('views')); @endphp

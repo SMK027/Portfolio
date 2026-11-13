@@ -28,6 +28,22 @@ class StatisticsController extends Controller
         ]);
     }
 
+    /** Export CSV des pages vues de la période (séparateur « ; » pour Excel). */
+    public function export(Request $request, SiteStatistics $statistics): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $days = array_key_exists((int) $request->query('periode'), SiteStatistics::PERIODS) ? (int) $request->query('periode') : 30;
+        $withIps = $request->user()->isAdmin();
+
+        return response()->streamDownload(function () use ($statistics, $days, $withIps) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM : accents lisibles dans Excel
+            foreach ($statistics->exportRows($days, $withIps) as $row) {
+                fputcsv($out, $row, ';', escape: '');
+            }
+            fclose($out);
+        }, 'statistiques-'.now()->format('Y-m-d').'-'.$days.'j.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     /** Onglet « Temps réel » : historique complet, avec ajout automatique des nouvelles pages vues. */
     protected function live(Request $request, SiteStatistics $statistics): View|JsonResponse
     {
