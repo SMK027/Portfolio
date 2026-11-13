@@ -136,4 +136,60 @@ class InternshipContact extends Model
             default     => "dans {$days} j",
         };
     }
+
+    /** Mots ignorés pour comparer les noms (formes juridiques, articles). */
+    protected const NAME_NOISE = ['sas', 'sasu', 'sarl', 'eurl', 'sa', 'sci', 'snc', 'scop', 'sem', 'spa', 'gie', 'societe', 'ste', 'cie',
+        'groupe', 'group', 'et', 'de', 'des', 'du', 'la', 'le', 'les', 'l', 'd', 'the', 'and', 'france', 'inc', 'ltd', 'gmbh'];
+
+    /** Nom ou adresse réduit pour comparaison : sans accents, casse, ponctuation ni mots vides. */
+    public static function normalize(?string $value, bool $isName = true): string
+    {
+        $words = preg_split('/[^a-z0-9]+/', \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii((string) $value)), -1, PREG_SPLIT_NO_EMPTY);
+
+        return implode(' ', $isName ? array_diff($words, self::NAME_NOISE) : $words);
+    }
+
+    /**
+     * Contacts déjà enregistrés semblables à celui saisi : nom d'entreprise
+     * identique ou proche (fautes de frappe, forme juridique, nom inclus dans
+     * l'autre), ou même adresse.
+     *
+     * @return \Illuminate\Support\Collection<int, array{contact: self, reasons: list<string>}>
+     */
+    public static function similarTo(?string $company, ?string $address = null, ?int $exceptId = null): \Illuminate\Support\Collection
+    {
+        $name = self::normalize($company);
+        $place = self::normalize($address, isName: false);
+        if (mb_strlen($name) < 2 && mb_strlen($place) < 8) {
+            return collect();
+        }
+
+        return self::query()->when($exceptId, fn ($q) => $q->whereKeyNot($exceptId))->orderByDesc('contacted_on')->get()
+            ->map(function (self $contact) use ($name, $place) {
+                $reasons = [];
+                $other = self::normalize($contact->company);
+
+                if ($name !== '' && $other !== '') {
+                    $compact = str_replace(' ', '', $name);
+                    $otherCompact = str_replace(' ', '', $other);
+                    $tolerance = strlen($compact) >= 10 ? 2 : (strlen($compact) >= 5 ? 1 : 0);
+
+                    if ($compact === $otherCompact) {
+                        $reasons[] = 'Même entreprise';
+                    } elseif (levenshtein($compact, $otherCompact) <= $tolerance) {
+                        $reasons[] = 'Nom très proche';
+                    } elseif (min(strlen($compact), strlen($otherCompact)) >= 4
+                        && (str_contains(" {$other} ", " {$name} ") || str_contains(" {$name} ", " {$other} "))) {
+                        $reasons[] = 'Nom inclus dans l\'autre';
+                    }
+                }
+
+                if (mb_strlen($place) >= 8 && $place === self::normalize($contact->address, isName: false)) {
+                    $reasons[] = 'Même adresse';
+                }
+
+                return $reasons ? ['contact' => $contact, 'reasons' => $reasons] : null;
+            })
+            ->filter()->take(5)->values();
+    }
 }

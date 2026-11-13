@@ -86,9 +86,45 @@ class InternshipSearchController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        InternshipContact::create($this->validated($request));
+        $data = $this->validated($request);
+
+        // Doublon probable : enregistrement seulement après confirmation explicite.
+        if (! $request->boolean('confirm_duplicate')
+            && ($duplicates = InternshipContact::similarTo($data['company'], $data['address']))->isNotEmpty()) {
+            return back()->withInput()->with('duplicates', $duplicates->map(fn ($d) => $d['contact']->id)->all())
+                ->withErrors(['company' => 'Une entreprise semblable figure déjà dans le suivi : vérifiez ci-dessous, puis confirmez l\'ajout si besoin.']);
+        }
+
+        InternshipContact::create($data);
 
         return redirect()->route('admin.internship.index')->with('success', 'Contact ajouté.');
+    }
+
+    /** Contacts semblables à la saisie en cours (vérification en direct du formulaire). */
+    public function duplicates(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $similar = InternshipContact::similarTo(
+            mb_substr((string) $request->query('company'), 0, 150),
+            mb_substr((string) $request->query('address'), 0, 255),
+            $request->integer('except') ?: null,
+        );
+
+        return response()->json(['duplicates' => $similar->map(fn ($d) => $this->presentDuplicate($d['contact'], $d['reasons']))->all()]);
+    }
+
+    /** @param list<string> $reasons */
+    public static function presentDuplicate(InternshipContact $contact, array $reasons): array
+    {
+        return [
+            'id'           => $contact->id,
+            'company'      => $contact->company,
+            'address'      => $contact->address,
+            'contact_name' => $contact->contact_name,
+            'contacted_on' => $contact->contacted_on?->translatedFormat('j F Y'),
+            'status'       => InternshipContact::STATUS_SHORT[$contact->status] ?? $contact->status,
+            'reasons'      => $reasons,
+            'url'          => route('admin.internship.edit', $contact),
+        ];
     }
 
     public function edit(InternshipContact $contact): View

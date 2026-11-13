@@ -12,6 +12,54 @@ class InternshipSearchTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_similar_companies_are_detected(): void
+    {
+        $make = fn ($company, $address = '1 rue X, 75000 Paris') => InternshipContact::create([
+            'company' => $company, 'address' => $address, 'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending',
+        ]);
+        $tech = $make('TechSolutions SAS', '12 rue des Lilas, 75011 Paris');
+        $make('Orange Business');
+
+        $ids = fn ($company, $address = null) => InternshipContact::similarTo($company, $address)->map(fn ($d) => $d['contact']->id)->all();
+
+        $this->assertSame([$tech->id], $ids('techsolutions'));          // casse et forme juridique
+        $this->assertSame([$tech->id], $ids('Tech Solutions SARL'));    // espaces
+        $this->assertSame([$tech->id], $ids('TechSolutons'));           // faute de frappe
+        $this->assertSame([$tech->id], $ids('Autre', '12, rue des lilas 75011 PARIS')); // même adresse
+        $this->assertSame(['Nom inclus dans l\'autre'], InternshipContact::similarTo('Orange')->first()['reasons']);
+        $this->assertSame([], $ids('Capgemini'));
+        $this->assertSame([], $ids('Tech'));                            // trop court pour l'inclusion
+        $this->assertSame([], InternshipContact::similarTo('TechSolutions', null, $tech->id)->all());
+    }
+
+    public function test_adding_a_duplicate_requires_confirmation(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $payload = ['company' => 'TechSolutions', 'address' => '12 rue des Lilas, 75011 Paris',
+            'contacted_on' => '2026-10-01', 'contact_method' => 'email', 'status' => 'pending'];
+
+        $this->actingAs($admin)->post(route('admin.internship.store'), $payload)->assertRedirect(route('admin.internship.index'));
+
+        $this->from(route('admin.internship.create'))->post(route('admin.internship.store'), ['company' => 'Tech-Solutions SAS'] + $payload)
+            ->assertRedirect(route('admin.internship.create'))->assertSessionHasErrors('company')->assertSessionHas('duplicates');
+        $this->assertSame(1, InternshipContact::count());
+
+        // Le formulaire rechargé liste le doublon et propose la confirmation.
+        $this->get(route('admin.internship.create'))->assertSee('Entrée semblable déjà enregistrée')->assertSee('confirm_duplicate');
+
+        $this->post(route('admin.internship.store'), ['company' => 'Tech-Solutions SAS', 'confirm_duplicate' => '1'] + $payload)
+            ->assertRedirect(route('admin.internship.index'));
+        $this->assertSame(2, InternshipContact::count());
+
+        // Vérification en direct, sans le contact en cours de modification.
+        $first = InternshipContact::orderBy('id')->first();
+        $this->getJson(route('admin.internship.duplicates', ['company' => 'techsolutions']))->assertOk()->assertJsonCount(2, 'duplicates')
+            ->assertJsonPath('duplicates.0.reasons.0', 'Même entreprise');
+        $this->getJson(route('admin.internship.duplicates', ['company' => 'techsolutions', 'except' => $first->id]))->assertJsonCount(1, 'duplicates');
+
+        $this->actingAs(User::factory()->create())->getJson(route('admin.internship.duplicates', ['company' => 'x']))->assertForbidden();
+    }
+
     public function test_admin_manages_contacts_and_remarks(): void
     {
         $admin = User::factory()->admin()->create();

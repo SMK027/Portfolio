@@ -314,6 +314,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/tableau', 'grid')->middleware($panel('internship.update'))->name('grid');
         Route::put('/tableau', 'updateGrid')->middleware($panel('internship.update'))->name('grid.update');
         Route::get('/nouveau', 'create')->middleware($panel('internship.create'))->name('create');
+        Route::get('/doublons', 'duplicates')->middleware($panel('internship.create|internship.update'))->name('duplicates');
         Route::post('/', 'store')->middleware($panel('internship.create'))->name('store');
         Route::get('/{contact}/modifier', 'edit')->middleware($panel('internship.read|internship.update'))->name('edit');
         Route::put('/{contact}', 'update')->middleware($panel('internship.update'))->name('update');
