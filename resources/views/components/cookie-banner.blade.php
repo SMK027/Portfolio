@@ -1,8 +1,7 @@
 {{--
     Bandeau de consentement aux cookies (site public).
     Le choix est mémorisé 13 mois dans le cookie « cookie_consent » (accepted / refused).
-    TODO : phase de développement — la mesure d'audience (App\Http\Middleware\RecordPageView)
-    collecte encore les données quel que soit le choix ; à faire respecter avant la mise en production.
+    Sans « accepted », App\Http\Middleware\RecordPageView se limite à une mesure anonyme sans cookie.
 --}}
 <div x-data="{
         open: ! document.cookie.split('; ').some(c => c.startsWith('cookie_consent=')),
@@ -20,7 +19,7 @@
             <p id="cookie-banner-title" class="font-medium text-slate-900">Cookies et mesure d'audience</p>
             <p class="mt-1">
                 Ce site utilise des cookies pour mesurer son audience (pages vues, durée de lecture, pays) et reconnaître un visiteur qui revient.
-                Aucune donnée n'est transmise à un service tiers. Vous pouvez accepter ou refuser, et changer d'avis à tout moment depuis le pied de page.
+                Aucune donnée n'est transmise à un service tiers. En cas de refus, seule une mesure anonyme sans cookie (page vue, pays, type d'appareil) est conservée. Vous pouvez accepter ou refuser, et changer d'avis à tout moment depuis le pied de page.
             </p>
         </div>
         <div class="flex flex-none gap-2">

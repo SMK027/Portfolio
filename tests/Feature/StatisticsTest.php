@@ -13,6 +13,41 @@ class StatisticsTest extends TestCase
 
     protected const BROWSER = ['User-Agent' => 'Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0'];
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Mesure complète : le visiteur a accepté les cookies.
+        $this->withUnencryptedCookie('cookie_consent', 'accepted');
+    }
+
+    public function test_without_consent_only_anonymous_measurement_is_kept(): void
+    {
+        foreach ([null, 'refused'] as $choice) {
+            PageView::query()->delete();
+            $this->defaultCookies = [];
+            $this->unencryptedCookies = $choice ? ['cookie_consent' => $choice] : [];
+            if ($choice) {
+                $this->withCookie('pv_vid', '3f1d3c1e-5a43-4c4a-9d55-6c9f7d1b2a10');
+            }
+
+            $response = $this->get('/', self::BROWSER)->assertOk();
+
+            $view = PageView::sole();
+            $this->assertNull($view->ip_address);
+            $this->assertNull($view->visitor_id);
+            $this->assertNull($view->session_id);
+            $this->assertNull($view->city);
+            $this->assertSame('desktop', $view->device);
+            $this->assertNull($response->getCookie('pv_sid', false));
+            if ($choice) {
+                $this->assertTrue($response->getCookie('pv_vid', false)->isCleared());
+            } else {
+                $response->assertCookieMissing('pv_vid');
+            }
+        }
+    }
+
     public function test_public_page_views_are_recorded_with_visitor_details(): void
     {
         $this->get('/', self::BROWSER + ['Referer' => 'https://www.linkedin.com/feed/'])->assertOk();
@@ -75,7 +110,7 @@ class StatisticsTest extends TestCase
         // Même visite (cookies renvoyés) : visiteur connu, même identifiant de visite.
         $this->withUnencryptedCookies(['pv_vid' => $vid, 'pv_sid' => $sid])->get('/formations', self::BROWSER);
         // Nouvelle visite plus tard : seul le cookie visiteur subsiste.
-        $this->unencryptedCookies = [];
+        $this->unencryptedCookies = ['cookie_consent' => 'accepted'];
         $this->withUnencryptedCookies(['pv_vid' => $vid])->get('/', self::BROWSER);
 
         $views = PageView::orderBy('id')->get();

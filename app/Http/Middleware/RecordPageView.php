@@ -19,9 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
  * - les personnes connectées, les robots, les préchargements et les
  *   navigateurs demandant à ne pas être suivis (DNT / GPC) sont ignorés.
  *
- * TODO : phase de développement — le choix du bandeau de cookies (cookie
- * « cookie_consent », voir components/cookie-banner) n'est pas encore pris en
- * compte : la collecte a lieu même en cas de refus. À corriger avant la production.
+ * Consentement (cookie « cookie_consent », voir components/cookie-banner) :
+ * sans accord explicite, seule une mesure exemptée (CNIL) est conservée —
+ * aucun cookie déposé ni lu, ni adresse IP, ni ville : empreinte du jour,
+ * pays, appareil et page uniquement. Les cookies de mesure déjà présents
+ * sont effacés en cas de refus.
  */
 class RecordPageView
 {
@@ -43,6 +45,13 @@ class RecordPageView
     {
     }
 
+    public const CONSENT_COOKIE = 'cookie_consent';
+
+    public static function hasConsent(Request $request): bool
+    {
+        return $request->cookie(self::CONSENT_COOKIE) === 'accepted';
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         // Identifiant préparé avant le rendu : la page l'utilise pour envoyer sa durée de lecture.
@@ -55,6 +64,14 @@ class RecordPageView
 
         if ($eligible && $response->getStatusCode() === 200) {
             try {
+                $consent = self::hasConsent($request);
+                if (! $consent) {
+                    $this->recordAnonymously($request);
+                    $this->forgetCookies($request, $response);
+
+                    return $response;
+                }
+
                 $visitorId = $this->validUuid($request->cookie(self::VISITOR_COOKIE));
                 $sessionId = $this->validUuid($request->cookie(self::SESSION_COOKIE)) ?? (string) Str::uuid();
                 $agent = UserAgent::parse($request->userAgent());
@@ -92,6 +109,35 @@ class RecordPageView
         }
 
         return $response;
+    }
+
+    /** Mesure exemptée de consentement : aucune donnée permettant de suivre le visiteur. */
+    protected function recordAnonymously(Request $request): void
+    {
+        $agent = UserAgent::parse($request->userAgent());
+
+        PageView::create([
+            'uuid'          => $request->attributes->get('page_view_uuid'),
+            'path'          => '/'.ltrim($request->path(), '/'),
+            'route'         => $request->route()?->getName(),
+            'referrer_host' => $this->referrerHost($request),
+            'visitor'       => substr(hash('sha256', now()->toDateString().config('app.key').$request->ip().$request->userAgent()), 0, 16),
+            'viewed_on'     => now()->toDateString(),
+            'country'       => $this->geoip->locate($request->ip(), $request->header('CF-IPCountry'))['country'],
+            'device'        => $agent['device'],
+            'browser'       => $agent['browser'],
+            'os'            => $agent['os'],
+        ]);
+    }
+
+    /** Refus : effacement des cookies de mesure déposés auparavant. */
+    protected function forgetCookies(Request $request, Response $response): void
+    {
+        foreach ([self::VISITOR_COOKIE, self::SESSION_COOKIE] as $name) {
+            if ($request->cookies->has($name)) {
+                $response->headers->setCookie(cookie()->forget($name));
+            }
+        }
     }
 
     protected function validUuid(mixed $value): ?string
