@@ -174,6 +174,7 @@ class ContentTransfer
         return Project::with('themes', 'skills', 'links')->latestFirst()->get()->map(fn (Project $p) => [
             'title'        => $p->title,
             'slug'         => $p->slug,
+            'status'       => $p->status, // mot de passe jamais exporté
             'published_on' => $p->published_on->toDateString(),
             'description'  => $p->description,
             ...($p->description_editor === 'markdown' ? ['description_markdown' => $p->description_markdown] : []),
@@ -569,6 +570,7 @@ class ContentTransfer
         $data = $this->validate($item, $label, 'projects', [
             'title'         => ['required', 'string', 'max:255'],
             'slug'          => ['nullable', 'string', 'max:255'],
+            'status'        => ['nullable', 'in:'.implode(',', array_keys(Project::STATUSES))],
             'published_on'  => ['required', 'date'],
             'description'          => ['required_without:description_markdown'],
             'description_markdown' => ['nullable', 'string'],
@@ -600,8 +602,14 @@ class ContentTransfer
             ?? new Project;
 
         $created = ! $project->exists;
+        // Statut « mot de passe » sans mot de passe défini (non exporté) : privé, par prudence
+        $status = $data['status'] ?? $project->status ?? Project::PUBLIC;
+        if ($status === Project::PASSWORD && ! $project->password) {
+            $status = Project::PRIVATE;
+        }
         $project->fill([
             'title'        => $data['title'],
+            'status'       => $status,
             'published_on' => Carbon::parse($data['published_on'])->toDateString(),
             'description'          => $description,
             'description_editor'   => filled($markdown) ? 'markdown' : 'blocks',
