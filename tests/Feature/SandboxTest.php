@@ -287,6 +287,28 @@ class SandboxTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.sandbox.show'))->assertSee('Historique des connexions');
     }
 
+    public function test_permanently_banned_ips_trigger_no_failure_alert(): void
+    {
+        config(['services.sandbox.url' => 'http://sandbox-agent:8080', 'auth.login_ban.enabled' => true, 'auth.login_ban.max_attempts' => 3, 'auth.login_ban.whitelist' => '']);
+        app(\App\Services\DiscordNotifier::class)->save('https://discord.com/api/webhooks/1/abc', ['sandbox', 'ip_ban']);
+        \App\Models\IpBan::create(['ip_address' => '198.51.100.50', 'attempts' => 0, 'is_manual' => true, 'banned_until' => null]);
+        foreach (range(1, 25) as $i) {
+            \App\Models\SandboxConnection::create(['connected_at' => now()->subMinute(), 'ip_address' => '198.51.100.50', 'channel' => 'ssh', 'username' => 'root', 'result' => 'refusée (identifiants)']);
+        }
+        Http::fake([
+            'sandbox-agent:8080/status' => Http::response(['container' => ['running' => true], 'quota' => ['exceeded' => false], 'connections' => []]),
+            'sandbox-agent:8080/auth-failures/drain' => Http::response(['failures' => array_fill(0, 3, ['ip' => '198.51.100.50', 'channel' => 'ssh'])]),
+            'discord.com/*' => Http::response(null, 204),
+        ]);
+        $sandbox = app(Sandbox::class);
+
+        $sandbox->monitor();
+        $sandbox->processAuthFailures();
+
+        Http::assertNotSent(fn (HttpRequest $r) => str_contains($r->url(), 'discord.com'));
+        $this->assertSame(1, \App\Models\IpBan::count()); // pas de nouveau bannissement temporaire
+    }
+
     public function test_scheduled_reset_restores_the_reference_backup(): void
     {
         $this->fakeAgent();

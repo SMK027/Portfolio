@@ -190,7 +190,12 @@ class Sandbox
     {
         $failures = $this->call('post', 'auth-failures/drain')['failures'] ?? [];
         $bans = app(LoginBan::class);
+        $permanent = $bans->permanentlyBannedIps();
         foreach ($failures as $failure) {
+            // Adresse déjà bannie définitivement : rien à compter ni à notifier.
+            if (in_array($failure['ip'] ?? null, $permanent, true)) {
+                continue;
+            }
             // Adresse privée : passerelle Docker (proxy « userland » actif), partagée par tous les
             // visiteurs. La bannir fermerait la machine à tout le monde : ignorée.
             if (filter_var($failure['ip'] ?? null, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
@@ -303,7 +308,10 @@ class Sandbox
 
         $running = (bool) ($status['container']['running'] ?? false);
         $quota = (bool) ($status['quota']['exceeded'] ?? false);
-        $refused = SandboxConnection::where('connected_at', '>=', now()->subMinutes(5))->where('result', 'like', 'refusée%')->count();
+        // Les tentatives des adresses bannies définitivement ne déclenchent pas d'alerte
+        $refused = SandboxConnection::where('connected_at', '>=', now()->subMinutes(5))->where('result', 'like', 'refusée%')
+            ->where(fn ($q) => $q->whereNull('ip_address')->orWhereNotIn('ip_address', app(LoginBan::class)->permanentlyBannedIps()))
+            ->count();
         $alerts = [
             'unreachable' => [false, null],
             'down'        => [! $running, 'Machine SSH arrêtée ('.($status['container']['status'] ?? 'inconnue').')'],

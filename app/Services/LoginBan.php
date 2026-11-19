@@ -86,6 +86,16 @@ class LoginBan
         }
     }
 
+    /** Adresses bannies sans date de fin (la base indisponible n'en renvoie aucune). */
+    public function permanentlyBannedIps(): array
+    {
+        try {
+            return IpBan::active()->whereNull('banned_until')->distinct()->pluck('ip_address')->all();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
     /**
      * Durée du prochain bannissement automatique de l'IP : durée de base, puis
      * paliers de récidive selon les bannissements automatiques récents.
