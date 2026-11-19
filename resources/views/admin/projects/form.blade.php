@@ -24,6 +24,22 @@
             <x-form.editor name="description" label="Description *" :value="$project->description" :mode="$project->description_editor" :markdown="$project->description_markdown" with-markdown placeholder="Présentez le projet : contexte, objectifs, réalisation, bilan…" />
         </x-admin.section>
 
+        <x-admin.section title="Statut" description="Visibilité du projet sur le site public. Les administrateurs y ont toujours accès.">
+            <div class="grid gap-5 sm:grid-cols-2" x-data="{ status: @js(old('status', $project->status ?? 'public')) }">
+                <x-form.select name="status" label="Statut" :options="\App\Models\Project::STATUSES" :value="$project->status ?? 'public'" required x-model="status" />
+                <div x-show="status === 'password'" x-cloak>
+                    <x-form.input name="password" type="password" label="Mot de passe d'accès" autocomplete="new-password"
+                                  :help="$project->password ? 'Laisser vide pour conserver le mot de passe actuel.' : 'Au moins 4 caractères.'" />
+                </div>
+            </div>
+            <ul class="mt-3 space-y-1 text-xs text-slate-500">
+                <li><strong>Public</strong> : affiché et accessible à tous. <strong>Mot de passe</strong> : affiché, contenu déverrouillé par mot de passe.</li>
+                <li><strong>Non indexé</strong> : accessible par lien direct, absent des listes, de la recherche et du plan du site.</li>
+                <li><strong>Maintenance</strong> : absent des listes, page « en maintenance » pour les visiteurs.</li>
+                <li><strong>Brouillon</strong> / <strong>Privé</strong> : introuvable pour les visiteurs.</li>
+            </ul>
+        </x-admin.section>
+
         <x-admin.section title="Classement">
             <x-form.chips name="themes" label="Thèmes" :options="$themes->pluck('name', 'id')" :selected="$project->themes->pluck('id')"
                           :create-url="auth()->user()->can('panel', 'themes.write') ? route('admin.themes.quick') : null" create-label="Nouveau thème" />

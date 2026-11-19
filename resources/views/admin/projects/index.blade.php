@@ -7,6 +7,12 @@
 
     <form method="GET" class="flex gap-2">
         <input type="search" name="q" value="{{ request('q') }}" placeholder="Rechercher un projet…" class="form-input max-w-sm">
+        <select name="statut" class="form-input w-auto" onchange="this.form.submit()">
+            <option value="">Tous les statuts</option>
+            @foreach (\App\Models\Project::STATUSES as $value => $label)
+                <option value="{{ $value }}" @selected(request('statut') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
         <button class="btn-secondary">Rechercher</button>
     </form>
 
@@ -25,7 +31,7 @@
                                         @if ($project->thumbnailUrl())<img src="{{ $project->thumbnailUrl() }}" alt="" class="h-full w-full object-cover">@endif
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="truncate font-medium text-slate-900">{{ $project->title }}</p>
+                                        <p class="truncate font-medium text-slate-900">{{ $project->title }}@if ($project->status !== 'public') <span class="badge ml-1 bg-slate-100 text-slate-600" title="{{ $project->statusLabel() }}">{{ $project->statusBadge() }}</span>@endif</p>
                                         <p class="text-xs text-slate-500">{{ $project->published_on->format('d/m/Y') }}</p>
                                     </div>
                                 </div>

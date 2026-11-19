@@ -17,6 +17,7 @@ class ProjectResource extends JsonResource
             'id'           => $this->id,
             'slug'         => $this->slug,
             'title'        => $this->title,
+            'status'       => $this->status,
             'published_on' => $this->published_on?->toDateString(),
             'excerpt'      => $this->excerpt(),
             'themes'       => $this->whenLoaded('themes', fn () => $this->themes->pluck('name')),

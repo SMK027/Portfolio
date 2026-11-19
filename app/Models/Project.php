@@ -14,16 +14,42 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'published_on', 'description', 'description_editor', 'description_markdown', 'thumbnail_file_id'])]
+#[Fillable(['title', 'status', 'published_on', 'description', 'description_editor', 'description_markdown', 'thumbnail_file_id'])]
 class Project extends Model
 {
     use Auditable, HasUniqueSlug;
+
+    public const PUBLIC = 'public';
+    public const PASSWORD = 'password';
+    public const UNLISTED = 'unlisted';
+    public const MAINTENANCE = 'maintenance';
+    public const DRAFT = 'draft';
+    public const PRIVATE = 'private';
+
+    /** Statuts et libellés. */
+    public const STATUSES = [
+        self::PUBLIC      => 'Public',
+        self::PASSWORD    => 'Protégé par mot de passe',
+        self::UNLISTED    => 'Non indexé (accessible par lien direct)',
+        self::MAINTENANCE => 'En maintenance',
+        self::DRAFT       => 'Brouillon',
+        self::PRIVATE     => 'Privé (administrateurs uniquement)',
+    ];
+
+    /** Statuts affichés dans les listes publiques (projets, accueil, recherche, plan du site…). */
+    public const LISTED = [self::PUBLIC, self::PASSWORD];
+
+    /** Statuts réservés aux administrateurs (404 pour les autres). */
+    public const HIDDEN = [self::DRAFT, self::PRIVATE];
+
+    protected $hidden = ['password'];
 
     protected function casts(): array
     {
         return [
             'published_on' => 'date',
             'description'  => 'array',
+            'password'     => 'hashed',
         ];
     }
 
@@ -59,6 +85,31 @@ class Project extends Model
     public function themes(): BelongsToMany
     {
         return $this->belongsToMany(Theme::class)->orderBy('position')->orderBy('name');
+    }
+
+    /** Projets affichés dans les listes publiques. */
+    public function scopeListed(Builder $query): void
+    {
+        $query->whereIn('status', self::LISTED);
+    }
+
+    public function isListed(): bool
+    {
+        return in_array($this->status, self::LISTED, true);
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    /** Badge court (back-office, aperçu administrateur). */
+    public function statusBadge(): string
+    {
+        return [
+            self::PUBLIC => 'Public', self::PASSWORD => 'Mot de passe', self::UNLISTED => 'Non indexé',
+            self::MAINTENANCE => 'Maintenance', self::DRAFT => 'Brouillon', self::PRIVATE => 'Privé',
+        ][$this->status] ?? $this->status;
     }
 
     public function scopeLatestFirst(Builder $query): void

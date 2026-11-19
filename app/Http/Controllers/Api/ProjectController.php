@@ -63,6 +63,8 @@ class ProjectController extends Controller
         $data = $request->validate([
             'title'                => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
             'published_on'         => [$creating ? 'required' : 'sometimes', 'date'],
+            // Le mot de passe se définit depuis le panel : statut « password » seulement s'il en a déjà un
+            'status'               => ['sometimes', 'in:'.implode(',', array_diff(array_keys(Project::STATUSES), $project->password ? [] : [Project::PASSWORD]))],
             'description'          => ['nullable', 'array'],
             'description_markdown' => ['nullable', 'string', 'max:1000000'],
             'description_html'     => ['nullable', 'string', 'max:2000000'],
@@ -84,7 +86,7 @@ class ProjectController extends Controller
             'thèmes' => $project->themes()->pluck('name')->all(), 'compétences' => $project->skills()->pluck('name')->all(), 'liens' => $project->links()->pluck('url')->all(),
         ];
 
-        $project->fill(collect($data)->only(['title', 'published_on'])->all() + ($description ?? []))->save();
+        $project->fill(collect($data)->only(['title', 'published_on', 'status'])->all() + ($description ?? []))->save();
 
         if (array_key_exists('themes', $data)) {
             $project->themes()->sync($this->idsByName(Theme::class, $data['themes'] ?? [], 'themes'));

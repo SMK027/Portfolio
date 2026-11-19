@@ -25,6 +25,7 @@ class ProjectController extends Controller
             'projects' => Project::with('thumbnail', 'themes')
                 ->withCount('files', 'skills')
                 ->when($request->filled('q'), fn ($q) => $q->where('title', 'like', '%'.$request->string('q').'%'))
+                ->when(array_key_exists($request->string('statut')->toString(), Project::STATUSES), fn ($q) => $q->where('status', $request->string('statut')))
                 ->latestFirst()
                 ->paginate(20)
                 ->withQueryString(),
@@ -33,7 +34,7 @@ class ProjectController extends Controller
 
     public function create(): View
     {
-        return view('admin.projects.form', $this->formData(new Project(['published_on' => now()])));
+        return view('admin.projects.form', $this->formData(new Project(['published_on' => now(), 'status' => Project::DRAFT])));
     }
 
     public function store(Request $request): RedirectResponse
@@ -86,6 +87,9 @@ class ProjectController extends Controller
         $data = $request->validate([
             'title'         => ['required', 'string', 'max:255'],
             'published_on'  => ['required', 'date'],
+            'status'        => ['nullable', 'in:'.implode(',', array_keys(Project::STATUSES))],
+            // Obligatoire à l'activation de la protection, facultatif ensuite (vide = inchangé)
+            'password'      => [$request->input('status') === Project::PASSWORD && ! $project->password ? 'required' : 'nullable', 'string', 'min:4', 'max:100'],
             'links'         => ['nullable', 'array', 'max:20'],
             'links.*.label' => ['nullable', 'string', 'max:100'],
             'links.*.url'   => ['nullable', 'url:http,https', 'max:2048'],
@@ -98,12 +102,20 @@ class ProjectController extends Controller
         ]);
 
         $relationsBefore = $this->relations($project);
+        $data['status'] ??= $project->status ?? Project::PUBLIC;
 
         $project->fill([
             'title'        => $data['title'],
             'published_on' => $data['published_on'],
+            'status'       => $data['status'],
             ...$this->richText($request, 'description', true, 'description'),
-        ])->save();
+        ]);
+        if ($data['status'] !== Project::PASSWORD) {
+            $project->password = null;
+        } elseif (filled($data['password'] ?? null)) {
+            $project->password = $data['password'];
+        }
+        $project->save();
 
         $project->skills()->sync($data['skills'] ?? []);
         $project->themes()->sync($data['themes'] ?? []);
