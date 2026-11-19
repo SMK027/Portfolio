@@ -89,6 +89,11 @@ class SandboxTest extends TestCase
 
         $this->assertSame(7, $sandbox->processAuthFailures());
         $this->assertTrue(\App\Models\IpBan::active()->where('ip_address', '203.0.113.66')->exists());
+
+        // Nouveaux échecs relevés alors que le bannissement est en cours : pas de doublon
+        Http::fake(['sandbox-agent:8080/auth-failures/drain' => Http::response(['failures' => array_fill(0, 3, ['ip' => '203.0.113.66', 'channel' => 'ssh'])])]);
+        $sandbox->processAuthFailures();
+        $this->assertSame(1, \App\Models\IpBan::where('ip_address', '203.0.113.66')->count());
         $this->assertFalse(\App\Models\IpBan::where('ip_address', '172.28.0.1')->exists()); // passerelle Docker : jamais bannie
 
         $sandbox->sync();

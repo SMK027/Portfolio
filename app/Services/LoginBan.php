@@ -53,6 +53,12 @@ class LoginBan
 
         $this->clearFailures($ip);
 
+        // Déjà bannie (tentatives relevées avant la prise d'effet du bannissement, ex. machine SSH) :
+        // pas de doublon, qui fausserait aussi le décompte des récidives.
+        if ($active = $this->activeBanFor($ip)) {
+            return $active;
+        }
+
         return $this->ban($ip, count($failures), $method);
     }
 

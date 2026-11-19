@@ -190,12 +190,7 @@ class Sandbox
     {
         $failures = $this->call('post', 'auth-failures/drain')['failures'] ?? [];
         $bans = app(LoginBan::class);
-        $permanent = $bans->permanentlyBannedIps();
         foreach ($failures as $failure) {
-            // Adresse déjà bannie définitivement : rien à compter ni à notifier.
-            if (in_array($failure['ip'] ?? null, $permanent, true)) {
-                continue;
-            }
             // Adresse privée : passerelle Docker (proxy « userland » actif), partagée par tous les
             // visiteurs. La bannir fermerait la machine à tout le monde : ignorée.
             if (filter_var($failure['ip'] ?? null, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
