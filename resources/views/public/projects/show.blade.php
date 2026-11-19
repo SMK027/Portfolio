@@ -1,4 +1,8 @@
 <x-public-layout :page="$page" :title="$project->title" :description="$project->excerpt(160)" :image="$project->thumbnailUrl()">
+    @unless ($project->isListed())@push('head')<meta name="robots" content="noindex">@endpush @endunless
+    @if ($project->status !== 'public' && \App\Models\Project::bypasses(auth()->user()))
+        <div class="bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">Aperçu administrateur — statut : <strong>{{ $project->statusLabel() }}</strong></div>
+    @endif
     <article>
         <header class="border-b border-slate-200 bg-white">
             <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">

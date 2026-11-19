@@ -18,6 +18,11 @@ class ProjectFileController extends Controller
 
     public function show(Request $request, Project $project, ProjectFile $file): StreamedResponse
     {
+        $user = $request->user();
+        abort_if($project->isHiddenFrom($user) || $project->isInMaintenanceFor($user), 404);
+        // La miniature reste visible sur la carte d'un projet verrouillé
+        abort_if($project->isLockedFor($user) && $file->id !== $project->thumbnail_file_id, 403);
+
         return $this->attachmentResponse($request, $file);
     }
 }

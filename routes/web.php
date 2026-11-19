@@ -57,6 +57,7 @@ Route::middleware('page:projets')->prefix('projets')->name('projects.')->group(f
     Route::get('/', [ProjectController::class, 'index'])->name('index');
     Route::get('/themes/{theme}', [ProjectController::class, 'theme'])->name('theme');
     Route::get('/{project}', [ProjectController::class, 'show'])->name('show');
+    Route::post('/{project}/deverrouiller', [ProjectController::class, 'unlock'])->middleware('throttle:20,1')->name('unlock');
     Route::get('/{project:id}/fichiers/{file}', [ProjectFileController::class, 'show'])
         ->scopeBindings()
         ->name('files.show');

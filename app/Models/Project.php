@@ -98,6 +98,46 @@ class Project extends Model
         return in_array($this->status, self::LISTED, true);
     }
 
+    /** Administrateur : accès complet quel que soit le statut. */
+    public static function bypasses(?User $user): bool
+    {
+        return (bool) $user?->isAdmin();
+    }
+
+    /** Projet introuvable (404) pour ce visiteur. */
+    public function isHiddenFrom(?User $user): bool
+    {
+        return in_array($this->status, self::HIDDEN, true) && ! self::bypasses($user);
+    }
+
+    public function isInMaintenanceFor(?User $user): bool
+    {
+        return $this->status === self::MAINTENANCE && ! self::bypasses($user);
+    }
+
+    /** Contenu verrouillé : statut « mot de passe », non déverrouillé dans cette session. */
+    public function isLockedFor(?User $user): bool
+    {
+        return $this->status === self::PASSWORD && $this->password && ! self::bypasses($user)
+            && ! hash_equals($this->unlockToken(), (string) session($this->unlockKey()));
+    }
+
+    public function unlock(): void
+    {
+        session()->put($this->unlockKey(), $this->unlockToken());
+    }
+
+    protected function unlockKey(): string
+    {
+        return 'projects.unlocked.'.$this->id;
+    }
+
+    /** Lié au mot de passe actuel : le changer reverrouille les sessions ouvertes. */
+    protected function unlockToken(): string
+    {
+        return hash_hmac('sha256', (string) $this->password, (string) config('app.key'));
+    }
+
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
