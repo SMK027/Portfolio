@@ -25,7 +25,7 @@ class SitemapController extends Controller
 
             if ($pages->contains('key', 'projets')) {
                 $urls = $urls
-                    ->merge(Project::orderByDesc('published_on')->get()->map(fn (Project $p) => ['loc' => route('projects.show', $p), 'lastmod' => $p->updated_at]))
+                    ->merge(Project::listed()->orderByDesc('published_on')->get()->map(fn (Project $p) => ['loc' => route('projects.show', $p), 'lastmod' => $p->updated_at]))
                     ->merge(Theme::whereHas('projects')->get()->map(fn (Theme $t) => ['loc' => route('projects.theme', $t), 'lastmod' => $t->updated_at]));
             }
 

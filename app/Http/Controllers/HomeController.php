@@ -23,7 +23,7 @@ class HomeController extends Controller
             'page'     => $request->attributes->get('page'),
             'profile'  => Profile::current(),
             'projects' => $canSee('projets')
-                ? Project::with('thumbnail', 'themes')->latestFirst()->limit(3)->get()
+                ? Project::with('thumbnail', 'themes')->listed()->latestFirst()->limit(3)->get()
                 : collect(),
             'articles' => $canSee('veille')
                 ? Article::with('author', 'themes')->published()->forListing()->limit(3)->get()

@@ -99,4 +99,26 @@ class ProjectStatusTest extends TestCase
         }
         $this->post(route('projects.unlock', $project), ['password' => 'secret-42'])->assertSessionHasErrors('password');
     }
+
+    public function test_only_listed_projects_appear_in_public_listings(): void
+    {
+        $theme = \App\Models\Theme::create(['name' => 'Réseau']);
+        foreach (array_keys(Project::STATUSES) as $status) {
+            $this->project($status, ['themes' => [$theme->id], ...($status === Project::PASSWORD ? ['password' => 'secret-42'] : [])]);
+        }
+        // Repérés par leur URL (cartes, plan du site)
+        $listed = ['/projets/projet-public', '/projets/projet-password'];
+        $unlisted = ['/projets/projet-unlisted', '/projets/projet-maintenance', '/projets/projet-draft', '/projets/projet-private'];
+
+        foreach ([route('projects.index'), route('projects.theme', $theme), route('home'), route('sitemap')] as $url) {
+            $response = $this->get($url)->assertOk();
+            foreach ($listed as $title) {
+                $response->assertSee($title, false);
+            }
+            foreach ($unlisted as $title) {
+                $response->assertDontSee($title, false);
+            }
+        }
+        $this->get(route('projects.index'))->assertSee('Protégé par mot de passe');
+    }
 }

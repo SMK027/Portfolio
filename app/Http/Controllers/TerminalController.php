@@ -30,7 +30,7 @@ class TerminalController extends Controller
         $sections = array_filter([
             'competences' => $canSee('competences') ? Skill::groupByCategory(Skill::ordered()->get())
                 ->map(fn ($skills) => $skills->map(fn (Skill $s) => ['name' => $s->name, 'level' => $s->level])->values())->all() : null,
-            'projets' => $canSee('projets') ? Project::latestFirst()->limit(30)->get()->map(fn (Project $p) => [
+            'projets' => $canSee('projets') ? Project::listed()->latestFirst()->limit(30)->get()->map(fn (Project $p) => [
                 'name' => $p->slug, 'title' => $p->title, 'date' => $p->published_on?->format('Y'), 'url' => route('projects.show', $p),
             ])->all() : null,
             'veille' => $canSee('veille') ? Article::published()->forListing()->limit(30)->get()->map(fn (Article $a) => [

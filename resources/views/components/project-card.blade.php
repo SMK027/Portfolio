@@ -18,7 +18,11 @@
         <h3 class="font-display text-lg font-semibold text-slate-900">
             <a href="{{ route('projects.show', $project) }}" class="after:absolute after:inset-0 focus:outline-none">{{ $project->title }}</a>
         </h3>
-        <p class="mt-2 line-clamp-3 text-sm text-slate-600">{{ $project->excerpt() }}</p>
+        @if ($project->status === \App\Models\Project::PASSWORD)
+            <p class="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-500"><x-icon name="lock" class="h-4 w-4" /> Protégé par mot de passe</p>
+        @else
+            <p class="mt-2 line-clamp-3 text-sm text-slate-600">{{ $project->excerpt() }}</p>
+        @endif
         @if ($project->relationLoaded('skills') && $project->skills->isNotEmpty())
             <div class="mt-auto flex flex-wrap gap-1.5 pt-4">
                 @foreach ($project->skills->take(4) as $skill)

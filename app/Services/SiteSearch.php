@@ -108,7 +108,7 @@ class SiteSearch
         }
         if ($can('projets')) {
             $results = $results
-                ->merge($this->find(Project::orderByDesc('published_on'), ['title', 'description', 'description_markdown'], $query)
+                ->merge($this->find(Project::where('status', Project::PUBLIC)->orderByDesc('published_on'), ['title', 'description', 'description_markdown'], $query)
                     ->map(fn (Project $p) => $this->result('Projet', $p->title, route('projects.show', $p), $query, $p->description)))
                 ->merge($this->find(Theme::ordered(), ['name', 'description'], $query)
                     ->map(fn (Theme $t) => $this->result('Thème', $t->name, route('projects.theme', $t), $query, $t->description)));

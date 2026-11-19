@@ -60,7 +60,7 @@ class BackgroundController extends Controller
     {
         return view('public.skills', [
             'page'   => $request->attributes->get('page'),
-            'groups' => Skill::groupByCategory(Skill::ordered()->withCount('projects')->get()),
+            'groups' => Skill::groupByCategory(Skill::ordered()->withCount(['projects' => fn ($q) => $q->listed()])->get()),
         ]);
     }
 }

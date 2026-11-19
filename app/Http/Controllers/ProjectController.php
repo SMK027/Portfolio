@@ -19,8 +19,8 @@ class ProjectController extends Controller
     {
         return view('public.projects.index', [
             'page'     => $request->attributes->get('page'),
-            'themes'   => Theme::ordered()->has('projects')->withCount('projects')->get(),
-            'projects' => Project::with('thumbnail', 'themes', 'skills')->latestFirst()->paginate(12),
+            'themes'   => Theme::ordered()->whereHas('projects', fn ($q) => $q->listed())->withCount(['projects' => fn ($q) => $q->listed()])->get(),
+            'projects' => Project::with('thumbnail', 'themes', 'skills')->listed()->latestFirst()->paginate(12),
         ]);
     }
 
@@ -29,8 +29,8 @@ class ProjectController extends Controller
         return view('public.projects.theme', [
             'page'     => $request->attributes->get('page'),
             'theme'    => $theme,
-            'themes'   => Theme::ordered()->has('projects')->withCount('projects')->get(),
-            'projects' => $theme->projects()->with('thumbnail', 'themes', 'skills')->latestFirst()->paginate(12),
+            'themes'   => Theme::ordered()->whereHas('projects', fn ($q) => $q->listed())->withCount(['projects' => fn ($q) => $q->listed()])->get(),
+            'projects' => $theme->projects()->with('thumbnail', 'themes', 'skills')->listed()->latestFirst()->paginate(12),
         ]);
     }
 
