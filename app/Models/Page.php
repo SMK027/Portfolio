@@ -3,15 +3,37 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasAccessPassword;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['title', 'intro', 'is_public', 'position'])]
+#[Fillable(['title', 'intro', 'status', 'position'])]
 class Page extends Model
 {
-    use Auditable;
+    use Auditable, HasAccessPassword;
+
+    public const PUBLIC = 'public';
+    public const PASSWORD = 'password';
+    public const UNLISTED = 'unlisted';
+    public const MAINTENANCE = 'maintenance';
+    public const DRAFT = 'draft';
+    public const PRIVATE = 'private';
+
+    public const STATUSES = [
+        self::PUBLIC      => 'Publique',
+        self::PASSWORD    => 'Protégée par mot de passe',
+        self::UNLISTED    => 'Non indexée (lien direct)',
+        self::MAINTENANCE => 'En maintenance',
+        self::DRAFT       => 'Brouillon',
+        self::PRIVATE     => 'Privée',
+    ];
+
+    /** Statuts affichés dans le menu pour les visiteurs. */
+    public const LISTED = [self::PUBLIC, self::PASSWORD];
+
+    protected $hidden = ['password'];
 
     /**
      * Correspondance clé de page → nom de la route publique.
@@ -70,7 +92,7 @@ class Page extends Model
     protected function casts(): array
     {
         return [
-            'is_public' => 'boolean',
+            'password' => 'hashed',
         ];
     }
 
@@ -96,13 +118,19 @@ class Page extends Model
     }
 
     /**
-     * Pages visibles par l'utilisateur courant (toutes pour un administrateur).
+     * Pages du menu pour l'utilisateur courant (toutes pour un administrateur) :
+     * publiques et protégées par mot de passe.
      *
      * @return Collection<int, Page>
      */
     public static function visibleTo(?User $user): Collection
     {
-        return static::allOrdered()->filter(fn (Page $page) => $page->isAccessibleBy($user))->values();
+        return static::allOrdered()->filter(fn (Page $page) => $page->isListedFor($user))->values();
+    }
+
+    public function isListedFor(?User $user): bool
+    {
+        return in_array($this->status, self::LISTED, true) || (bool) $user?->isAdmin();
     }
 
     public static function isKeyAccessibleBy(string $key, ?User $user): bool
@@ -110,9 +138,23 @@ class Page extends Model
         return (bool) static::findByKey($key)?->isAccessibleBy($user);
     }
 
+    /** Accès au contenu : publique, non indexée, ou protégée et déverrouillée (administrateurs : toujours). */
     public function isAccessibleBy(?User $user): bool
     {
-        return $this->is_public || (bool) $user?->isAdmin();
+        return in_array($this->status, [self::PUBLIC, self::UNLISTED], true)
+            || ($this->status === self::PASSWORD && $this->isUnlocked())
+            || (bool) $user?->isAdmin();
+    }
+
+    /** Publique au sens strict : menu, recherche, plan du site, indexation. */
+    public function getIsPublicAttribute(): bool
+    {
+        return $this->status === self::PUBLIC;
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUSES[$this->status] ?? $this->status;
     }
 
     public function routeName(): string

@@ -31,14 +31,14 @@ class PageVisibilityTest extends TestCase
     #[DataProvider('publicRoutes')]
     public function test_public_pages_are_accessible(string $key, string $url): void
     {
-        Page::where('key', $key)->update(['is_public' => true]);
+        Page::where('key', $key)->update(['status' => 'public']);
         $this->get($url)->assertOk();
     }
 
     #[DataProvider('publicRoutes')]
     public function test_private_pages_are_hidden_from_guests_but_visible_to_admins(string $key, string $url): void
     {
-        Page::where('key', $key)->update(['is_public' => false]);
+        Page::where('key', $key)->update(['status' => 'private']);
         Page::flushCache();
 
         $response = $this->get($url);
@@ -52,14 +52,14 @@ class PageVisibilityTest extends TestCase
 
     public function test_private_pages_are_hidden_from_non_admin_users(): void
     {
-        Page::where('key', 'projets')->update(['is_public' => false]);
+        Page::where('key', 'projets')->update(['status' => 'private']);
 
         $this->actingAs(User::factory()->create())->get('/projets')->assertNotFound();
     }
 
     public function test_menu_hides_private_pages_from_guests_only(): void
     {
-        Page::where('key', 'veille')->update(['is_public' => false, 'title' => 'Ma veille secrète']);
+        Page::where('key', 'veille')->update(['status' => 'private', 'title' => 'Ma veille secrète']);
 
         $this->get('/formations')->assertDontSee('Ma veille secrète');
 
@@ -72,14 +72,14 @@ class PageVisibilityTest extends TestCase
 
     public function test_private_home_redirects_guests_to_first_public_page(): void
     {
-        Page::where('key', 'home')->update(['is_public' => false]);
+        Page::where('key', 'home')->update(['status' => 'private']);
 
         $this->get('/')->assertRedirect(route('formations'));
     }
 
     public function test_everything_private_returns_404(): void
     {
-        Page::query()->update(['is_public' => false]);
+        Page::query()->update(['status' => 'private']);
 
         $this->get('/')->assertNotFound();
     }
@@ -91,7 +91,7 @@ class PageVisibilityTest extends TestCase
             'title'     => $page->key === 'contact' ? 'Me joindre' : $page->title,
             'intro'     => $page->intro,
             'position'  => $page->position,
-            'is_public' => $page->key === 'contact' ? 0 : 1,
+            'status' => $page->key === 'contact' ? 'private' : 'public',
         ]])->all();
 
         $this->actingAs($admin)->put(route('admin.pages.update'), ['pages' => $pages])->assertSessionHasNoErrors();

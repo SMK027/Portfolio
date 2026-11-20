@@ -128,7 +128,7 @@
 
             <x-admin.section title="Pages privées">
                 @forelse ($privatePages as $privatePage)
-                    <p class="flex items-center gap-2 text-sm text-slate-700"><x-icon name="lock" class="h-4 w-4 text-amber-500" /> {{ $privatePage->title }}</p>
+                    <p class="flex items-center gap-2 text-sm text-slate-700"><x-icon name="lock" class="h-4 w-4 text-amber-500" /> {{ $privatePage->title }} <span class="text-xs text-slate-500">— {{ $privatePage->statusLabel() }}</span></p>
                 @empty
                     <p class="text-sm text-slate-500">Toutes les pages sont publiques.</p>
                 @endforelse

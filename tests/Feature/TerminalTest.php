@@ -43,7 +43,7 @@ class TerminalTest extends TestCase
 
     public function test_private_pages_are_left_out(): void
     {
-        Page::whereIn('key', ['projets', 'contact'])->update(['is_public' => false]);
+        Page::whereIn('key', ['projets', 'contact'])->update(['status' => 'private']);
         Page::flushCache();
         Profile::current()->update(['email' => 'leo@example.com']);
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasAccessPassword;
 use App\Models\Concerns\HasUniqueSlug;
 use App\Support\EditorContent;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 #[Fillable(['title', 'status', 'published_on', 'description', 'description_editor', 'description_markdown', 'thumbnail_file_id'])]
 class Project extends Model
 {
-    use Auditable, HasUniqueSlug;
+    use Auditable, HasAccessPassword, HasUniqueSlug;
 
     public const PUBLIC = 'public';
     public const PASSWORD = 'password';
@@ -119,23 +120,7 @@ class Project extends Model
     public function isLockedFor(?User $user): bool
     {
         return $this->status === self::PASSWORD && $this->password && ! self::bypasses($user)
-            && ! hash_equals($this->unlockToken(), (string) session($this->unlockKey()));
-    }
-
-    public function unlock(): void
-    {
-        session()->put($this->unlockKey(), $this->unlockToken());
-    }
-
-    protected function unlockKey(): string
-    {
-        return 'projects.unlocked.'.$this->id;
-    }
-
-    /** Lié au mot de passe actuel : le changer reverrouille les sessions ouvertes. */
-    protected function unlockToken(): string
-    {
-        return hash_hmac('sha256', (string) $this->password, (string) config('app.key'));
+            && ! $this->isUnlocked();
     }
 
     public function statusLabel(): string

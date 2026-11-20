@@ -24,7 +24,7 @@ class SitemapTest extends TestCase
             ->assertSee(route('articles.show', $published), false)
             ->assertDontSee(route('articles.show', $draft), false);
 
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
         $this->get('/sitemap.xml')->assertDontSee(route('articles.show', $published), false);
     }

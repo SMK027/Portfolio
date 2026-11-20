@@ -54,7 +54,7 @@ class ArticlePreviewLinkTest extends TestCase
         $url = $this->share();
         $this->get($url)->assertOk(); // session autorisée tant que la page est publique
 
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
 
         $this->get($url)->assertNotFound();

@@ -24,7 +24,7 @@ class PrivateVeillePageTest extends TestCase
         $file = $article->files()->create(['path' => UploadedFile::fake()->image('a.png')->store('article-files', 'local'),
             'original_name' => 'a.png', 'mime_type' => 'image/png', 'size' => 10]);
 
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
 
         $this->get(route('articles.index'))->assertNotFound();

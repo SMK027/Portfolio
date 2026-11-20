@@ -25,7 +25,7 @@ class AppointmentTest extends TestCase
         parent::setUp();
         Mail::fake();
         $this->travelTo(CarbonImmutable::parse('2026-10-05 09:00')); // lundi
-        Page::where('key', 'rendez-vous')->update(['is_public' => true]);
+        Page::where('key', 'rendez-vous')->update(['status' => 'public']);
         Page::flushCache();
         AppointmentSettings::save(['duration' => 30, 'notice_hours' => 24, 'horizon_days' => 14]);
         AvailabilityRule::create(['weekday' => 2, 'start_time' => '14:00', 'end_time' => '15:30']); // mardi
@@ -260,7 +260,7 @@ class AppointmentTest extends TestCase
         $this->book('2026-10-06 14:30', ['website' => 'spam'])->assertRedirect();
         $this->assertSame(0, Appointment::count());
 
-        Page::where('key', 'rendez-vous')->update(['is_public' => false]);
+        Page::where('key', 'rendez-vous')->update(['status' => 'private']);
         Page::flushCache();
         $this->get(route('appointments.show'))->assertNotFound();
     }

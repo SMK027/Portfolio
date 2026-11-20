@@ -36,7 +36,7 @@ class DashboardController extends Controller
             'online'         => app(\App\Services\SiteStatistics::class)->activeVisitors(),
             'unreadCount'    => ContactMessage::whereNull('read_at')->count(),
             'latestMessages' => ContactMessage::latest()->limit(5)->get(),
-            'privatePages'   => Page::allOrdered()->where('is_public', false),
+            'privatePages'   => Page::allOrdered()->where('status', '!=', Page::PUBLIC),
             'pendingArticles' => Article::pendingReview()->with('author')->oldest('submitted_at')->get(),
             'drafts'         => Article::where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '>', now()))
                 ->latest('updated_at')->limit(5)->get(),

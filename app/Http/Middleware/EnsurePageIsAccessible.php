@@ -8,8 +8,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Bloque l'accès à une page privée pour les visiteurs non administrateurs.
- * Une page privée répond 404 afin de ne pas révéler son existence.
+ * Applique le statut d'une page aux visiteurs non administrateurs : brouillon ou
+ * privée → 404 (existence non révélée), maintenance → 503, mot de passe → formulaire.
  *
  * Usage : ->middleware('page:projets')
  */
@@ -25,7 +25,17 @@ class EnsurePageIsAccessible
             return $next($request);
         }
 
-        // Accueil privé : on redirige vers la première page accessible.
+        // Maintenance : page d'attente (503) ; mot de passe : formulaire de déverrouillage
+        if ($page?->status === Page::MAINTENANCE) {
+            return response()->view('public.page-maintenance', ['page' => $page], 503)->header('Retry-After', 3600);
+        }
+        if ($page?->status === Page::PASSWORD && $page->password) {
+            abort_unless($request->isMethod('GET'), 403);
+
+            return response()->view('public.page-locked', ['page' => $page]);
+        }
+
+        // Accueil brouillon ou privé : on redirige vers la première page accessible.
         if ($key === 'home') {
             $fallback = Page::visibleTo($request->user())->first();
 

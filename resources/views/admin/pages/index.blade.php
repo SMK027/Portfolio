@@ -3,8 +3,13 @@
     <x-slot name="header">Pages & visibilité</x-slot>
 
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        Une page <strong>privée</strong> n'apparaît plus dans le menu et renvoie une erreur 404 aux visiteurs.
-        Les administrateurs connectés continuent de la voir (signalée par un cadenas) ainsi que tout son contenu.
+        <ul class="space-y-1">
+            <li><strong>Publique</strong> : dans le menu, la recherche et le plan du site. <strong>Protégée</strong> : dans le menu, contenu déverrouillé par mot de passe.</li>
+            <li><strong>Non indexée</strong> : accessible par son adresse, absente du menu, de la recherche et du plan du site.</li>
+            <li><strong>Maintenance</strong> : absente du menu, page « en maintenance » pour les visiteurs.</li>
+            <li><strong>Brouillon</strong> / <strong>Privée</strong> : erreur 404 pour les visiteurs.</li>
+        </ul>
+        <p class="mt-2">Les administrateurs connectés voient toujours toutes les pages et leur contenu.</p>
     </div>
 
     <form method="POST" action="{{ route('admin.pages.update') }}" class="space-y-4">
@@ -12,7 +17,7 @@
         @method('PUT')
 
         @foreach ($pages as $page)
-            <div class="card grid gap-4 p-4 sm:p-5 md:grid-cols-[1fr_1.5fr_90px_auto] md:items-start" x-data="{ isPublic: @js((bool) old("pages.$page->id.is_public", $page->is_public)) }">
+            <div class="card grid gap-4 p-4 sm:p-5 md:grid-cols-[1fr_1.5fr_90px_220px] md:items-start" x-data="{ status: @js(old("pages.$page->id.status", $page->status)) }">
                 <div>
                     <label class="form-label" for="page-{{ $page->id }}-title">Titre (menu)</label>
                     <input id="page-{{ $page->id }}-title" type="text" name="pages[{{ $page->id }}][title]" value="{{ old("pages.$page->id.title", $page->title) }}" required maxlength="100" class="form-input">
@@ -27,16 +32,18 @@
                     <label class="form-label" for="page-{{ $page->id }}-position">Ordre</label>
                     <input id="page-{{ $page->id }}-position" type="number" min="0" max="999" name="pages[{{ $page->id }}][position]" value="{{ old("pages.$page->id.position", $page->position) }}" class="form-input">
                 </div>
-                <div>
-                    <span class="form-label">Visibilité</span>
-                    <input type="hidden" name="pages[{{ $page->id }}][is_public]" :value="isPublic ? 1 : 0">
-                    <button type="button" @click="isPublic = !isPublic" role="switch" :aria-checked="isPublic.toString()"
-                            :class="isPublic ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800'"
-                            class="inline-flex w-32 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition">
-                        <x-icon name="eye" class="h-4 w-4" x-show="isPublic" />
-                        <x-icon name="lock" class="h-4 w-4" x-show="!isPublic" x-cloak />
-                        <span x-text="isPublic ? 'Publique' : 'Privée'"></span>
-                    </button>
+                <div class="space-y-2">
+                    <label class="form-label" for="page-{{ $page->id }}-status">Statut</label>
+                    <select id="page-{{ $page->id }}-status" name="pages[{{ $page->id }}][status]" x-model="status" class="form-input">
+                        @foreach (\App\Models\Page::STATUSES as $value => $label)
+                            <option value="{{ $value }}" @selected(old("pages.$page->id.status", $page->status) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <div x-show="status === 'password'" x-cloak>
+                        <input type="password" name="pages[{{ $page->id }}][password]" autocomplete="new-password" maxlength="100" class="form-input"
+                               aria-label="Mot de passe de la page" placeholder="{{ $page->password ? 'Inchangé si vide' : 'Mot de passe (4 caractères min.)' }}">
+                    </div>
+                    @error("pages.$page->id.password")<p class="form-error">{{ $message }}</p>@enderror
                 </div>
             </div>
         @endforeach

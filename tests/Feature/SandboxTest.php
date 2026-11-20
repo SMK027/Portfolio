@@ -178,7 +178,7 @@ class SandboxTest extends TestCase
 
     public function test_public_page_and_signed_ticket(): void
     {
-        Page::where('key', 'machine-ssh')->update(['is_public' => true]);
+        Page::where('key', 'machine-ssh')->update(['status' => 'public']);
         Page::flushCache();
         $guest = new SandboxAccount(['username' => 'guest', 'is_guest' => true]);
         $guest->setPassword('Invite-2026');
@@ -353,7 +353,7 @@ class SandboxTest extends TestCase
 
     public function test_ephemeral_sessions_are_offered_when_enabled(): void
     {
-        Page::where('key', 'machine-ssh')->update(['is_public' => true]);
+        Page::where('key', 'machine-ssh')->update(['status' => 'public']);
         Page::flushCache();
         $sandbox = app(Sandbox::class);
         $sandbox->saveSettings(['public' => true]);

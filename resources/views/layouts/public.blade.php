@@ -76,7 +76,7 @@
                     @endunless
                     @if ($page && ! $page->is_public)
                         <span class="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 font-medium text-amber-300">
-                            <x-icon name="lock" class="h-3.5 w-3.5" /> Page privée — visible uniquement par les administrateurs
+                            <x-icon name="lock" class="h-3.5 w-3.5" /> Page « {{ mb_strtolower($page->statusLabel()) }} » — contenu affiché car vous êtes administrateur
                         </span>
                     @else
                         <span>Connecté en tant que <strong class="text-white">{{ auth()->user()->name }}</strong></span>
@@ -183,7 +183,7 @@
                             <a href="{{ $navPage->url() }}" @class(['flex items-center justify-between rounded-lg px-3 py-2.5 text-base font-medium hover:bg-slate-100', 'text-primary-700' => $isActive($navPage), 'text-slate-700' => ! $isActive($navPage)])>
                                 {{ $navPage->title }}
                                 @unless ($navPage->is_public)
-                                    <span class="badge-amber"><x-icon name="lock" class="h-3 w-3" /> Privée</span>
+                                    <span class="badge-amber"><x-icon name="lock" class="h-3 w-3" /> {{ $navPage->statusLabel() }}</span>
                                 @endunless
                             </a>
                         @endforeach

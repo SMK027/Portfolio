@@ -139,7 +139,7 @@ class ProjectTest extends TestCase
 
         $this->get($file->url())->assertOk()->assertHeader('Content-Disposition');
 
-        Page::where('key', 'projets')->update(['is_public' => false]);
+        Page::where('key', 'projets')->update(['status' => 'private']);
         Page::flushCache();
         $this->get($file->url())->assertNotFound();
     }

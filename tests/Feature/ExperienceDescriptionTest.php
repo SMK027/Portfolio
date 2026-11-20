@@ -21,7 +21,7 @@ class ExperienceDescriptionTest extends TestCase
     {
         parent::setUp();
         $this->admin = User::factory()->admin()->create();
-        Page::where('key', 'experiences')->update(['is_public' => true]);
+        Page::where('key', 'experiences')->update(['status' => 'public']);
     }
 
     protected function store(array $fields)

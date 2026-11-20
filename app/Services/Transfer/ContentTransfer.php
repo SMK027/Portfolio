@@ -118,7 +118,7 @@ class ContentTransfer
 
     protected function exportPages(): array
     {
-        return Page::ordered()->get()->map(fn (Page $p) => $p->only(['key', 'title', 'intro', 'is_public', 'position']))->all();
+        return Page::ordered()->get()->map(fn (Page $p) => $p->only(['key', 'title', 'intro', 'status', 'position']))->all();
     }
 
     protected function exportThemes(): array
@@ -417,7 +417,8 @@ class ContentTransfer
             'key'       => ['required', Rule::in(array_keys(Page::ROUTES))],
             'title'     => ['nullable', 'string', 'max:100'],
             'intro'     => ['nullable', 'string', 'max:500'],
-            'is_public' => ['nullable', 'boolean'],
+            'status'    => ['nullable', Rule::in(array_keys(Page::STATUSES))],
+            'is_public' => ['nullable', 'boolean'], // anciens exports
             'position'  => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
         if ($data === null) {
@@ -431,7 +432,15 @@ class ContentTransfer
             return;
         }
 
-        $page->update(collect($data)->except('key')->filter(fn ($v, $k) => array_key_exists($k, $item))->all());
+        $values = collect($data)->only(['title', 'intro', 'position', 'status'])->filter(fn ($v, $k) => array_key_exists($k, $item))->all();
+        if (! array_key_exists('status', $item) && array_key_exists('is_public', $item)) {
+            $values['status'] = $data['is_public'] ? Page::PUBLIC : Page::PRIVATE;
+        }
+        // Mot de passe jamais exporté : une page protégée sans mot de passe devient privée
+        if (($values['status'] ?? null) === Page::PASSWORD && ! $page->password) {
+            $values['status'] = Page::PRIVATE;
+        }
+        $page->update($values);
         $this->count('pages', false);
     }
 

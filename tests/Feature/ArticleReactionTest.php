@@ -64,7 +64,7 @@ class ArticleReactionTest extends TestCase
     public function test_private_veille_page_blocks_reactions(): void
     {
         $article = $this->article();
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
 
         $this->postJson(route('articles.reactions', $article), ['emoji' => 'like'])->assertNotFound();

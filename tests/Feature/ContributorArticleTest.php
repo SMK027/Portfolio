@@ -175,7 +175,7 @@ class ContributorArticleTest extends TestCase
     public function test_contributor_sees_draft_attachments_even_if_the_veille_page_is_private(): void
     {
         \Illuminate\Support\Facades\Storage::fake('local');
-        \App\Models\Page::where('key', 'veille')->update(['is_public' => false]);
+        \App\Models\Page::where('key', 'veille')->update(['status' => 'private']);
         $article = $this->articleBy($this->contributor);
 
         $this->actingAs($this->contributor)->put(route('admin.articles.update', $article), [

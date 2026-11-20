@@ -8,8 +8,6 @@ use App\Models\Theme;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -62,18 +60,9 @@ class ProjectController extends Controller
         abort_if($project->status !== Project::PASSWORD || ! $project->password, 404);
         $request->validate(['password' => ['required', 'string', 'max:100']]);
 
-        $key = 'project-unlock:'.$project->id.':'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            throw ValidationException::withMessages(['password' => 'Trop de tentatives. Réessayez dans '.RateLimiter::availableIn($key).' secondes.']);
+        if ($error = $project->attemptUnlock($request->input('password'), $request->ip())) {
+            throw ValidationException::withMessages(['password' => $error]);
         }
-        if (! Hash::check($request->input('password'), $project->password)) {
-            RateLimiter::hit($key, 60);
-            throw ValidationException::withMessages(['password' => 'Mot de passe incorrect.']);
-        }
-
-        RateLimiter::clear($key);
-        $request->session()->regenerate();
-        $project->unlock();
 
         return redirect()->route('projects.show', $project);
     }

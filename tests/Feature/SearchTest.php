@@ -63,7 +63,7 @@ class SearchTest extends TestCase
     public function test_private_pages_are_not_searched_for_visitors(): void
     {
         $this->article('Kubernetes en pratique', 'Texte.');
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
 
         $this->get(route('search', ['q' => 'kubernetes']))->assertDontSee('Kubernetes en pratique');
@@ -88,7 +88,7 @@ class SearchTest extends TestCase
         \App\Models\Theme::create(['name' => 'Zabbix et supervision']);
         $this->get(route('search', ['q' => 'zabbix']))->assertSeeText('Supervision Zabbix')->assertSeeText('Zabbix et supervision');
 
-        Page::where('key', 'projets')->update(['is_public' => false]);
+        Page::where('key', 'projets')->update(['status' => 'private']);
         Page::flushCache();
 
         foreach ([null, User::factory()->admin()->create()] as $user) {

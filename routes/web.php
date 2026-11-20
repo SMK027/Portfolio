@@ -36,6 +36,7 @@ Route::get('/pwa/icone-{size}.png', [\App\Http\Controllers\PwaController::class,
 Route::get('/hors-ligne', [\App\Http\Controllers\PwaController::class, 'offline'])->name('pwa.offline');
 
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
+Route::post('/acces/{key}', \App\Http\Controllers\PageUnlockController::class)->middleware('throttle:20,1')->name('pages.unlock');
 
 // Page d'easter eggs : accessible uniquement via un déclencheur caché (lien signé, puis session).
 Route::controller(\App\Http\Controllers\EasterEggController::class)->prefix('surprise')->name('easter-eggs.')->group(function () {

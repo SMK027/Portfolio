@@ -20,7 +20,7 @@ class SitemapController extends Controller
         $urls = collect();
 
         if (Setting::siteIsIndexable()) {
-            $pages = Page::visibleTo(null);
+            $pages = Page::allOrdered()->where('is_public', true)->values();
             $urls = $pages->map(fn (Page $page) => ['loc' => $page->url(), 'lastmod' => $page->updated_at]);
 
             if ($pages->contains('key', 'projets')) {

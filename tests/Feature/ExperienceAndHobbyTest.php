@@ -37,7 +37,7 @@ class ExperienceAndHobbyTest extends TestCase
         $this->assertNull($experience->end_date);
         $this->assertTrue($experience->isOngoing());
 
-        Page::where('key', 'experiences')->update(['is_public' => true]);
+        Page::where('key', 'experiences')->update(['status' => 'public']);
         Page::flushCache();
         auth()->logout();
 
@@ -62,7 +62,7 @@ class ExperienceAndHobbyTest extends TestCase
         $hobby = Hobby::sole();
         Storage::disk('public')->assertExists($hobby->image_path);
 
-        Page::where('key', 'loisirs')->update(['is_public' => true]);
+        Page::where('key', 'loisirs')->update(['status' => 'public']);
         Page::flushCache();
         $this->get('/loisirs')->assertOk()->assertSee('Photographie')->assertSee('Paysages urbains.');
 

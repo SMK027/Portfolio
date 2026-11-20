@@ -23,7 +23,7 @@ class RecommendationTest extends TestCase
 
     protected function publishPage(): void
     {
-        Page::where('key', 'recommandations')->update(['is_public' => true]);
+        Page::where('key', 'recommandations')->update(['status' => 'public']);
         Page::flushCache();
     }
 

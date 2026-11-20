@@ -99,7 +99,7 @@ class ArticleFileTest extends TestCase
         $url = $article->files->first()->url();
         auth()->logout();
 
-        Page::where('key', 'veille')->update(['is_public' => false]);
+        Page::where('key', 'veille')->update(['status' => 'private']);
         Page::flushCache();
 
         $this->get($url)->assertNotFound();
