@@ -60,7 +60,7 @@
             </div>
         </x-admin.section>
 
-        <x-admin.section title="Fichiers" description="Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice et ZIP — 20 Mo max. par fichier. Les images forment le carrousel ; choisissez-en une comme miniature, ou insérez-la dans la description.">
+        <x-admin.section title="Fichiers" description="Images (JPG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, LibreOffice, ZIP, HTML, Markdown, CSS et JavaScript — 20 Mo max. par fichier. Les images forment le carrousel ; choisissez-en une comme miniature, ou insérez-la dans la description.">
             <x-admin.attachments :files="$editing ? $project->files : collect()" :file-class="\App\Models\ProjectFile::class" with-thumbnail insertable />
         </x-admin.section>
 

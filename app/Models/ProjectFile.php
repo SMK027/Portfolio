@@ -11,6 +11,15 @@ class ProjectFile extends Model
 {
     use Auditable, IsAttachment;
 
+    /** Fichiers web et Markdown, propres aux projets (toujours servis en téléchargement). */
+    public const CODE_EXTENSIONS = ['html', 'htm', 'md', 'css', 'js'];
+
+    /** @return list<string> */
+    public static function allowedExtensions(): array
+    {
+        return [...self::IMAGE_EXTENSIONS, ...self::DOCUMENT_EXTENSIONS, ...self::CODE_EXTENSIONS];
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

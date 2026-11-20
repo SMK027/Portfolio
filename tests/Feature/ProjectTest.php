@@ -92,6 +92,22 @@ class ProjectTest extends TestCase
         $this->get($file->url())->assertOk()->assertDownload('Montre.zip');
     }
 
+    public function test_web_and_markdown_files_are_accepted_and_always_downloaded(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = $this->createProject($admin, ['files' => [
+            UploadedFile::fake()->createWithContent('index.html', '<script>alert(1)</script>'),
+            UploadedFile::fake()->createWithContent('README.md', '# Projet'),
+            UploadedFile::fake()->createWithContent('style.css', 'body{}'),
+            UploadedFile::fake()->createWithContent('app.js', 'console.log(1)'),
+        ]]);
+
+        $this->assertSame(['index.html', 'README.md', 'style.css', 'app.js'], $project->files->pluck('original_name')->all());
+        $this->get($project->files->first()->url())->assertOk()
+            ->assertHeader('Content-Security-Policy', 'sandbox')
+            ->assertHeader('Content-Disposition', 'attachment; filename=index.html');
+    }
+
     public function test_zip_archives_are_limited_to_20_mb(): void
     {
         $admin = User::factory()->admin()->create();
