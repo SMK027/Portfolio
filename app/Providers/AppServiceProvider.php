@@ -36,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(Recaptcha::class);
         $this->app->singleton(EditorJsRenderer::class);
         $this->app->singleton(\App\Services\Maintenance::class);
+        $this->app->singleton(\App\Services\Achievements::class);
         $this->app->singleton(AuditTrail::class);
     }
 

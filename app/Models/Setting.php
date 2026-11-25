@@ -51,6 +51,7 @@ class Setting extends Model
             'security.blocked_countries' => 'Pays bloqués',
             'appointments.google'       => 'Google Agenda',
             'easter_eggs.settings'      => 'Page d\'easter eggs',
+            'achievements.settings'     => 'Succès',
             'notifications.discord'     => 'Notifications Discord',
             'sandbox.settings'          => 'Machine SSH',
             'sandbox.ssh'               => 'Machine SSH : adresse publique',
