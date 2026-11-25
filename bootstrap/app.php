@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'page'  => \App\Http\Middleware\EnsurePageIsAccessible::class,
+            // Compteur propre à chaque route (voir la classe).
+            'throttle' => \App\Http\Middleware\ThrottleRequestsPerRoute::class,
             'auth.service' => \App\Http\Middleware\AuthenticateServiceToken::class,
             'service.can'  => \App\Http\Middleware\EnsureServicePermission::class,
         ]);

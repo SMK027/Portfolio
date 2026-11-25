@@ -108,7 +108,7 @@ class CvDownloadTest extends TestCase
     public function test_cv_requires_a_valid_code(): void
     {
         $this->upload();
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class); // limite testée à part
+        $this->withoutMiddleware(\App\Http\Middleware\ThrottleRequestsPerRoute::class); // limite testée à part
 
         $this->post(route('cv.download.submit'), ['code' => 'WRONG123'])->assertSessionHasErrors('code');
         $this->post(route('cv.download.submit'))->assertSessionHasErrors('code');
