@@ -131,6 +131,7 @@ class AppServiceProvider extends ServiceProvider
                 'announcements' => Announcement::visible()->ordered()->get(),
                 'indexable'     => Setting::siteIsIndexable(),
                 'maintenance'   => app(\App\Services\Maintenance::class)->isActive(),
+                'achievementsEnabled' => \App\Models\AchievementSettings::enabled(),
                 'easterEggTriggers' => app(\App\Services\EasterEggs::class)->triggers(),
             ]);
         });

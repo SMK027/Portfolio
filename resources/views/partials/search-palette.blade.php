@@ -1,5 +1,12 @@
 {{-- Palette de recherche : Ctrl+K, ⌘K ou « / » ; résultats au fil de la frappe --}}
-<div x-data="searchPalette(@js(route('search')))" x-show="open" x-cloak
+@php
+    $paletteShortcuts = ($achievementsEnabled ?? false) ? [[
+        'type' => 'Raccourci', 'url' => route('achievements.index'),
+        'title' => 'Succès', 'excerpt' => 'Vos succès débloqués et ceux qui restent à trouver',
+        'title_html' => '🏆 Succès', 'excerpt_html' => 'Vos succès débloqués et ceux qui restent à trouver',
+    ]] : [];
+@endphp
+<div x-data="searchPalette(@js(route('search')), @js($paletteShortcuts))" x-show="open" x-cloak
      @open-search.window="show()" @keydown.window="shortcut($event)" @keydown.escape.window="open = false"
      class="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 px-4 pt-[12vh] backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Recherche">
     <div @click.outside="open = false" class="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
@@ -22,7 +29,7 @@
             </template>
         </ul>
         <p x-show="query.trim().length >= 2 && ! loading && ! results.length && searched" class="px-4 py-6 text-center text-sm text-slate-500">Aucun résultat pour « <span x-text="query"></span> ».</p>
-        <div x-show="results.length" class="border-t border-slate-100 px-4 py-2 text-right">
+        <div x-show="results.length && query.trim().length >= 2" class="border-t border-slate-100 px-4 py-2 text-right">
             <a :href="url + '?q=' + encodeURIComponent(query)" class="text-xs font-semibold text-primary-600 hover:text-primary-700">Voir tous les résultats →</a>
         </div>
     </div>

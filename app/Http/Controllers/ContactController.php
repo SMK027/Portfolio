@@ -185,6 +185,7 @@ class ContactController extends Controller
         $request->session()->forget(self::SESSION_KEY);
 
         $this->notify($mailer, $message);
+        app(\App\Services\Achievements::class)->record('contact_sent');
 
         return redirect()->route('contact.show')->with('success', $success);
     }

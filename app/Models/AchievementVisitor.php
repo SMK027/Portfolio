@@ -20,7 +20,7 @@ class AchievementVisitor extends Model
         return $this->hasMany(AchievementUnlock::class);
     }
 
-    public function count(string $trigger): int
+    public function progressOf(string $trigger): int
     {
         return (int) ($this->progress[$trigger] ?? 0);
     }

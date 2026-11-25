@@ -25,6 +25,7 @@ class ArticleReactionController extends Controller
 
         if (! ArticleReaction::where($attributes)->delete()) {
             ArticleReaction::firstOrCreate($attributes);
+            app(\App\Services\Achievements::class)->record('article_reacted', (string) $article->id);
         }
 
         return response()->json(ArticleReaction::summaryFor($article, $visitor));

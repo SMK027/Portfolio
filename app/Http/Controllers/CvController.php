@@ -61,6 +61,8 @@ class CvController extends Controller
 
     protected function serve(Profile $profile): StreamedResponse
     {
+        app(\App\Services\Achievements::class)->record('cv_downloaded');
+
         return Storage::disk('local')->response($profile->cv_path, $profile->cvFilename(), [
             'Content-Type'  => 'application/pdf',
             'Cache-Control' => 'no-store, private',

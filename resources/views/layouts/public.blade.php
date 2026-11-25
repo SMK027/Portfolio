@@ -49,7 +49,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased" data-terminal-url="{{ route('terminal') }}" @guest data-service-worker="{{ asset('sw.js') }}" @endguest
+<body class="flex min-h-full flex-col bg-slate-50 font-sans text-slate-800 antialiased" data-terminal-url="{{ route('terminal') }}" @if ($achievementsEnabled) data-achievements-url="{{ route('achievements.event') }}" @endif @guest data-service-worker="{{ asset('sw.js') }}" @endguest
       @if ($pageViewId = request()->attributes->get('page_view_uuid')) data-page-view="{{ $pageViewId }}" data-page-view-url="{{ route('stats.duration') }}" @endif>
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">Aller au contenu</a>
 
@@ -157,7 +157,7 @@
             <div class="ml-1 flex flex-none items-center gap-1">
             {{-- Thème clair / sombre --}}
             <button type="button" x-data="{ dark: document.documentElement.classList.contains('dark') }"
-                    @click="dark = ! dark; document.documentElement.classList.toggle('dark', dark); try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}"
+                    @click="dark = ! dark; document.documentElement.classList.toggle('dark', dark); try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}; $dispatch('achievement-event', 'theme_toggled')"
                     class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900" :aria-label="dark ? 'Passer en mode clair' : 'Passer en mode sombre'" :title="dark ? 'Mode clair' : 'Mode sombre'">
                 <x-icon name="moon" class="h-5 w-5" x-show="! dark" />
                 <x-icon name="sun" class="h-5 w-5" x-show="dark" x-cloak />
@@ -214,6 +214,9 @@
         <div class="border-t border-slate-100">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-slate-400 sm:px-6">
                 <span>© {{ now()->year }} {{ $siteName }}</span>
+                @if ($achievementsEnabled)
+                    <a href="{{ route('achievements.index') }}" class="inline-flex items-center gap-1 hover:text-slate-600"><x-icon name="trophy" class="h-3.5 w-3.5" /> Succès</a>
+                @endif
                 <a href="{{ route('terminal') }}" class="font-mono hover:text-slate-600" title="Mode terminal (touche ² ou `)">&gt;_ terminal</a>
                 <button type="button" class="hover:text-slate-600" @click="$dispatch('cookie-consent-open')" x-data>Gérer les cookies</button>
                 {{-- Masqué quand l'adresse de connexion est personnalisée (App\Services\LoginPath) --}}

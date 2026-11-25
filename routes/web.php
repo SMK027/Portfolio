@@ -47,6 +47,10 @@ Route::controller(\App\Http\Controllers\EasterEggController::class)->prefix('sur
     Route::get('/{egg}/code', 'code')->name('code');
 });
 
+// Succès : page publique et événements signalés par le navigateur.
+Route::get('/succes', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');
+Route::post('/succes/evenement', [\App\Http\Controllers\AchievementController::class, 'event'])->middleware('throttle:30,1')->name('achievements.event');
+
 Route::get('/formations', [BackgroundController::class, 'formations'])->middleware('page:formations')->name('formations');
 Route::get('/diplomes', [BackgroundController::class, 'diplomas'])->middleware('page:diplomes')->name('diplomes');
 Route::get('/certifications', [BackgroundController::class, 'certifications'])->middleware('page:certifications')->name('certifications');

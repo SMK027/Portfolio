@@ -90,6 +90,8 @@ class AppointmentController extends Controller
             'E-mail'  => $appointment->email,
         ], route('admin.appointments.index'));
 
+        app(\App\Services\Achievements::class)->record('appointment_booked');
+
         return redirect()->route('appointments.show')->with('success',
             'Demande envoyée pour le '.$start->translatedFormat('l j F à H:i').'. Vous recevrez un e-mail de confirmation.');
     }

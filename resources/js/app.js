@@ -39,6 +39,9 @@ Alpine.data('securityKeyPasswordless', securityKeyPasswordless);
 
 Alpine.start();
 
+// Succès : notifications de déblocage, partout (y compris après une action en administration).
+import('./achievements').then(({ default: start }) => start());
+
 // Mesure d'audience : durée de lecture des pages publiques.
 import('./components/page-timer').then(({ default: start }) => start());
 

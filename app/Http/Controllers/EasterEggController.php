@@ -70,6 +70,7 @@ class EasterEggController extends Controller
         }
 
         $this->eggs->unlock($request, $egg);
+        app(\App\Services\Achievements::class)->record('easter_eggs_unlocked', (string) $egg->id);
         app(\App\Services\DiscordNotifier::class)->notify('easter_egg', 'Easter egg déverrouillé : '.$egg->title, null, [], route('admin.easter-eggs.edit', $egg));
         $request->session()->put('easter_eggs.just_unlocked', $egg->id);
 

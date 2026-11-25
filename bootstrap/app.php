@@ -49,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleMaintenanceMode::class,
             \App\Http\Middleware\HandleWaitingRoom::class,
             \App\Http\Middleware\RecordPageView::class,
+            \App\Http\Middleware\TrackAchievements::class,
             \App\Http\Middleware\ApplySupervisionBypass::class,
         ]);
 

@@ -135,7 +135,7 @@ class Achievements
         $unlocked = $visitor->unlocks()->pluck('achievement_id')->all();
 
         $reached = Achievement::active()->where('trigger', $trigger)
-            ->where('threshold', '<=', $visitor->count($trigger))
+            ->where('threshold', '<=', $visitor->progressOf($trigger))
             ->whereNotIn('id', $unlocked)->ordered()->get();
 
         foreach ($reached as $achievement) {
@@ -183,7 +183,7 @@ class Achievements
         return Achievement::active()->ordered()->withCount('unlocks')->get()->map(fn (Achievement $a) => [
             'achievement' => $a,
             'unlocked_at' => isset($unlocks[$a->id]) ? \Illuminate\Support\Carbon::parse($unlocks[$a->id]) : null,
-            'current'     => min($a->threshold, $visitor?->count($a->trigger) ?? 0),
+            'current'     => min($a->threshold, $visitor?->progressOf($a->trigger) ?? 0),
             'rarity'      => round($a->unlocks_count / $visitors * 100, 1),
         ]);
     }
