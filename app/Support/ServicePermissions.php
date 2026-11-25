@@ -108,6 +108,9 @@ final class ServicePermissions
         'Sécurité' => [
             'ip_bans.self' => 'Bannir sa propre adresse IP (super-administrateurs)',
         ],
+        'Limitation de débit' => [
+            'throttle.bypass' => 'Débloquer une requête refusée pour « trop de requêtes » (erreur 429), hors connexion et double authentification',
+        ],
         'Formulaire de contact' => [
             'contact.skip_verification' => 'Envoyer un message de contact sans le code de vérification reçu par e-mail',
         ],

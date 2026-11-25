@@ -35,6 +35,10 @@ Route::get('/manifest.webmanifest', [\App\Http\Controllers\PwaController::class,
 Route::get('/pwa/icone-{size}.png', [\App\Http\Controllers\PwaController::class, 'icon'])->whereNumber('size')->name('pwa.icon');
 Route::get('/hors-ligne', [\App\Http\Controllers\PwaController::class, 'offline'])->name('pwa.offline');
 
+// Erreur 429 : validation superviseur puis rejeu de la requête bloquée (App\Services\ThrottleSupervision).
+Route::get('/limite/superviseur', [\App\Http\Controllers\ThrottleSupervisionController::class, 'show'])->name('throttle-supervision.show');
+Route::post('/limite/superviseur', [\App\Http\Controllers\ThrottleSupervisionController::class, 'store'])->name('throttle-supervision.store');
+
 Route::get('/', HomeController::class)->middleware('page:home')->name('home');
 Route::post('/acces/{key}', \App\Http\Controllers\PageUnlockController::class)->middleware('throttle:20,1')->name('pages.unlock');
 
