@@ -110,4 +110,42 @@ class AchievementTest extends TestCase
         $this->get('/', self::BROWSER)->assertDontSee(route('achievements.index'));
         $this->assertDatabaseCount('achievement_visitors', 0);
     }
+
+    public function test_admin_manages_achievements_and_sees_stats(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->get(route('admin.succes.index'))->assertOk()->assertSee('Premiers pas');
+
+        $this->actingAs($admin)->post(route('admin.succes.store'), [
+            'title' => 'Touche-à-tout', 'description' => 'Ouvrir la palette deux fois.', 'icon' => 'squares',
+            'category' => 'interaction', 'trigger' => 'palette_opened', 'threshold' => 2, 'is_active' => '1',
+        ])->assertRedirect(route('admin.succes.index'));
+        $achievement = Achievement::where('title', 'Touche-à-tout')->sole();
+
+        $this->actingAs($admin)->post(route('admin.succes.store'), ['title' => 'X', 'icon' => 'trophy', 'category' => 'interaction', 'trigger' => 'inconnu', 'threshold' => 1])
+            ->assertSessionHasErrors('trigger');
+
+        $this->actingAs($admin)->put(route('admin.succes.update', $achievement), [
+            'title' => 'Touche-à-tout', 'icon' => 'squares', 'category' => 'secret', 'trigger' => 'palette_opened', 'threshold' => 3, 'is_secret' => '1',
+        ])->assertRedirect();
+        $this->assertTrue($achievement->fresh()->is_secret);
+        $this->assertFalse($achievement->fresh()->is_active);
+
+        $this->actingAs($admin)->put(route('admin.succes.settings'), ['enabled' => '0', 'title' => 'Trophées'])->assertRedirect();
+        $this->assertFalse(AchievementSettings::enabled());
+
+        $this->actingAs($admin)->delete(route('admin.succes.destroy', $achievement));
+        $this->assertModelMissing($achievement);
+    }
+
+    public function test_admin_resets_progress(): void
+    {
+        $this->postJson('/succes/evenement', ['event' => 'palette_opened'], self::BROWSER);
+        $this->assertDatabaseCount('achievement_unlocks', 1);
+
+        $this->actingAs(User::factory()->admin()->create())->delete(route('admin.succes.reset'))->assertRedirect();
+        $this->assertDatabaseCount('achievement_visitors', 0);
+        $this->assertDatabaseCount('achievement_unlocks', 0);
+    }
 }

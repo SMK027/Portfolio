@@ -308,6 +308,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         ->scopeBindings()->middleware($panel('projects.write'))->name('projets.files.destroy');
 
     $crud('annonces', Admin\AnnouncementController::class, 'announcements', ['annonces' => 'announcement']);
+    Route::put('/succes/reglages', [Admin\AchievementController::class, 'updateSettings'])->middleware($panel('achievements.write'))->name('succes.settings');
+    Route::delete('/succes/progression', [Admin\AchievementController::class, 'resetProgress'])->middleware($panel('achievements.delete'))->name('succes.reset');
+    $crud('succes', Admin\AchievementController::class, 'achievements', ['succes' => 'achievement']);
     Route::put('/easter-eggs/reglages', [Admin\EasterEggController::class, 'updateSettings'])->middleware($panel('easter_eggs.write'))->name('easter-eggs.settings');
     $crud('easter-eggs', Admin\EasterEggController::class, 'easter_eggs', ['easter-eggs' => 'easterEgg']);
 
