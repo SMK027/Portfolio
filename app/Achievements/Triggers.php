@@ -16,6 +16,7 @@ final class Triggers
         'interaction' => ['Interaction', 'sparkles'],
         'secret'      => ['Secrets', 'lock'],
         'loyalty'     => ['Fidélité', 'heart'],
+        'sandbox'     => ['Machine SSH', 'terminal'],
     ];
 
     /** [libellé, catégorie suggérée, type, unité du seuil] */
@@ -35,6 +36,8 @@ final class Triggers
         'easter_eggs_unlocked' => ['Éléments secrets déverrouillés', 'secret', 'distinct', 'éléments'],
         'night_visit'         => ['Visite entre minuit et 5 h', 'secret', 'count', 'pages vues'],
         'achievements_page'   => ['Consultation de la page des succès', 'secret', 'count', 'consultations'],
+        'sandbox_terminal_opened' => ['Connexions au terminal web de la machine SSH', 'sandbox', 'count', 'connexions'],
+        'sandbox_challenges'  => ['Défis Linux de la machine SSH validés', 'sandbox', 'distinct', 'défis'],
         'visit_days'          => ['Jours de visite différents', 'loyalty', 'distinct', 'jours'],
         'minutes_spent'       => ['Minutes passées sur le site', 'loyalty', 'count', 'minutes'],
         'achievements_unlocked' => ['Autres succès débloqués', 'loyalty', 'total', 'succès'],
@@ -61,6 +64,20 @@ final class Triggers
     public static function isDistinct(string $trigger): bool
     {
         return (self::ALL[$trigger][2] ?? null) === 'distinct';
+    }
+
+    /** Succès de la machine SSH (ajoutés par la migration 2026_11_25_000002). */
+    public static function sandboxDefaults(): array
+    {
+        $row = fn ($title, $description, $icon, $trigger, $threshold, $secret = false) => compact('title', 'description', 'icon', 'trigger', 'threshold') + ['category' => 'sandbox', 'is_secret' => $secret];
+
+        return [
+            $row('Bienvenue à bord', 'Se connecter à la machine SSH depuis le navigateur.', 'terminal', 'sandbox_terminal_opened', 1),
+            $row('Habitué du shell', 'Se connecter 5 fois au terminal web.', 'clock', 'sandbox_terminal_opened', 5),
+            $row('Premier défi', 'Valider un défi Linux de la machine SSH.', 'check', 'sandbox_challenges', 1),
+            $row('Apprenti administrateur', 'Valider 3 défis Linux.', 'academic-cap', 'sandbox_challenges', 3),
+            $row('Maître du shell', 'Valider les 5 défis Linux.', 'trophy', 'sandbox_challenges', 5),
+        ];
     }
 
     /** Succès créés à l'installation (modifiables ensuite en administration). */

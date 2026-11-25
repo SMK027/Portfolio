@@ -83,6 +83,16 @@ export default function startAchievements() {
         return response;
     };
 
+    // Même chose pour axios (ticket du terminal SSH, défis…), succès comme erreurs.
+    const fromAxios = (response) => {
+        const header = response?.headers?.[HEADER.toLowerCase()];
+        if (header) showAll(decode(header), 0);
+    };
+    window.axios?.interceptors.response.use(
+        (response) => { fromAxios(response); return response; },
+        (error) => { fromAxios(error.response); return Promise.reject(error); },
+    );
+
     const url = document.body.dataset.achievementsUrl;
     if (! url) return;
 

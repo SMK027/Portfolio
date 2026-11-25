@@ -15,6 +15,7 @@ case "${1:-}" in
         if [ "$(printf '%s' "$reponse" | sha256sum | cut -d' ' -f1)" = "$(cat "$SHARE/$n")" ]; then
             grep -qx "$n" "$PROGRESS" || echo "$n" >> "$PROGRESS"
             echo "✔ Défi $n réussi : ${TITLES[$n]} !"
+            echo "  Validez cette réponse sur la page « Machine SSH » du portfolio pour débloquer un succès."
         else
             echo "✘ Ce n'est pas ça. Persévérez !"; exit 1
         fi

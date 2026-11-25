@@ -87,6 +87,7 @@ Route::get('/veille/{article:id}/fichiers/{file}', [ArticleFileController::class
 Route::middleware('page:machine-ssh')->prefix('machine-ssh')->name('sandbox.')->group(function () {
     Route::get('/', [\App\Http\Controllers\SandboxController::class, 'show'])->name('show');
     Route::post('/ticket', [\App\Http\Controllers\SandboxController::class, 'ticket'])->middleware('throttle:10,1')->name('ticket');
+    Route::post('/defis', [\App\Http\Controllers\SandboxController::class, 'challenge'])->middleware('throttle:10,1')->name('challenge');
 });
 
 Route::get('/terminal', \App\Http\Controllers\TerminalController::class)->name('terminal');

@@ -18,7 +18,7 @@ class Achievement extends Model
     /** Icônes proposées (composant x-icon). */
     public const ICONS = [
         'trophy', 'sparkles', 'badge', 'heart', 'globe', 'home', 'folder', 'briefcase', 'newspaper', 'academic-cap',
-        'search', 'squares', 'moon', 'sun', 'mail', 'calendar', 'download', 'terminal', 'lock', 'clock', 'eye', 'tag', 'users',
+        'search', 'squares', 'moon', 'sun', 'mail', 'calendar', 'download', 'terminal', 'lock', 'clock', 'eye', 'tag', 'users', 'check',
     ];
 
     protected function casts(): array

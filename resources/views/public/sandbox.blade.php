@@ -79,5 +79,43 @@
                 </div>
             </section>
         @endunless
+
+        {{-- Défis Linux : la machine est isolée, la réponse se valide ici pour débloquer les succès --}}
+        @if ($challenges)
+            <section class="card space-y-4 p-6" x-data="{ number: '1', answer: '', message: '', ok: false, sending: false,
+                async submit() {
+                    this.sending = true;
+                    try {
+                        const { data } = await window.axios.post(@js(route('sandbox.challenge')), { number: this.number, answer: this.answer });
+                        this.ok = true; this.message = data.message; this.answer = '';
+                    } catch (e) {
+                        this.ok = false; this.message = e.response?.data?.message ?? 'Vérification impossible pour le moment.';
+                    } finally { this.sending = false; }
+                } }">
+                <div>
+                    <h2 class="flex items-center gap-2 font-display text-lg font-semibold text-slate-900"><x-icon name="trophy" class="h-5 w-5 text-amber-500" /> Défis Linux</h2>
+                    <p class="mt-1 text-sm text-slate-600">
+                        Sur la machine, tapez <code class="rounded bg-slate-100 px-1 font-mono">defis</code> pour découvrir les 5 défis.
+                        Réponse trouvée ? Validez-la ici pour débloquer les <a href="{{ route('achievements.index') }}" class="font-medium text-primary-600 hover:underline">succès</a> de la machine SSH.
+                    </p>
+                </div>
+                <form @submit.prevent="submit()" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div class="sm:w-64">
+                        <label for="challenge-number" class="form-label">Défi</label>
+                        <select id="challenge-number" x-model="number" class="form-input">
+                            @foreach ($challenges as $number => [$title])
+                                <option value="{{ $number }}">{{ $number }}. {{ $title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="challenge-answer" class="form-label">Réponse</label>
+                        <input id="challenge-answer" x-model="answer" required maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false" class="form-input font-mono">
+                    </div>
+                    <button type="submit" class="btn-primary" :disabled="sending"><x-icon name="check" class="h-4 w-4" /> Valider</button>
+                </form>
+                <p x-show="message" x-text="message" x-cloak :class="ok ? 'text-emerald-600' : 'text-red-600'" class="text-sm font-medium" role="status"></p>
+            </section>
+        @endif
     </div>
 </x-public-layout>
