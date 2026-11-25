@@ -65,17 +65,26 @@ class Achievements
             return $this->visitor;
         }
 
-        $token = $this->request->cookie(self::COOKIE);
-        if (is_string($token) && Str::isUuid($token)) {
-            $this->visitor = AchievementVisitor::where('token', $token)->first();
+        // Cookie dédié (visites suivantes), sinon session : un cookie perdu ou bloqué
+        // ne doit pas faire changer de visiteur à chaque page de la visite.
+        $session = $this->request->hasSession() ? $this->request->session() : null;
+        foreach ([$this->request->cookie(self::COOKIE), $session?->get(self::COOKIE)] as $token) {
+            if (is_string($token) && Str::isUuid($token) && ($this->visitor = AchievementVisitor::where('token', $token)->first())) {
+                break;
+            }
         }
 
         if (! $this->visitor && $create) {
             $this->visitor = AchievementVisitor::create(['token' => (string) Str::uuid(), 'progress' => [], 'seen' => []]);
         }
 
-        if ($this->visitor && $create) {
-            Cookie::queue(self::COOKIE, $this->visitor->token, 60 * 24 * 395, httpOnly: true, sameSite: 'lax');
+        if ($this->visitor) {
+            if ($session && $session->get(self::COOKIE) !== $this->visitor->token) {
+                $session->put(self::COOKIE, $this->visitor->token);
+            }
+            if ($this->request->cookie(self::COOKIE) !== $this->visitor->token) {
+                Cookie::queue(self::COOKIE, $this->visitor->token, 60 * 24 * 395, httpOnly: true, sameSite: 'lax');
+            }
         }
 
         return $this->visitor;

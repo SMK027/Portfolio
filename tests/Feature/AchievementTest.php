@@ -80,6 +80,15 @@ class AchievementTest extends TestCase
         $this->assertSame('Raccourci clavier', $toasts[0]['title']);
     }
 
+    public function test_visitor_is_kept_by_the_session_when_the_cookie_is_lost(): void
+    {
+        $this->postJson('/succes/evenement', ['event' => 'palette_opened'], self::BROWSER)->assertOk();
+
+        // Même session, mais sans le cookie dédié.
+        $this->get('/succes', self::BROWSER)->assertOk()->assertSee('Raccourci clavier')->assertSee('Débloqué le');
+        $this->assertDatabaseCount('achievement_visitors', 1);
+    }
+
     public function test_minutes_cannot_be_inflated(): void
     {
         $this->postJson('/succes/evenement', ['event' => 'minutes_spent'], self::BROWSER)->assertOk();
